@@ -1,12 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-
-const subjectData = [
-  { name: "BEE", hours: 42, mastery: 78 },
-  { name: "Mechanics", hours: 35, mastery: 65 },
-  { name: "Maths II", hours: 50, mastery: 82 },
-  { name: "Chemistry", hours: 28, mastery: 55 },
-  { name: "Workshop", hours: 15, mastery: 90 },
-];
+import type { UserSubject } from "@/lib/subjects-store";
 
 const chartColors = [
   "hsl(217, 91%, 60%)",
@@ -16,14 +9,28 @@ const chartColors = [
   "hsl(350, 80%, 60%)",
 ];
 
-export default function SubjectChart() {
+export default function SubjectChart({ subjects }: { subjects: UserSubject[] }) {
+  const chartData = subjects.map((s) => ({
+    name: s.code,
+    units: s.completed_units,
+    target: s.target_units,
+  }));
+
+  if (chartData.length === 0) {
+    return (
+      <div className="glass-card p-5 flex items-center justify-center h-[300px]">
+        <p className="text-muted-foreground text-sm">Add subjects to see charts</p>
+      </div>
+    );
+  }
+
   return (
     <div className="glass-card p-5">
-      <h3 className="font-semibold text-foreground mb-1">Subject-wise Mastery</h3>
-      <p className="text-xs text-muted-foreground font-mono mb-4">Hours studied & mastery %</p>
+      <h3 className="font-semibold text-foreground mb-1">Subject Progress</h3>
+      <p className="text-xs text-muted-foreground font-mono mb-4">Units completed per subject</p>
 
       <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={subjectData} barSize={32} margin={{ left: -10 }}>
+        <BarChart data={chartData} barSize={32} margin={{ left: -10 }}>
           <XAxis
             dataKey="name"
             axisLine={false}
@@ -41,14 +48,10 @@ export default function SubjectChart() {
             }}
             labelStyle={{ color: "hsl(220, 14%, 92%)" }}
             itemStyle={{ color: "hsl(220, 14%, 80%)" }}
-            formatter={(value: number, name: string) => [
-              name === "hours" ? `${value}h` : `${value}%`,
-              name === "hours" ? "Study Hours" : "Mastery",
-            ]}
           />
-          <Bar dataKey="hours" radius={[6, 6, 0, 0]}>
-            {subjectData.map((_, i) => (
-              <Cell key={i} fill={chartColors[i]} />
+          <Bar dataKey="units" name="Completed" radius={[6, 6, 0, 0]}>
+            {chartData.map((_, i) => (
+              <Cell key={i} fill={chartColors[i % chartColors.length]} />
             ))}
           </Bar>
         </BarChart>

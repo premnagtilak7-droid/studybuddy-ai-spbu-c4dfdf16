@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, BookOpen, Save, X } from "lucide-react";
+import { Plus, Pencil, Trash2, BookOpen, Save, X, GraduationCap } from "lucide-react";
 import AppLayout from "../components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,44 +12,83 @@ import {
   deleteSubject,
   type UserSubject,
 } from "@/lib/subjects-store";
+import { toast } from "sonner";
 
 export default function SubjectManagement() {
   const [subjects, setSubjects] = useState<UserSubject[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", targetUnits: 6 });
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setSubjects(getSubjects()); }, []);
+  const loadSubjects = async () => {
+    try {
+      const data = await getSubjects();
+      setSubjects(data);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleAdd = () => {
+  useEffect(() => { loadSubjects(); }, []);
+
+  const handleAdd = async () => {
     if (!form.name.trim() || !form.code.trim()) return;
-    const updated = addSubject(form.name, form.code.toUpperCase(), form.targetUnits);
-    setSubjects(updated);
-    setForm({ name: "", code: "", targetUnits: 6 });
-    setShowAdd(false);
+    try {
+      await addSubject(form.name, form.code.toUpperCase(), form.targetUnits);
+      setForm({ name: "", code: "", targetUnits: 6 });
+      setShowAdd(false);
+      toast.success("Subject added!");
+      loadSubjects();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
-  const handleUpdate = (id: string) => {
-    const updated = updateSubject(id, {
-      name: form.name,
-      code: form.code.toUpperCase(),
-      targetUnits: form.targetUnits,
-    });
-    setSubjects(updated);
-    setEditing(null);
+  const handleUpdate = async (id: string) => {
+    try {
+      await updateSubject(id, {
+        name: form.name,
+        code: form.code.toUpperCase(),
+        target_units: form.targetUnits,
+      });
+      setEditing(null);
+      toast.success("Subject updated!");
+      loadSubjects();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setSubjects(deleteSubject(id));
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteSubject(id);
+      toast.success("Subject deleted");
+      loadSubjects();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const startEdit = (s: UserSubject) => {
     setEditing(s.id);
-    setForm({ name: s.name, code: s.code, targetUnits: s.targetUnits });
+    setForm({ name: s.name, code: s.code, targetUnits: s.target_units });
   };
 
-  const totalTarget = subjects.reduce((a, s) => a + s.targetUnits, 0);
-  const totalCompleted = subjects.reduce((a, s) => a + s.completedUnits, 0);
+  const totalTarget = subjects.reduce((a, s) => a + s.target_units, 0);
+  const totalCompleted = subjects.reduce((a, s) => a + s.completed_units, 0);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading subjects...</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -132,13 +171,13 @@ export default function SubjectManagement() {
                     <div>
                       <h3 className="font-semibold text-foreground">{subj.name}</h3>
                       <p className="text-xs font-mono text-muted-foreground">
-                        {subj.completedUnits}/{subj.targetUnits} units completed
+                        {subj.completed_units}/{subj.target_units} units completed
                       </p>
                       <div className="w-32 h-1.5 bg-secondary rounded-full mt-2">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{
-                            width: `${Math.min(100, (subj.completedUnits / subj.targetUnits) * 100)}%`,
+                            width: `${Math.min(100, (subj.completed_units / subj.target_units) * 100)}%`,
                             background: `hsl(var(--${subj.color}))`,
                           }}
                         />
@@ -158,11 +197,23 @@ export default function SubjectManagement() {
             </motion.div>
           ))}
 
-          {subjects.length === 0 && (
-            <div className="glass-card p-12 text-center">
-              <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">No subjects yet. Add your first subject to get started.</p>
-            </div>
+          {subjects.length === 0 && !showAdd && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card p-12 text-center"
+            >
+              <div className="w-16 h-16 rounded-2xl gradient-primary mx-auto flex items-center justify-center mb-4">
+                <GraduationCap className="w-8 h-8 text-primary-foreground" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-2">Create Your First Subject</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+                Start tracking your SPPU 2024 Pattern subjects. Add subjects like BEE, Engineering Mechanics, or Maths II.
+              </p>
+              <Button onClick={() => { setShowAdd(true); setForm({ name: "", code: "", targetUnits: 6 }); }}>
+                <Plus className="w-4 h-4 mr-1" /> Create Your First Subject
+              </Button>
+            </motion.div>
           )}
         </div>
       </div>

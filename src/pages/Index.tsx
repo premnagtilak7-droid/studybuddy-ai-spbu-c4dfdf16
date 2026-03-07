@@ -1,36 +1,43 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Clock, Flame, BookOpen, Target, TrendingUp, Calendar } from "lucide-react";
+import { Clock, Flame, BookOpen, Target, TrendingUp, Plus } from "lucide-react";
 import StudyHeatmap from "../components/StudyHeatmap";
 import SubjectChart from "../components/SubjectChart";
 import AppLayout from "../components/AppLayout";
-import { getSubjects } from "@/lib/subjects-store";
+import { Button } from "@/components/ui/button";
+import { getSubjects, type UserSubject } from "@/lib/subjects-store";
 
 const dateFilters = ["Yesterday", "Today", "This Week", "6 Months", "1 Year", "Custom"];
 
 export default function Dashboard() {
   const [activeFilter, setActiveFilter] = useState("This Week");
-  
-  const subjects = useMemo(() => getSubjects(), []);
-  const completedSubjects = subjects.filter(s => s.completedUnits >= s.targetUnits).length;
+  const [subjects, setSubjects] = useState<UserSubject[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getSubjects().then((data) => {
+      setSubjects(data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  const completedSubjects = subjects.filter(s => s.completed_units >= s.target_units).length;
 
   const statCards = [
-    { label: "Today's Hours", value: "4.5h", icon: Clock, change: "+1.2h", color: "primary" },
-    { label: "Current Streak", value: "12 days", icon: Flame, change: "🔥 Best: 23", color: "accent" },
+    { label: "Today's Hours", value: "0h", icon: Clock, change: "Start studying!", color: "primary" },
+    { label: "Current Streak", value: "0 days", icon: Flame, change: "Build your streak", color: "accent" },
     { label: "Subjects Covered", value: `${completedSubjects}/${subjects.length}`, icon: BookOpen, change: subjects.length > 0 ? "Click to manage" : "Add subjects", color: "success", clickable: true },
-    { label: "Weekly Target", value: "78%", icon: Target, change: "31.2/40h", color: "primary" },
+    { label: "Weekly Target", value: "0%", icon: Target, change: "0/40h", color: "primary" },
   ];
 
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">Stats Center</h1>
           <p className="text-sm text-muted-foreground mt-1">Track your SPPU study progress</p>
         </div>
 
-        {/* Date Filters */}
         <div className="flex gap-2 flex-wrap">
           {dateFilters.map((f) => (
             <button
@@ -47,7 +54,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat, i) => (
             <motion.div
@@ -74,50 +80,68 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Heatmap */}
-        <StudyHeatmap />
-
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <SubjectChart />
-
-          {/* Quick Actions / Score Max */}
-          <div className="glass-card p-5">
-            <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2">
-              <Flame className="w-4 h-4 text-accent" />
-              Score Max — High Weightage Topics
-            </h3>
-            <p className="text-xs text-muted-foreground font-mono mb-4">Focus on these for maximum marks</p>
-
-            <div className="space-y-3">
-              {[
-                { topic: "Star-Delta Transformation", subject: "BEE", weight: "12 marks", priority: "high" },
-                { topic: "Truss Analysis (Method of Joints)", subject: "Mechanics", weight: "10 marks", priority: "high" },
-                { topic: "Laplace Transforms", subject: "Maths II", weight: "10 marks", priority: "medium" },
-                { topic: "Kirchhoff's Laws", subject: "BEE", weight: "8 marks", priority: "medium" },
-                { topic: "Centroid & Moment of Inertia", subject: "Mechanics", weight: "8 marks", priority: "medium" },
-              ].map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{item.topic}</p>
-                    <p className="text-[11px] font-mono text-muted-foreground">{item.subject}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-muted-foreground">{item.weight}</span>
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        item.priority === "high" ? "bg-accent animate-pulse-glow" : "bg-primary"
-                      }`}
-                    />
-                  </div>
+        {subjects.length === 0 && !loading ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-12 text-center"
+          >
+            <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-foreground mb-2">No Subjects Yet</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+              Create your first subject to start tracking your SPPU study progress.
+            </p>
+            <Button onClick={() => window.location.href = "/subject-management"}>
+              <Plus className="w-4 h-4 mr-1" /> Create Your First Subject
+            </Button>
+          </motion.div>
+        ) : (
+          <>
+            <StudyHeatmap />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <SubjectChart subjects={subjects} />
+              <div className="glass-card p-5">
+                <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-accent" />
+                  Your Subjects
+                </h3>
+                <p className="text-xs text-muted-foreground font-mono mb-4">Progress overview</p>
+                <div className="space-y-3">
+                  {subjects.map((subj) => (
+                    <div
+                      key={subj.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold font-mono text-primary-foreground"
+                          style={{ background: `hsl(var(--${subj.color}))` }}
+                        >
+                          {subj.code}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{subj.name}</p>
+                          <p className="text-[11px] font-mono text-muted-foreground">
+                            {subj.completed_units}/{subj.target_units} units
+                          </p>
+                        </div>
+                      </div>
+                      <div className="w-20 h-1.5 bg-secondary rounded-full">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.min(100, (subj.completed_units / subj.target_units) * 100)}%`,
+                            background: `hsl(var(--${subj.color}))`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </AppLayout>
   );
