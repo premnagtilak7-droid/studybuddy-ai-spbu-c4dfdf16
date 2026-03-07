@@ -11,6 +11,16 @@ const dateFilters = ["Yesterday", "Today", "This Week", "6 Months", "1 Year", "C
 
 export default function Dashboard() {
   const [activeFilter, setActiveFilter] = useState("This Week");
+  const navigate = useNavigate();
+  const subjects = useMemo(() => getSubjects(), []);
+  const completedSubjects = subjects.filter(s => s.completedUnits >= s.targetUnits).length;
+
+  const statCards = [
+    { label: "Today's Hours", value: "4.5h", icon: Clock, change: "+1.2h", color: "primary" },
+    { label: "Current Streak", value: "12 days", icon: Flame, change: "🔥 Best: 23", color: "accent" },
+    { label: "Subjects Covered", value: `${completedSubjects}/${subjects.length}`, icon: BookOpen, change: subjects.length > 0 ? "Click to manage" : "Add subjects", color: "success", clickable: true },
+    { label: "Weekly Target", value: "78%", icon: Target, change: "31.2/40h", color: "primary" },
+  ];
 
   return (
     <AppLayout>
