@@ -50,15 +50,18 @@ export default function Dashboard() {
 
         {/* Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {statCards.map((stat, i) => (
+          {statCards.map((stat, i) => {
+            const CardWrapper = (stat as any).clickable ? Link : "div";
+            const wrapperProps = (stat as any).clickable ? { to: "/subject-management" } : {};
+            return (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
               className={`glass-card p-4 ${(stat as any).clickable ? "cursor-pointer hover:ring-2 hover:ring-primary/30" : ""}`}
-              onClick={() => (stat as any).clickable && navigate("/subject-management")}
             >
+              <CardWrapper {...wrapperProps} className={(stat as any).clickable ? "block no-underline" : undefined}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
