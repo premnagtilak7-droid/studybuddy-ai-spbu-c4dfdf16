@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-
 import { motion } from "framer-motion";
 import { Clock, Flame, BookOpen, Target, TrendingUp, Calendar } from "lucide-react";
 import StudyHeatmap from "../components/StudyHeatmap";
