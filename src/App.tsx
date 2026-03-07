@@ -2,16 +2,54 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Timetable from "./pages/Timetable";
 import Subjects from "./pages/Subjects";
 import SubjectManagement from "./pages/SubjectManagement";
 import AISolver from "./pages/AISolver";
 import StudyRoom from "./pages/StudyRoom";
+import AdminConsole from "./pages/AdminConsole";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>;
+  if (!user) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAdmin, loading } = useAuth();
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>;
+  if (!isAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function AuthRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+    <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+    <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
+    <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
+    <Route path="/subject-management" element={<ProtectedRoute><SubjectManagement /></ProtectedRoute>} />
+    <Route path="/ai-solver" element={<ProtectedRoute><AISolver /></ProtectedRoute>} />
+    <Route path="/study-room" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
+    <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -19,15 +57,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/timetable" element={<Timetable />} />
-          <Route path="/subjects" element={<Subjects />} />
-          <Route path="/subject-management" element={<SubjectManagement />} />
-          <Route path="/ai-solver" element={<AISolver />} />
-          <Route path="/study-room" element={<StudyRoom />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

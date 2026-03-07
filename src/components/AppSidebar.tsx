@@ -11,9 +11,12 @@ import {
   ChevronRight,
   GraduationCap,
   Zap,
+  Shield,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-const navItems = [
+const baseNavItems = [
   { icon: BarChart3, label: "Stats Center", path: "/" },
   { icon: Calendar, label: "Timetable", path: "/timetable" },
   { icon: BookOpen, label: "Subjects", path: "/subjects" },
@@ -25,6 +28,11 @@ const navItems = [
 export default function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { isAdmin, user, signOut } = useAuth();
+
+  const navItems = isAdmin
+    ? [...baseNavItems, { icon: Shield, label: "Admin Console", path: "/admin" }]
+    : baseNavItems;
 
   return (
     <motion.aside
@@ -69,13 +77,30 @@ export default function AppSidebar() {
         })}
       </nav>
 
-      {/* Collapse */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="mx-2 mb-4 p-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-      >
-        {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-      </button>
+      {/* User & Collapse */}
+      <div className="px-2 pb-4 space-y-2">
+        {user && !collapsed && (
+          <div className="px-3 py-2 text-xs text-sidebar-foreground truncate font-mono">
+            {user.email}
+          </div>
+        )}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+          >
+            {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          </button>
+          {!collapsed && (
+            <button
+              onClick={signOut}
+              className="flex-1 flex items-center gap-2 p-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors text-sm"
+            >
+              <LogOut className="w-4 h-4" /> Sign Out
+            </button>
+          )}
+        </div>
+      </div>
     </motion.aside>
   );
 }
