@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   BarChart3,
   BookOpen,
+  CalendarClock,
   Calendar,
   Trophy,
   MessageSquare,
@@ -22,6 +23,7 @@ const baseNavItems = [
   { icon: BookOpen, label: "Subjects", path: "/subjects" },
   { icon: BookOpen, label: "Manage Subjects", path: "/subject-management" },
   { icon: MessageSquare, label: "AI Doubt Solver", path: "/ai-solver" },
+  { icon: CalendarClock, label: "Exam Dates", path: "/exam-dates" },
   { icon: Trophy, label: "Study Room", path: "/study-room" },
 ];
 
