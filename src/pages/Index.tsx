@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+
 import { motion } from "framer-motion";
 import { Clock, Flame, BookOpen, Target, TrendingUp, Calendar } from "lucide-react";
 import StudyHeatmap from "../components/StudyHeatmap";
@@ -11,7 +11,7 @@ const dateFilters = ["Yesterday", "Today", "This Week", "6 Months", "1 Year", "C
 
 export default function Dashboard() {
   const [activeFilter, setActiveFilter] = useState("This Week");
-  const navigate = useNavigate();
+  
   const subjects = useMemo(() => getSubjects(), []);
   const completedSubjects = subjects.filter(s => s.completedUnits >= s.targetUnits).length;
 
@@ -57,7 +57,7 @@ export default function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
               className={`glass-card p-4 ${(stat as any).clickable ? "cursor-pointer hover:ring-2 hover:ring-primary/30" : ""}`}
-              onClick={() => (stat as any).clickable && navigate("/subject-management")}
+              onClick={() => (stat as any).clickable && (window.location.href = "/subject-management")}
             >
               <div className="flex items-start justify-between">
                 <div>
