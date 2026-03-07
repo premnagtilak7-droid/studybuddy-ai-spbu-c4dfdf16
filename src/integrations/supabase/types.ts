@@ -76,6 +76,82 @@ export type Database = {
         }
         Relationships: []
       }
+      doubt_history: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          image_url: string | null
+          question: string
+          subject_id: string | null
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          question: string
+          subject_id?: string | null
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          question?: string
+          subject_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doubt_history_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_dates: {
+        Row: {
+          created_at: string
+          exam_date: string
+          id: string
+          is_global: boolean
+          label: string | null
+          subject_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          exam_date: string
+          id?: string
+          is_global?: boolean
+          label?: string | null
+          subject_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          exam_date?: string
+          id?: string
+          is_global?: boolean
+          label?: string | null
+          subject_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_dates_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -142,6 +218,73 @@ export type Database = {
         }
         Relationships: []
       }
+      topics: {
+        Row: {
+          created_at: string
+          id: string
+          is_completed: boolean
+          name: string
+          priority: Database["public"]["Enums"]["topic_priority"]
+          unit_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          name: string
+          priority?: Database["public"]["Enums"]["topic_priority"]
+          unit_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          name?: string
+          priority?: Database["public"]["Enums"]["topic_priority"]
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topics_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      units: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          subject_id: string
+          unit_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          subject_id: string
+          unit_number: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          subject_id?: string
+          unit_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "units_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -175,6 +318,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "student"
+      topic_priority: "high" | "medium" | "low"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -303,6 +447,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "student"],
+      topic_priority: ["high", "medium", "low"],
     },
   },
 } as const
