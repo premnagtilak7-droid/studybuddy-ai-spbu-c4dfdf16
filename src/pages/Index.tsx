@@ -11,7 +11,7 @@ const dateFilters = ["Yesterday", "Today", "This Week", "6 Months", "1 Year", "C
 
 export default function Dashboard() {
   const [activeFilter, setActiveFilter] = useState("This Week");
-  const navigate = useNavigate();
+  
   const subjects = useMemo(() => getSubjects(), []);
   const completedSubjects = subjects.filter(s => s.completedUnits >= s.targetUnits).length;
 
