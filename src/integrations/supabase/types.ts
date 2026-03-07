@@ -106,6 +106,42 @@ export type Database = {
         }
         Relationships: []
       }
+      subjects: {
+        Row: {
+          code: string
+          color: string
+          completed_units: number
+          created_at: string
+          id: string
+          name: string
+          target_units: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          color?: string
+          completed_units?: number
+          created_at?: string
+          id?: string
+          name: string
+          target_units?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          color?: string
+          completed_units?: number
+          created_at?: string
+          id?: string
+          name?: string
+          target_units?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
