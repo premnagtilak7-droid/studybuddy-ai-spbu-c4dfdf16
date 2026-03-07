@@ -56,7 +56,8 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="glass-card p-4"
+              className={`glass-card p-4 ${(stat as any).clickable ? "cursor-pointer hover:ring-2 hover:ring-primary/30" : ""}`}
+              onClick={() => (stat as any).clickable && navigate("/subject-management")}
             >
               <div className="flex items-start justify-between">
                 <div>

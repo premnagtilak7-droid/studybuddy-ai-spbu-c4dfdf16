@@ -17,6 +17,7 @@ const navItems = [
   { icon: BarChart3, label: "Stats Center", path: "/" },
   { icon: Calendar, label: "Timetable", path: "/timetable" },
   { icon: BookOpen, label: "Subjects", path: "/subjects" },
+  { icon: BookOpen, label: "Manage Subjects", path: "/subject-management" },
   { icon: MessageSquare, label: "AI Doubt Solver", path: "/ai-solver" },
   { icon: Trophy, label: "Study Room", path: "/study-room" },
 ];

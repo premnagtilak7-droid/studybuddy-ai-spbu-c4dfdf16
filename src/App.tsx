@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Timetable from "./pages/Timetable";
 import Subjects from "./pages/Subjects";
+import SubjectManagement from "./pages/SubjectManagement";
 import AISolver from "./pages/AISolver";
 import StudyRoom from "./pages/StudyRoom";
 import NotFound from "./pages/NotFound";
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/timetable" element={<Timetable />} />
           <Route path="/subjects" element={<Subjects />} />
+          <Route path="/subject-management" element={<SubjectManagement />} />
           <Route path="/ai-solver" element={<AISolver />} />
           <Route path="/study-room" element={<StudyRoom />} />
           <Route path="*" element={<NotFound />} />
