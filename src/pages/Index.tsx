@@ -1,21 +1,26 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Clock, Flame, BookOpen, Target, TrendingUp, Calendar } from "lucide-react";
 import StudyHeatmap from "../components/StudyHeatmap";
 import SubjectChart from "../components/SubjectChart";
 import AppLayout from "../components/AppLayout";
+import { getSubjects } from "@/lib/subjects-store";
 
 const dateFilters = ["Yesterday", "Today", "This Week", "6 Months", "1 Year", "Custom"];
 
-const statCards = [
-  { label: "Today's Hours", value: "4.5h", icon: Clock, change: "+1.2h", color: "primary" },
-  { label: "Current Streak", value: "12 days", icon: Flame, change: "🔥 Best: 23", color: "accent" },
-  { label: "Subjects Covered", value: "5/5", icon: BookOpen, change: "All on track", color: "success" },
-  { label: "Weekly Target", value: "78%", icon: Target, change: "31.2/40h", color: "primary" },
-];
-
 export default function Dashboard() {
   const [activeFilter, setActiveFilter] = useState("This Week");
+  const navigate = useNavigate();
+  const subjects = useMemo(() => getSubjects(), []);
+  const completedSubjects = subjects.filter(s => s.completedUnits >= s.targetUnits).length;
+
+  const statCards = [
+    { label: "Today's Hours", value: "4.5h", icon: Clock, change: "+1.2h", color: "primary" },
+    { label: "Current Streak", value: "12 days", icon: Flame, change: "🔥 Best: 23", color: "accent" },
+    { label: "Subjects Covered", value: `${completedSubjects}/${subjects.length}`, icon: BookOpen, change: subjects.length > 0 ? "Click to manage" : "Add subjects", color: "success", clickable: true },
+    { label: "Weekly Target", value: "78%", icon: Target, change: "31.2/40h", color: "primary" },
+  ];
 
   return (
     <AppLayout>
@@ -51,7 +56,8 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="glass-card p-4"
+              className={`glass-card p-4 ${(stat as any).clickable ? "cursor-pointer hover:ring-2 hover:ring-primary/30" : ""}`}
+              onClick={() => (stat as any).clickable && navigate("/subject-management")}
             >
               <div className="flex items-start justify-between">
                 <div>
