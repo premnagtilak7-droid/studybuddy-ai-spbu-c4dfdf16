@@ -8,8 +8,10 @@ import Index from "./pages/Index";
 import Timetable from "./pages/Timetable";
 import Subjects from "./pages/Subjects";
 import SubjectManagement from "./pages/SubjectManagement";
+import SubjectDetail from "./pages/SubjectDetail";
 import AISolver from "./pages/AISolver";
 import StudyRoom from "./pages/StudyRoom";
+import ExamDates from "./pages/ExamDates";
 import AdminConsole from "./pages/AdminConsole";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -44,8 +46,10 @@ const AppRoutes = () => (
     <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
     <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
     <Route path="/subject-management" element={<ProtectedRoute><SubjectManagement /></ProtectedRoute>} />
+    <Route path="/subject/:id" element={<ProtectedRoute><SubjectDetail /></ProtectedRoute>} />
     <Route path="/ai-solver" element={<ProtectedRoute><AISolver /></ProtectedRoute>} />
     <Route path="/study-room" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
+    <Route path="/exam-dates" element={<ProtectedRoute><ExamDates /></ProtectedRoute>} />
     <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>

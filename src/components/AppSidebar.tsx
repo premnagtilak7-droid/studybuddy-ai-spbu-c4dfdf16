@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   BarChart3,
   BookOpen,
+  CalendarClock,
   Calendar,
   Trophy,
   MessageSquare,
