@@ -74,8 +74,10 @@ export default function Dashboard() {
                   <stat.icon className="w-4 h-4 text-primary-foreground" />
                 </div>
               </div>
+              </CardWrapper>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Heatmap */}
