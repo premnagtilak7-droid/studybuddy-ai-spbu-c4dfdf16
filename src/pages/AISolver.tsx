@@ -65,7 +65,7 @@ function DoubtHistory({ onClose }: { onClose: () => void }) {
                 {d.image_url && <img src={d.image_url} alt="Query" className="max-h-32 rounded-lg" />}
                 <p className="text-sm font-medium text-foreground">{d.question}</p>
                 <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground border-t border-border pt-2 mt-2">
-                  <ReactMarkdown>{d.answer.slice(0, 300)}{d.answer.length > 300 ? "..." : ""}</ReactMarkdown>
+                  <ReactMarkdown>{d.answer.slice(0, 300) + (d.answer.length > 300 ? "..." : "")}</ReactMarkdown>
                 </div>
               </div>
             ))}
