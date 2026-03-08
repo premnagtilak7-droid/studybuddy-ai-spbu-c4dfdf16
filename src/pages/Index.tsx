@@ -8,6 +8,7 @@ import WeeklyReport from "../components/WeeklyReport";
 import AppLayout from "../components/AppLayout";
 import CircularProgress from "../components/CircularProgress";
 import DashboardSearch from "../components/DashboardSearch";
+import SubjectProgressBar from "../components/SubjectProgressBar";
 import OnboardingWizard from "../components/OnboardingWizard";
 import QuickExamModal from "../components/QuickExamModal";
 import DailyStudyGoal from "../components/DailyStudyGoal";
