@@ -15,6 +15,10 @@ import StudyRoom from "./pages/StudyRoom";
 import StudyPlanGenerator from "./pages/StudyPlanGenerator";
 import ExamDates from "./pages/ExamDates";
 import AdminConsole from "./pages/AdminConsole";
+import AIMockTest from "./pages/AIMockTest";
+import AIAnswerChecker from "./pages/AIAnswerChecker";
+import AIFormulaSheet from "./pages/AIFormulaSheet";
+import AIExamPredictor from "./pages/AIExamPredictor";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
