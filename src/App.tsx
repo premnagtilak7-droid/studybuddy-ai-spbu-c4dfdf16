@@ -11,6 +11,7 @@ import SubjectManagement from "./pages/SubjectManagement";
 import SubjectDetail from "./pages/SubjectDetail";
 import AISolver from "./pages/AISolver";
 import StudyRoom from "./pages/StudyRoom";
+import StudyPlanGenerator from "./pages/StudyPlanGenerator";
 import ExamDates from "./pages/ExamDates";
 import AdminConsole from "./pages/AdminConsole";
 import Auth from "./pages/Auth";
@@ -48,6 +49,7 @@ const AppRoutes = () => (
     <Route path="/subject-management" element={<ProtectedRoute><SubjectManagement /></ProtectedRoute>} />
     <Route path="/subject/:id" element={<ProtectedRoute><SubjectDetail /></ProtectedRoute>} />
     <Route path="/ai-solver" element={<ProtectedRoute><AISolver /></ProtectedRoute>} />
+    <Route path="/study-plan" element={<ProtectedRoute><StudyPlanGenerator /></ProtectedRoute>} />
     <Route path="/study-room" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
     <Route path="/exam-dates" element={<ProtectedRoute><ExamDates /></ProtectedRoute>} />
     <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />

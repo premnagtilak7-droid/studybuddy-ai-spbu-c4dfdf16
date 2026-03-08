@@ -17,6 +17,7 @@ import {
   Flame,
   Settings,
   User,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStudyStreak } from "@/lib/study-tracker";
@@ -34,6 +35,7 @@ const navItems = [
   { icon: BookOpen, label: "Subjects", path: "/subjects" },
   { icon: BookOpen, label: "Manage Subjects", path: "/subject-management" },
   { icon: MessageSquare, label: "AI Doubt Solver", path: "/ai-solver" },
+  { icon: Sparkles, label: "AI Study Plan", path: "/study-plan" },
   { icon: CalendarClock, label: "Exam Dates", path: "/exam-dates" },
   { icon: Trophy, label: "Study Room", path: "/study-room" },
 ];
