@@ -61,6 +61,13 @@ export default function AppSidebar() {
   const navigate = useNavigate();
   const { isAdmin, user, signOut } = useAuth();
   const streak = getStudyStreak();
+  const [xp, setXP] = useState(0);
+
+  useEffect(() => {
+    getUserXP().then(setXP);
+  }, []);
+
+  const level = getLevel(xp);
 
   const handleSignOut = async () => {
     setSigningOut(true);
