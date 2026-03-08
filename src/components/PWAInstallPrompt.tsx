@@ -42,7 +42,7 @@ const PWAInstallPrompt = forwardRef<HTMLDivElement>(function PWAInstallPrompt(_p
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm bg-card border border-border rounded-xl shadow-lg p-4 flex items-center gap-3">
+    <div ref={ref} className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm bg-card border border-border rounded-xl shadow-lg p-4 flex items-center gap-3">
       <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
         <Download className="w-5 h-5 text-primary" />
       </div>
@@ -56,4 +56,6 @@ const PWAInstallPrompt = forwardRef<HTMLDivElement>(function PWAInstallPrompt(_p
       </button>
     </div>
   );
-}
+});
+
+export default PWAInstallPrompt;

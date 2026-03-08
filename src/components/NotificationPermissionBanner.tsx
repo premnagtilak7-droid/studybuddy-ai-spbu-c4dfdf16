@@ -35,7 +35,7 @@ const NotificationPermissionBanner = forwardRef<HTMLDivElement>(function Notific
   };
 
   return (
-    <div className="fixed top-4 right-4 z-[100] w-80 bg-card border border-border rounded-xl shadow-lg p-4">
+    <div ref={ref} className="fixed top-4 right-4 z-[100] w-80 bg-card border border-border rounded-xl shadow-lg p-4">
       <button onClick={handleDismiss} className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-foreground">
         <X className="w-4 h-4" />
       </button>
@@ -54,4 +54,6 @@ const NotificationPermissionBanner = forwardRef<HTMLDivElement>(function Notific
       </div>
     </div>
   );
-}
+});
+
+export default NotificationPermissionBanner;
