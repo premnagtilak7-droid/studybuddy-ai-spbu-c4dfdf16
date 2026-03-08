@@ -34,6 +34,7 @@ import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
+import NotificationSettings from "./pages/NotificationSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -91,11 +92,15 @@ const AppRoutes = () => {
       <Route path="/marks" element={<ProtectedRoute><MarksTracker /></ProtectedRoute>} />
       <Route path="/assignments" element={<ProtectedRoute><AssignmentTracker /></ProtectedRoute>} />
       <Route path="/focus" element={<ProtectedRoute><FocusMode /></ProtectedRoute>} />
+      <Route path="/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };
+
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import NotificationPermissionBanner from "./components/NotificationPermissionBanner";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -105,6 +110,8 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
+          <PWAInstallPrompt />
+          <NotificationPermissionBanner />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
