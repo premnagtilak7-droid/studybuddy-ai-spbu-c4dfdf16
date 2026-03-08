@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Clock, Flame, BookOpen, Target, TrendingUp, Plus, AlertTriangle, CalendarClock, PlayCircle, Search, Info } from "lucide-react";
+import { Clock, Flame, BookOpen, Target, TrendingUp, Plus, AlertTriangle, CalendarClock, PlayCircle, Search, Info, Zap } from "lucide-react";
 import StudyHeatmap from "../components/StudyHeatmap";
 import SubjectChart from "../components/SubjectChart";
 import ExamCountdown from "../components/ExamCountdown";
@@ -17,12 +17,19 @@ import TimetableDayProgress from "../components/TimetableDayProgress";
 import RevisionSchedule from "../components/RevisionSchedule";
 import AchievementBadges from "../components/AchievementBadges";
 import GettingStartedChecklist from "../components/GettingStartedChecklist";
+import LevelBadge from "../components/LevelBadge";
+import WeeklyChallenges from "../components/WeeklyChallenges";
+import Leaderboard from "../components/Leaderboard";
+import { XPNotificationContainer } from "../components/XPNotification";
+import { emitXP } from "../components/XPNotification";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
 import { getExamDates, getNextExam, type ExamDate } from "@/lib/exam-store";
 import { getUnitsWithTopics, type Unit } from "@/lib/units-store";
 import { getLastStudied, getStudyStreak } from "@/lib/study-tracker";
+import { getUserXP, awardXP } from "@/lib/xp-store";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
@@ -33,9 +40,27 @@ export default function Dashboard() {
   const [subjectProgress, setSubjectProgress] = useState<Record<string, { total: number; done: number; unitsDone: number }>>({});
   const [allUnits, setAllUnits] = useState<Record<string, Unit[]>>({});
   const [examModalOpen, setExamModalOpen] = useState(false);
+  const [xp, setXP] = useState(0);
+  const [gamificationCounts, setGamificationCounts] = useState({ doubts: 0, plans: 0, tests: 0 });
 
   const lastStudied = getLastStudied();
   const streak = getStudyStreak();
+
+  useEffect(() => {
+    // Award daily login XP
+    awardXP("daily_login").then((amount) => {
+      if (amount > 0) emitXP(amount, "Daily login bonus");
+    });
+
+    // Award streak bonus
+    if (streak > 0) {
+      awardXP("streak_bonus").then((amount) => {
+        if (amount > 0) emitXP(amount, `${streak}-day streak bonus`);
+      });
+    }
+
+    getUserXP().then(setXP);
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -66,7 +91,25 @@ export default function Dashboard() {
       setAllUnits(unitsMap);
       setLoading(false);
     }).catch(() => setLoading(false));
+
+    // Load gamification counts
+    loadGamificationCounts();
   }, []);
+
+  async function loadGamificationCounts() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const [doubts, plans, tests] = await Promise.all([
+      supabase.from("doubt_history").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("study_plans").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("mock_tests").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    ]);
+    setGamificationCounts({
+      doubts: doubts.count ?? 0,
+      plans: plans.count ?? 0,
+      tests: tests.count ?? 0,
+    });
+  }
 
   const nextExam = getNextExam(examDates);
   const isRevisionMode = nextExam && nextExam.daysLeft <= 7;
@@ -75,13 +118,11 @@ export default function Dashboard() {
   const completedTopics = Object.values(subjectProgress).reduce((a, p) => a + p.done, 0);
   const syllabusPercent = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
 
-  // Goal warning: check if any subject with target_grade has low progress vs days left
   const goalWarnings = subjects.filter(s => {
     if (!s.target_grade || !nextExam) return false;
     const prog = subjectProgress[s.id];
     if (!prog || prog.total === 0) return false;
     const progressPct = (prog.done / prog.total) * 100;
-    // Warn if progress% is less than (100 - daysLeft) — i.e. behind schedule
     const expectedPct = Math.max(0, 100 - nextExam.daysLeft * 2);
     return progressPct < expectedPct;
   });
@@ -90,11 +131,12 @@ export default function Dashboard() {
     { label: "Syllabus Done", value: `${syllabusPercent}%`, icon: Target, change: `${completedTopics}/${totalTopics} topics`, color: "primary" },
     { label: "Subjects", value: `${subjects.length}`, icon: BookOpen, change: "Click to manage", color: "success", onClick: () => navigate("/subject-management") },
     { label: "Next Exam", value: nextExam ? `${nextExam.daysLeft}d` : "—", icon: CalendarClock, change: nextExam?.exam.label || "Set exam dates", color: isRevisionMode ? "destructive" : "accent", onClick: () => setExamModalOpen(true) },
-    { label: "Study Streak", value: `${streak}`, icon: Flame, change: streak > 0 ? `${streak} day streak 🔥` : "Complete a topic!", color: "accent", tooltip: "Your streak increases by 1 each day you complete at least 1 topic. Don't miss a day or it resets!" },
+    { label: "XP Points", value: `${xp}`, icon: Zap, change: `Study to earn more XP`, color: "accent" },
   ];
 
   return (
     <AppLayout examDates={examDates}>
+      <XPNotificationContainer />
       <div className={`max-w-6xl mx-auto space-y-6 ${isRevisionMode ? "revision-mode" : ""}`}>
         {isRevisionMode && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
@@ -113,18 +155,19 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold text-foreground">Stats Center</h1>
             <p className="text-sm text-muted-foreground mt-1">Track your SPPU study progress</p>
           </div>
-          {streak > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/15 border border-accent/30">
-              <Flame className="w-4 h-4 text-accent" />
-              <span className="text-sm font-bold font-mono text-accent">{streak}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <LevelBadge xp={xp} compact />
+            {streak > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/15 border border-accent/30">
+                <Flame className="w-4 h-4 text-accent" />
+                <span className="text-sm font-bold font-mono text-accent">{streak}</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Search Bar */}
         <DashboardSearch subjects={subjects} allUnits={allUnits} />
 
-        {/* Resume Study */}
         {lastStudied && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <button
@@ -145,7 +188,6 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* Goal Warnings */}
         {goalWarnings.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             className="p-4 rounded-xl bg-accent/10 border border-accent/30"
@@ -175,19 +217,7 @@ export default function Dashboard() {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
-                    {stat.label}
-                    {stat.tooltip && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="w-3 h-3 text-muted-foreground/60 cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[220px] text-xs">
-                          <p>{stat.tooltip}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                  </p>
+                  <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
                   <p className="text-2xl font-bold font-mono mt-1 text-foreground">{stat.value}</p>
                   <p className="text-[11px] text-muted-foreground font-mono mt-1 flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" /> {stat.change}
@@ -201,6 +231,11 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* XP Level Progress */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
+          <LevelBadge xp={xp} />
+        </motion.div>
+
         {subjects.length === 0 && !loading ? (
           <OnboardingWizard />
         ) : !loading ? (
@@ -213,6 +248,9 @@ export default function Dashboard() {
               hasTimetable={!!localStorage.getItem("sppu_timetable_visited")}
             />
             <ExamCountdown exam={nextExam?.exam} daysLeft={nextExam?.daysLeft} />
+
+            <WeeklyChallenges />
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <DailyStudyGoal />
               <TimetableDayProgress />
@@ -223,13 +261,19 @@ export default function Dashboard() {
 
             <WeeklyStudyChart />
 
-            <AchievementBadges
-              subjectCount={subjects.length}
-              streak={streak}
-              syllabusPercent={syllabusPercent}
-              examCount={examDates.length}
-              pomodoroSessions={0}
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <AchievementBadges
+                subjectCount={subjects.length}
+                streak={streak}
+                syllabusPercent={syllabusPercent}
+                examCount={examDates.length}
+                pomodoroSessions={0}
+                doubtsAsked={gamificationCounts.doubts}
+                studyPlans={gamificationCounts.plans}
+                mockTests={gamificationCounts.tests}
+              />
+              <Leaderboard />
+            </div>
 
             <StudyHeatmap />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

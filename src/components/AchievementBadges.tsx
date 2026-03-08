@@ -11,6 +11,9 @@ interface AchievementBadgesProps {
   syllabusPercent: number;
   examCount: number;
   pomodoroSessions: number;
+  doubtsAsked?: number;
+  studyPlans?: number;
+  mockTests?: number;
 }
 
 export default function AchievementBadges({
@@ -19,6 +22,9 @@ export default function AchievementBadges({
   syllabusPercent,
   examCount,
   pomodoroSessions,
+  doubtsAsked = 0,
+  studyPlans = 0,
+  mockTests = 0,
 }: AchievementBadgesProps) {
   const [unlocked, setUnlocked] = useState<Set<string>>(new Set());
   const [checked, setChecked] = useState(false);
@@ -28,7 +34,6 @@ export default function AchievementBadges({
     getUnlockedBadges().then((keys) => setUnlocked(new Set(keys)));
   }, []);
 
-  // Check for new badges when context changes
   useEffect(() => {
     if (checked) return;
     if (subjectCount === undefined) return;
@@ -40,6 +45,9 @@ export default function AchievementBadges({
       examCount,
       subjectCount_total: subjectCount,
       pomodoroSessions,
+      doubtsAsked,
+      studyPlans,
+      mockTests,
     }).then((newBadges) => {
       if (newBadges.length > 0) {
         setUnlocked((prev) => {
@@ -57,16 +65,16 @@ export default function AchievementBadges({
       }
       setChecked(true);
     });
-  }, [subjectCount, streak, syllabusPercent, examCount, pomodoroSessions, checked, toast]);
+  }, [subjectCount, streak, syllabusPercent, examCount, pomodoroSessions, doubtsAsked, studyPlans, mockTests, checked, toast]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
       <h3 className="font-semibold text-foreground text-sm flex items-center gap-2 mb-4">
         <Award className="w-4 h-4 text-primary" />
-        Achievement Badges
+        Achievement Badges ({unlocked.size}/{BADGES.length})
       </h3>
 
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
         {BADGES.map((badge) => {
           const isUnlocked = unlocked.has(badge.key);
           return (

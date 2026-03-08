@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -28,6 +28,7 @@ import {
 import SupportTicketModal from "./SupportTicketModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStudyStreak } from "@/lib/study-tracker";
+import { getUserXP, getLevel } from "@/lib/xp-store";
 import { ThemeToggle } from "./ThemeToggle";
 import {
   DropdownMenu,
@@ -60,6 +61,13 @@ export default function AppSidebar() {
   const navigate = useNavigate();
   const { isAdmin, user, signOut } = useAuth();
   const streak = getStudyStreak();
+  const [xp, setXP] = useState(0);
+
+  useEffect(() => {
+    getUserXP().then(setXP);
+  }, []);
+
+  const level = getLevel(xp);
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -172,7 +180,9 @@ export default function AppSidebar() {
                   <p className="text-xs font-medium text-sidebar-accent-foreground truncate">
                     {user?.email}
                   </p>
-                  <p className="text-[10px] text-sidebar-foreground/60">Manage account</p>
+                  <p className="text-[10px] text-sidebar-foreground/60 flex items-center gap-1">
+                    {level.emoji} {level.name} · {xp} XP
+                  </p>
                 </div>
               )}
             </button>
