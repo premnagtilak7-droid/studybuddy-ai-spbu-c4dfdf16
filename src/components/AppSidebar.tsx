@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   BarChart3, BookOpen, CalendarClock, Calendar, Trophy, MessageSquare, ChevronLeft, ChevronRight, GraduationCap, Zap, Shield, LogOut, Flame, User, Sparkles, Loader2, HelpCircle, FileText, CheckCircle, Calculator, Target, Users, Heart, Share2, Rss, Layers, BookMarked, ClipboardList, Award, FlaskConical, Brain,
 } from "lucide-react";
+import { BellRing } from "lucide-react";
 import SupportTicketModal from "./SupportTicketModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStudyStreak } from "@/lib/study-tracker";
