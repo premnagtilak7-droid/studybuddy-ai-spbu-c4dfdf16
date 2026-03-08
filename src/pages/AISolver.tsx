@@ -1,168 +1,151 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, X, Sparkles, Languages, History, ArrowLeft, Copy, Check, BookOpen } from "lucide-react";
+import {
+  Send, Sparkles, Languages, History, Copy, Check, BookOpen,
+  HelpCircle, Calculator, FunctionSquare, FileText, Loader2, X, Trash2, ChevronDown, ChevronUp,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import AppLayout from "../components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { PaywallGate } from "@/components/PaywallGate";
 import { streamChat } from "@/lib/ai-stream";
 import { saveDoubt, getDoubts, deleteDoubt, type DoubtEntry } from "@/lib/doubt-store";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
 import { toast } from "sonner";
 
-type Msg = { role: "user" | "assistant"; content: string; image?: string };
+const QUESTION_TYPES = [
+  { value: "concept", label: "Concept Doubt", icon: HelpCircle },
+  { value: "numerical", label: "Numerical Problem", icon: Calculator },
+  { value: "formula", label: "Formula Help", icon: FunctionSquare },
+  { value: "definition", label: "Definition", icon: FileText },
+];
 
 const LANGUAGES = [
-  { value: "english", label: "English" },
-  { value: "marathi", label: "मराठी" },
-  { value: "hindi", label: "हिन्दी" },
+  { value: "english", label: "EN" },
+  { value: "marathi", label: "मरा" },
+  { value: "hindi", label: "हिं" },
 ];
 
-const QUESTION_TYPES = [
-  { value: "concept", label: "Concept" },
-  { value: "numerical", label: "Numerical" },
-  { value: "formula", label: "Formula" },
-  { value: "definition", label: "Definition" },
-];
-
+/* ─── Copy Button ─── */
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
   return (
-    <button onClick={handleCopy} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1">
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-7 text-xs gap-1"
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+    >
       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-      {copied ? "Copied" : "Copy"}
-    </button>
+      {copied ? "Copied!" : "Copy Answer"}
+    </Button>
   );
 }
 
-function DoubtHistory({ onClose }: { onClose: () => void }) {
-  const [doubts, setDoubts] = useState<DoubtEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getDoubts().then(setDoubts).catch(() => {}).finally(() => setLoading(false));
-  }, []);
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteDoubt(id);
-      setDoubts(d => d.filter(x => x.id !== id));
-    } catch { toast.error("Failed to delete"); }
-  };
+/* ─── Response Card ─── */
+function ResponseCard({ content }: { content: string }) {
+  // Parse markdown into sections by detecting ## headers
+  const sections = content.split(/(?=^##\s)/m).filter(Boolean);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)]">
-      <div className="flex items-center gap-3 pb-4">
-        <Button variant="ghost" size="icon" onClick={onClose}><ArrowLeft className="w-5 h-5" /></Button>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Doubt History</h1>
-          <p className="text-sm text-muted-foreground mt-1">{doubts.length} saved queries</p>
-        </div>
-      </div>
-      <ScrollArea className="flex-1">
-        {loading ? (
-          <p className="text-center text-muted-foreground py-8">Loading...</p>
-        ) : doubts.length === 0 ? (
-          <div className="text-center py-16">
-            <History className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">No saved doubts yet.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {doubts.map((d) => (
-              <div key={d.id} className="glass-card p-4 space-y-2">
-                <div className="flex items-start justify-between">
-                  <p className="text-xs text-muted-foreground font-mono">{new Date(d.created_at).toLocaleDateString()}</p>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(d.id)} className="text-destructive h-6 px-2"><X className="w-3 h-3" /></Button>
-                </div>
-                {d.image_url && <img src={d.image_url} alt="Query" className="max-h-32 rounded-lg" />}
-                <p className="text-sm font-medium text-foreground">{d.question}</p>
-                <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground border-t border-border pt-2 mt-2">
-                  <ReactMarkdown>{d.answer.slice(0, 300) + (d.answer.length > 300 ? "..." : "")}</ReactMarkdown>
-                </div>
-                <CopyButton text={d.answer} />
+    <Card className="border-primary/20">
+      <CardContent className="p-4 space-y-3">
+        {sections.length > 1 ? (
+          sections.map((sec, i) => (
+            <div key={i}>
+              {i > 0 && <Separator className="my-3" />}
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown>{sec}</ReactMarkdown>
               </div>
-            ))}
+            </div>
+          ))
+        ) : (
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown>{content}</ReactMarkdown>
           </div>
         )}
-      </ScrollArea>
-    </div>
+        <div className="flex justify-end pt-2">
+          <CopyButton text={content} />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
+/* ─── Main Component ─── */
 function AISolverChat() {
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [input, setInput] = useState("");
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [language, setLanguage] = useState("english");
-  const [questionType, setQuestionType] = useState("concept");
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [subjects, setSubjects] = useState<UserSubject[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [topicInput, setTopicInput] = useState("");
+  const [questionType, setQuestionType] = useState("concept");
+  const [doubtText, setDoubtText] = useState("");
+  const [language, setLanguage] = useState("english");
+  const [isLoading, setIsLoading] = useState(false);
+  const [response, setResponse] = useState("");
+  const [streamingDone, setStreamingDone] = useState(false);
+
+  // History state
+  const [doubts, setDoubts] = useState<DoubtEntry[]>([]);
+  const [historyFilter, setHistoryFilter] = useState("all");
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [expandedDoubt, setExpandedDoubt] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  const responseRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => { getSubjects().then(setSubjects).catch(() => {}); }, []);
+  useEffect(() => { loadHistory(); }, [historyFilter]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return; }
-    const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const data = await getDoubts(historyFilter);
+      setDoubts(data);
+    } catch { /* silent */ }
+    setHistoryLoading(false);
   };
 
   const send = async () => {
-    const text = input.trim();
-    if (!text && !imagePreview) return;
+    const text = doubtText.trim();
+    if (!text) { toast.error("Please enter your doubt"); return; }
 
-    const userContent = imagePreview
-      ? [...(text ? [{ type: "text" as const, text }] : []), { type: "image_url" as const, image_url: { url: imagePreview } }]
-      : text;
-
-    const subjectName = subjects.find(s => s.id === selectedSubject)?.name;
-    const userMsg: Msg = { role: "user", content: text || "(image uploaded)", image: imagePreview || undefined };
-    const savedImage = imagePreview || undefined;
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setImagePreview(null);
     setIsLoading(true);
+    setResponse("");
+    setStreamingDone(false);
+
+    const subjectName = subjects.find(s => s.id === selectedSubject)?.name || "General";
+    const fullQuestion = topicInput
+      ? `[Subject: ${subjectName}] [Topic: ${topicInput}]\n\n${text}`
+      : `[Subject: ${subjectName}]\n\n${text}`;
 
     let assistantSoFar = "";
-    const apiMessages = [
-      ...messages.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user" as const, content: userContent },
-    ];
+    const messages = [{ role: "user" as const, content: fullQuestion }];
 
     try {
       await streamChat({
-        messages: apiMessages as any,
+        messages,
         language,
         questionType,
         subject: subjectName,
         onDelta: (chunk) => {
           assistantSoFar += chunk;
-          setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last?.role === "assistant") {
-              return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
-            }
-            return [...prev, { role: "assistant", content: assistantSoFar }];
-          });
+          setResponse(assistantSoFar);
         },
-        onDone: () => {
+        onDone: async () => {
           setIsLoading(false);
-          if (assistantSoFar) saveDoubt(text || "(image uploaded)", assistantSoFar, savedImage);
+          setStreamingDone(true);
+          if (assistantSoFar) {
+            const subId = selectedSubject && selectedSubject !== "general" ? selectedSubject : null;
+            await saveDoubt(text, assistantSoFar, undefined, subId);
+            loadHistory();
+          }
+          setTimeout(() => responseRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         },
         onError: (err) => { toast.error(err); setIsLoading(false); },
       });
@@ -172,59 +155,34 @@ function AISolverChat() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  const handleDeleteDoubt = async (id: string) => {
+    try {
+      await deleteDoubt(id);
+      setDoubts(d => d.filter(x => x.id !== id));
+      toast.success("Doubt deleted");
+    } catch { toast.error("Failed to delete"); }
   };
 
-  if (showHistory) return <DoubtHistory onClose={() => setShowHistory(false)} />;
-
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)]">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">AI Doubt Solver</h1>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-primary" />
+            AI Doubt Solver
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">Powered by Gemini · SPPU 2024 Pattern</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setShowHistory(true)}>
-          <History className="w-4 h-4 mr-1" /> History
-        </Button>
-      </div>
-
-      {/* Controls bar */}
-      <div className="flex flex-wrap items-center gap-2 pb-3">
-        <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-          <SelectTrigger className="w-[180px] h-8 text-xs">
-            <BookOpen className="w-3 h-3 mr-1" />
-            <SelectValue placeholder="Select Subject" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="general">General</SelectItem>
-            {subjects.map(s => (
-              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={questionType} onValueChange={setQuestionType}>
-          <SelectTrigger className="w-[140px] h-8 text-xs">
-            <SelectValue placeholder="Question Type" />
-          </SelectTrigger>
-          <SelectContent>
-            {QUESTION_TYPES.map(qt => (
-              <SelectItem key={qt.value} value={qt.value}>{qt.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="flex items-center gap-1 ml-auto">
-          <Languages className="w-4 h-4 text-muted-foreground" />
+        <div className="flex items-center gap-1">
           {LANGUAGES.map((lang) => (
             <button
               key={lang.value}
               onClick={() => setLanguage(lang.value)}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-all ${
-                language === lang.value ? "gradient-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                language === lang.value
+                  ? "gradient-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground hover:bg-muted"
               }`}
             >
               {lang.label}
@@ -233,68 +191,194 @@ function AISolverChat() {
         </div>
       </div>
 
-      {/* Chat area */}
-      <ScrollArea className="flex-1 glass-card p-4 mb-3">
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center py-16">
-            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mb-4">
-              <Sparkles className="w-8 h-8 text-primary-foreground" />
+      {/* Input Form */}
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          {/* Row 1: Subject + Topic */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Subject</label>
+              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                <SelectTrigger className="h-9 text-sm">
+                  <BookOpen className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                  <SelectValue placeholder="Select Subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">General</SelectItem>
+                  {subjects.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name} ({s.code})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <h3 className="text-lg font-bold text-foreground">Ask any SPPU doubt</h3>
-            <p className="text-sm text-muted-foreground max-w-md mt-2">
-              Select your subject & question type above, then ask your doubt. Upload diagrams or handwritten notes too.
-            </p>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Topic (optional)</label>
+              <Input
+                value={topicInput}
+                onChange={e => setTopicInput(e.target.value)}
+                placeholder="e.g. Star-Delta Transformation"
+                className="h-9 text-sm"
+              />
+            </div>
           </div>
-        )}
-        <div className="space-y-4">
-          {messages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] rounded-xl px-4 py-3 ${
-                msg.role === "user" ? "gradient-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
-              }`}>
-                {msg.image && <img src={msg.image} alt="Uploaded" className="max-h-48 rounded-lg mb-2" />}
-                {msg.role === "assistant" ? (
-                  <div>
-                    <div className="prose prose-sm dark:prose-invert max-w-none"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
-                    <CopyButton text={msg.content} />
-                  </div>
-                ) : (
-                  <p className="text-sm">{msg.content}</p>
-                )}
-              </div>
-            </div>
-          ))}
-          {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-            <div className="flex justify-start">
-              <div className="bg-secondary rounded-xl px-4 py-3">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={bottomRef} />
-        </div>
-      </ScrollArea>
 
-      {/* Input area */}
-      <div className="glass-card p-3">
-        {imagePreview && (
-          <div className="flex items-center gap-2 mb-2 p-2 bg-secondary rounded-lg">
-            <img src={imagePreview} alt="Preview" className="h-16 rounded" />
-            <p className="text-xs text-muted-foreground flex-1">Image attached</p>
-            <Button variant="ghost" size="icon" onClick={() => setImagePreview(null)}><X className="w-4 h-4" /></Button>
+          {/* Row 2: Question Type */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Question Type</label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {QUESTION_TYPES.map(qt => {
+                const Icon = qt.icon;
+                const active = questionType === qt.value;
+                return (
+                  <button
+                    key={qt.value}
+                    onClick={() => setQuestionType(qt.value)}
+                    className={`flex items-center gap-2 p-2.5 rounded-lg text-xs font-medium transition-all border ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {qt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Row 3: Doubt text */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Your Doubt</label>
+            <Textarea
+              value={doubtText}
+              onChange={e => setDoubtText(e.target.value)}
+              placeholder="Type your doubt here... e.g. Explain Kirchhoff's Current Law with an example"
+              className="min-h-[120px] text-sm"
+              onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) send(); }}
+            />
+          </div>
+
+          {/* Send button */}
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-muted-foreground">Ctrl+Enter to send</p>
+            <Button onClick={send} disabled={isLoading || !doubtText.trim()} className="gap-2">
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {isLoading ? "Thinking..." : "Ask Gemini"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Streaming Response */}
+      {(response || isLoading) && (
+        <div ref={responseRef}>
+          <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            AI Response
+            {isLoading && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+          </h3>
+          {response ? (
+            <ResponseCard content={response} />
+          ) : (
+            <Card>
+              <CardContent className="p-6 flex items-center justify-center">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Doubt History */}
+      <div>
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary transition-colors w-full"
+        >
+          <History className="w-4 h-4" />
+          Doubt History ({doubts.length})
+          {showHistory ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
+        </button>
+
+        {showHistory && (
+          <div className="mt-3 space-y-3">
+            {/* Subject filter */}
+            <Select value={historyFilter} onValueChange={setHistoryFilter}>
+              <SelectTrigger className="w-[200px] h-8 text-xs">
+                <SelectValue placeholder="Filter by subject" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Subjects</SelectItem>
+                {subjects.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {historyLoading ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : doubts.length === 0 ? (
+              <div className="text-center py-8">
+                <History className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No doubts found</p>
+              </div>
+            ) : (
+              <ScrollArea className="max-h-[500px]">
+                <div className="space-y-2 pr-2">
+                  {doubts.map((d) => {
+                    const isExpanded = expandedDoubt === d.id;
+                    const subjectMatch = subjects.find(s => s.id === d.subject_id);
+                    return (
+                      <Card key={d.id} className="overflow-hidden">
+                        <CardContent className="p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <button
+                              onClick={() => setExpandedDoubt(isExpanded ? null : d.id)}
+                              className="flex-1 text-left"
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                {subjectMatch && (
+                                  <Badge variant="secondary" className="text-[10px] h-5">{subjectMatch.name}</Badge>
+                                )}
+                                <span className="text-[10px] text-muted-foreground">
+                                  {new Date(d.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <p className="text-sm font-medium text-foreground line-clamp-2">{d.question}</p>
+                            </button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteDoubt(d.id); }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          {isExpanded && (
+                            <div className="mt-3 pt-3 border-t border-border">
+                              <ResponseCard content={d.answer} />
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
           </div>
         )}
-        <div className="flex items-end gap-2">
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-          <Button variant="outline" size="icon" onClick={() => fileRef.current?.click()} className="shrink-0"><Upload className="w-4 h-4" /></Button>
-          <Textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
-            placeholder="Ask about Star-Delta, Laplace transforms, truss analysis..." className="min-h-[44px] max-h-32 resize-none" rows={1} />
-          <Button onClick={send} disabled={isLoading && !input.trim()} className="shrink-0"><Send className="w-4 h-4" /></Button>
-        </div>
       </div>
     </div>
   );
@@ -303,7 +387,7 @@ function AISolverChat() {
 export default function AISolver() {
   return (
     <AppLayout>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-4xl mx-auto pb-8">
         <PaywallGate featureName="AI Doubt Solver"><AISolverChat /></PaywallGate>
       </div>
     </AppLayout>
