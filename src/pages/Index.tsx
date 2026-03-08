@@ -4,7 +4,7 @@ import { Clock, Flame, BookOpen, Target, TrendingUp, Plus, AlertTriangle, Calend
 import StudyHeatmap from "../components/StudyHeatmap";
 import SubjectChart from "../components/SubjectChart";
 import ExamCountdown from "../components/ExamCountdown";
-import WeeklyReport from "../components/WeeklyReport";
+import WeeklyProgressSummary from "../components/WeeklyProgressSummary";
 import AppLayout from "../components/AppLayout";
 import CircularProgress from "../components/CircularProgress";
 import DashboardSearch from "../components/DashboardSearch";
@@ -213,11 +213,11 @@ export default function Dashboard() {
               hasTimetable={!!localStorage.getItem("sppu_timetable_visited")}
             />
             <ExamCountdown exam={nextExam?.exam} daysLeft={nextExam?.daysLeft} />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <DailyStudyGoal />
               <TimetableDayProgress />
-              <WeeklyReport subjects={subjects} subjectProgress={subjectProgress} syllabusPercent={syllabusPercent} />
             </div>
+            <WeeklyProgressSummary subjects={subjects} subjectProgress={subjectProgress} syllabusPercent={syllabusPercent} />
 
             <RevisionSchedule subjects={subjects} />
 
