@@ -108,7 +108,6 @@ export async function sendLocalNotification(title: string, body: string, type: s
           body,
           icon: "/pwa-192x192.png",
           badge: "/pwa-192x192.png",
-          vibrate: [200, 100, 200],
           tag: type,
         });
       } else {
