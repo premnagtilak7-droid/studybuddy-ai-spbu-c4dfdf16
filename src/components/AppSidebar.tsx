@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   BarChart3,
@@ -18,6 +18,7 @@ import {
   Settings,
   User,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStudyStreak } from "@/lib/study-tracker";
@@ -42,9 +43,26 @@ const navItems = [
 
 export default function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAdmin, user, signOut } = useAuth();
   const streak = getStudyStreak();
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+      // Clear any local storage data
+      localStorage.removeItem("study-tracker");
+      localStorage.removeItem("daily-goal");
+      navigate("/auth", { replace: true });
+    } catch (e) {
+      console.error("Sign out error:", e);
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   return (
     <motion.aside
@@ -132,9 +150,9 @@ export default function AppSidebar() {
                 <DropdownMenuSeparator />
               </>
             )}
-            <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
-              <LogOut className="w-4 h-4" />
-              Sign Out
+            <DropdownMenuItem onClick={handleSignOut} disabled={signingOut} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
+              {signingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+              {signingOut ? "Signing out..." : "Sign Out"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
