@@ -31,6 +31,9 @@ import MarksTracker from "./pages/MarksTracker";
 import AssignmentTracker from "./pages/AssignmentTracker";
 import FocusMode from "./pages/FocusMode";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +64,9 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+      <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
       <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
