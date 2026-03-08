@@ -97,7 +97,7 @@ export default function NotificationBell({ examDates = [] }: NotificationBellPro
         <button className="relative p-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors">
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
               {unreadCount}
             </span>
           )}
