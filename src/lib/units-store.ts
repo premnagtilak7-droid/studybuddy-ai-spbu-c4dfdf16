@@ -16,6 +16,7 @@ export type Topic = {
   is_completed: boolean;
   priority: "high" | "medium" | "low";
   created_at: string;
+  completed_at: string | null;
 };
 
 export async function getUnitsWithTopics(subjectId: string): Promise<Unit[]> {
