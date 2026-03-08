@@ -99,6 +99,9 @@ const AppRoutes = () => {
   );
 };
 
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import NotificationPermissionBanner from "./components/NotificationPermissionBanner";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -107,6 +110,8 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
+          <PWAInstallPrompt />
+          <NotificationPermissionBanner />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

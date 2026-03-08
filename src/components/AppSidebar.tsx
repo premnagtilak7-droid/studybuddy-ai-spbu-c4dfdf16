@@ -47,6 +47,7 @@ const navItems = [
   { icon: Award, label: "Marks & CGPA", path: "/marks" },
   { icon: FlaskConical, label: "Assignments & Labs", path: "/assignments" },
   { icon: Brain, label: "Focus Mode", path: "/focus" },
+  { icon: BellRing, label: "Notifications", path: "/notifications" },
 ];
 
 export default function AppSidebar() {
