@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { BellRing, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requestNotificationPermission, getPermissionStatus } from "@/lib/notifications";
 import { toast } from "sonner";
 
-export default function NotificationPermissionBanner() {
+const NotificationPermissionBanner = forwardRef<HTMLDivElement>(function NotificationPermissionBanner(_props, ref) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
