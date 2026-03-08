@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Clock, Flame, BookOpen, Target, TrendingUp, Plus, AlertTriangle, CalendarClock, PlayCircle, Search } from "lucide-react";
+import { Clock, Flame, BookOpen, Target, TrendingUp, Plus, AlertTriangle, CalendarClock, PlayCircle, Search, Info } from "lucide-react";
 import StudyHeatmap from "../components/StudyHeatmap";
 import SubjectChart from "../components/SubjectChart";
 import ExamCountdown from "../components/ExamCountdown";
@@ -10,6 +10,7 @@ import CircularProgress from "../components/CircularProgress";
 import DashboardSearch from "../components/DashboardSearch";
 import OnboardingWizard from "../components/OnboardingWizard";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
 import { getExamDates, getNextExam, type ExamDate } from "@/lib/exam-store";
 import { getUnitsWithTopics, type Unit } from "@/lib/units-store";
@@ -80,7 +81,7 @@ export default function Dashboard() {
     { label: "Syllabus Done", value: `${syllabusPercent}%`, icon: Target, change: `${completedTopics}/${totalTopics} topics`, color: "primary" },
     { label: "Subjects", value: `${subjects.length}`, icon: BookOpen, change: "Click to manage", color: "success", onClick: () => navigate("/subject-management") },
     { label: "Next Exam", value: nextExam ? `${nextExam.daysLeft}d` : "—", icon: CalendarClock, change: nextExam?.exam.label || "Set exam dates", color: isRevisionMode ? "destructive" : "accent" },
-    { label: "Study Streak", value: `${streak}`, icon: Flame, change: streak > 0 ? `${streak} day streak 🔥` : "Complete a topic!", color: "accent" },
+    { label: "Study Streak", value: `${streak}`, icon: Flame, change: streak > 0 ? `${streak} day streak 🔥` : "Complete a topic!", color: "accent", tooltip: "Your streak increases by 1 each day you complete at least 1 topic. Don't miss a day or it resets!" },
   ];
 
   return (
@@ -165,7 +166,19 @@ export default function Dashboard() {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                  <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                    {stat.label}
+                    {stat.tooltip && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3 h-3 text-muted-foreground/60 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[220px] text-xs">
+                          <p>{stat.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </p>
                   <p className="text-2xl font-bold font-mono mt-1 text-foreground">{stat.value}</p>
                   <p className="text-[11px] text-muted-foreground font-mono mt-1 flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" /> {stat.change}
