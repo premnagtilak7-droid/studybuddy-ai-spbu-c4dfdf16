@@ -11,6 +11,7 @@ import DashboardSearch from "../components/DashboardSearch";
 import SubjectProgressBar from "../components/SubjectProgressBar";
 import OnboardingWizard from "../components/OnboardingWizard";
 import QuickExamModal from "../components/QuickExamModal";
+import WeeklyStudyChart from "../components/WeeklyStudyChart";
 import DailyStudyGoal from "../components/DailyStudyGoal";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
