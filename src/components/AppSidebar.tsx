@@ -20,6 +20,10 @@ import {
   Sparkles,
   Loader2,
   HelpCircle,
+  FileText,
+  CheckCircle,
+  Calculator,
+  Target,
 } from "lucide-react";
 import SupportTicketModal from "./SupportTicketModal";
 import { useAuth } from "@/contexts/AuthContext";
