@@ -8,6 +8,7 @@ import WeeklyReport from "../components/WeeklyReport";
 import AppLayout from "../components/AppLayout";
 import CircularProgress from "../components/CircularProgress";
 import DashboardSearch from "../components/DashboardSearch";
+import SubjectProgressBar from "../components/SubjectProgressBar";
 import OnboardingWizard from "../components/OnboardingWizard";
 import QuickExamModal from "../components/QuickExamModal";
 import DailyStudyGoal from "../components/DailyStudyGoal";
@@ -221,7 +222,7 @@ export default function Dashboard() {
                     return (
                       <div
                         key={subj.id}
-                        className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
+                        className="p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
                         onClick={() => navigate(`/subject/${subj.id}`)}
                       >
                         <div className="flex items-center gap-3">
@@ -234,6 +235,7 @@ export default function Dashboard() {
                             </p>
                           </div>
                         </div>
+                        <SubjectProgressBar done={prog.done} total={prog.total} className="mt-2" />
                       </div>
                     );
                   })}

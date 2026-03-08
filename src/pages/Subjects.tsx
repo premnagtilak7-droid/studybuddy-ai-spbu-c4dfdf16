@@ -5,6 +5,7 @@ import { BookOpen, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AppLayout from "../components/AppLayout";
 import CircularProgress from "../components/CircularProgress";
+import SubjectProgressBar from "../components/SubjectProgressBar";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
 import { getUnitsWithTopics } from "@/lib/units-store";
 
@@ -79,6 +80,7 @@ export default function Subjects() {
                       <p className="text-xs font-mono text-muted-foreground">{subj.code}</p>
                     </div>
                   </div>
+                  <SubjectProgressBar done={p.topicsDone} total={p.topicsTotal} className="mb-2" />
                   <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
                     <span>{p.topicsDone}/{p.topicsTotal} topics</span>
                     <ChevronRight className="w-4 h-4" />
