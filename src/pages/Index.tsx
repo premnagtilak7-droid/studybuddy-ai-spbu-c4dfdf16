@@ -202,8 +202,15 @@ export default function Dashboard() {
 
         {subjects.length === 0 && !loading ? (
           <OnboardingWizard />
-        ) : (
+        ) : !loading ? (
           <>
+            <GettingStartedChecklist
+              subjects={subjects}
+              examDates={examDates}
+              totalTopics={totalTopics}
+              completedTopics={completedTopics}
+              hasTimetable={!!localStorage.getItem("sppu_timetable")}
+            />
             <ExamCountdown exam={nextExam?.exam} daysLeft={nextExam?.daysLeft} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <DailyStudyGoal />
