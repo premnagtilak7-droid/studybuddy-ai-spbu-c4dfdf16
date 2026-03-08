@@ -31,8 +31,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const checkRole = async (userId: string) => {
-    const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+  const checkRole = async (userId: string, email?: string) => {
+    console.log("Checking admin role for:", email, userId);
+    
+    // Hardcoded backup check
+    if (email === "nagtilakprem99@gmail.com") {
+      console.log("Admin email matched (hardcoded check)");
+      setIsAdmin(true);
+      return;
+    }
+    
+    const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    console.log("has_role RPC result:", data, error);
     setIsAdmin(!!data);
   };
 
