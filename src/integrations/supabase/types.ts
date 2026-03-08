@@ -76,6 +76,30 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_study_goals: {
+        Row: {
+          created_at: string
+          id: string
+          target_hours: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          target_hours?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          target_hours?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       doubt_history: {
         Row: {
           answer: string
@@ -181,6 +205,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      study_logs: {
+        Row: {
+          duration_minutes: number
+          id: string
+          logged_at: string
+          subject_id: string | null
+          user_id: string
+        }
+        Insert: {
+          duration_minutes?: number
+          id?: string
+          logged_at?: string
+          subject_id?: string | null
+          user_id: string
+        }
+        Update: {
+          duration_minutes?: number
+          id?: string
+          logged_at?: string
+          subject_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_logs_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subjects: {
         Row: {
