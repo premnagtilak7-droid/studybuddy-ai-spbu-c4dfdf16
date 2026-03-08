@@ -35,13 +35,13 @@ export function useActivityTracker() {
     const feature = featureMap[path] || path.startsWith("/subject/") ? "subject_detail" : "unknown";
     const resolvedFeature = featureMap[path] || feature;
 
-    supabase.from("activity_logs").insert({
+    supabase.from("activity_logs").insert([{
       user_id: user.id,
       feature: resolvedFeature,
       action: "page_view",
       device_type: getDeviceType(),
-      metadata: { path },
-    }).then(() => {});
+      metadata: { path } as any,
+    }]).then(() => {});
   }, [location.pathname, user]);
 }
 
