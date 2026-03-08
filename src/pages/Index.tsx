@@ -166,7 +166,19 @@ export default function Dashboard() {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                  <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                    {stat.label}
+                    {stat.tooltip && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3 h-3 text-muted-foreground/60 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[220px] text-xs">
+                          <p>{stat.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </p>
                   <p className="text-2xl font-bold font-mono mt-1 text-foreground">{stat.value}</p>
                   <p className="text-[11px] text-muted-foreground font-mono mt-1 flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" /> {stat.change}
