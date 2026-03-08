@@ -279,6 +279,7 @@ export type Database = {
       }
       topics: {
         Row: {
+          completed_at: string | null
           created_at: string
           id: string
           is_completed: boolean
@@ -287,6 +288,7 @@ export type Database = {
           unit_id: string
         }
         Insert: {
+          completed_at?: string | null
           created_at?: string
           id?: string
           is_completed?: boolean
@@ -295,6 +297,7 @@ export type Database = {
           unit_id: string
         }
         Update: {
+          completed_at?: string | null
           created_at?: string
           id?: string
           is_completed?: boolean
