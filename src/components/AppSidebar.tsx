@@ -43,9 +43,26 @@ const navItems = [
 
 export default function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAdmin, user, signOut } = useAuth();
   const streak = getStudyStreak();
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+      // Clear any local storage data
+      localStorage.removeItem("study-tracker");
+      localStorage.removeItem("daily-goal");
+      navigate("/auth", { replace: true });
+    } catch (e) {
+      console.error("Sign out error:", e);
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   return (
     <motion.aside
