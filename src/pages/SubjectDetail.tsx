@@ -70,7 +70,7 @@ export default function SubjectDetail() {
   const handleToggle = async (topicId: string, current: boolean, topicName: string, unitName: string) => {
     try {
       await toggleTopic(topicId, !current);
-      // Track study activity
+      // Track study activity and award XP when marking complete
       if (!current && subject) {
         recordStudySession();
         setLastStudied({
@@ -80,6 +80,8 @@ export default function SubjectDetail() {
           unitName,
           timestamp: Date.now(),
         });
+        const amount = await awardXP("topic_complete");
+        if (amount > 0) toast.success(`+${amount} XP for completing topic!`);
       }
       loadData();
     } catch (err: any) { toast.error(err.message); }
