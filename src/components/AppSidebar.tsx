@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  BarChart3, BookOpen, CalendarClock, Calendar, Trophy, MessageSquare, ChevronLeft, ChevronRight, GraduationCap, Zap, Shield, LogOut, Flame, User, Sparkles, Loader2, HelpCircle, FileText, CheckCircle, Calculator, Target, Users, Heart, Share2, Rss,
+  BarChart3, BookOpen, CalendarClock, Calendar, Trophy, MessageSquare, ChevronLeft, ChevronRight, GraduationCap, Zap, Shield, LogOut, Flame, User, Sparkles, Loader2, HelpCircle, FileText, CheckCircle, Calculator, Target, Users, Heart, Share2, Rss, Layers, BookMarked, ClipboardList, Award, FlaskConical, Brain,
 } from "lucide-react";
 import SupportTicketModal from "./SupportTicketModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +35,12 @@ const navItems = [
   { icon: Heart, label: "Study Buddy", path: "/study-buddy" },
   { icon: Share2, label: "Share Progress", path: "/share-progress" },
   { icon: Rss, label: "Batch Feed", path: "/batch-feed" },
+  { icon: Layers, label: "Flashcards", path: "/flashcards" },
+  { icon: BookMarked, label: "Formula Bank", path: "/formula-bank" },
+  { icon: ClipboardList, label: "Attendance", path: "/attendance" },
+  { icon: Award, label: "Marks & CGPA", path: "/marks" },
+  { icon: FlaskConical, label: "Assignments & Labs", path: "/assignments" },
+  { icon: Brain, label: "Focus Mode", path: "/focus" },
 ];
 
 export default function AppSidebar() {

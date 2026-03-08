@@ -113,6 +113,92 @@ export type Database = {
         }
         Relationships: []
       }
+      assignments: {
+        Row: {
+          created_at: string
+          deadline: string | null
+          id: string
+          status: string
+          subject: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          status?: string
+          subject: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          status?: string
+          subject?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      attendance_records: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          status: string
+          subject_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          status?: string
+          subject_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          status?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_subjects: {
+        Row: {
+          created_at: string
+          id: string
+          lectures_per_week: number
+          subject_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lectures_per_week?: number
+          subject_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lectures_per_week?: number
+          subject_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       batch_profiles: {
         Row: {
           branch: string
@@ -185,6 +271,30 @@ export type Database = {
           id?: string
           status?: string
           to_user_id?: string
+        }
+        Relationships: []
+      }
+      cgpa_history: {
+        Row: {
+          created_at: string
+          id: string
+          semester: number
+          sgpa: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          semester: number
+          sgpa: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          semester?: number
+          sgpa?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -400,6 +510,166 @@ export type Database = {
           },
         ]
       }
+      flashcard_decks: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          subject: string
+          topic: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          subject: string
+          topic?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          subject?: string
+          topic?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      flashcards: {
+        Row: {
+          back: string
+          created_at: string
+          deck_id: string
+          front: string
+          id: string
+          next_review_at: string
+          review_count: number
+          status: string
+        }
+        Insert: {
+          back: string
+          created_at?: string
+          deck_id: string
+          front: string
+          id?: string
+          next_review_at?: string
+          review_count?: number
+          status?: string
+        }
+        Update: {
+          back?: string
+          created_at?: string
+          deck_id?: string
+          front?: string
+          id?: string
+          next_review_at?: string
+          review_count?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcards_deck_id_fkey"
+            columns: ["deck_id"]
+            isOneToOne: false
+            referencedRelation: "flashcard_decks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      focus_sessions: {
+        Row: {
+          completed: boolean
+          created_at: string
+          duration_minutes: number
+          id: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          duration_minutes: number
+          id?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      formula_bank: {
+        Row: {
+          created_at: string
+          example: string | null
+          formula: string
+          id: string
+          is_custom: boolean
+          name: string
+          subject: string
+          user_id: string
+          variables: string | null
+        }
+        Insert: {
+          created_at?: string
+          example?: string | null
+          formula: string
+          id?: string
+          is_custom?: boolean
+          name: string
+          subject: string
+          user_id: string
+          variables?: string | null
+        }
+        Update: {
+          created_at?: string
+          example?: string | null
+          formula?: string
+          id?: string
+          is_custom?: boolean
+          name?: string
+          subject?: string
+          user_id?: string
+          variables?: string | null
+        }
+        Relationships: []
+      }
+      formula_bookmarks: {
+        Row: {
+          created_at: string
+          formula_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          formula_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          formula_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formula_bookmarks_formula_id_fkey"
+            columns: ["formula_id"]
+            isOneToOne: false
+            referencedRelation: "formula_bank"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       formula_sheets: {
         Row: {
           content: Json
@@ -587,6 +857,90 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lab_experiments: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          experiment_name: string
+          id: string
+          is_completed: boolean
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          experiment_name: string
+          id?: string
+          is_completed?: boolean
+          subject: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          experiment_name?: string
+          id?: string
+          is_completed?: boolean
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      marks_tracker: {
+        Row: {
+          assignment_marks: number | null
+          assignment_total: number
+          attendance_marks: number | null
+          attendance_total: number
+          created_at: string
+          credits: number
+          ia1_marks: number | null
+          ia1_total: number
+          ia2_marks: number | null
+          ia2_total: number
+          id: string
+          semester: number
+          subject_name: string
+          target_grade: string | null
+          user_id: string
+        }
+        Insert: {
+          assignment_marks?: number | null
+          assignment_total?: number
+          attendance_marks?: number | null
+          attendance_total?: number
+          created_at?: string
+          credits?: number
+          ia1_marks?: number | null
+          ia1_total?: number
+          ia2_marks?: number | null
+          ia2_total?: number
+          id?: string
+          semester?: number
+          subject_name: string
+          target_grade?: string | null
+          user_id: string
+        }
+        Update: {
+          assignment_marks?: number | null
+          assignment_total?: number
+          attendance_marks?: number | null
+          attendance_total?: number
+          created_at?: string
+          credits?: number
+          ia1_marks?: number | null
+          ia1_total?: number
+          ia2_marks?: number | null
+          ia2_total?: number
+          id?: string
+          semester?: number
+          subject_name?: string
+          target_grade?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       mock_tests: {
         Row: {
