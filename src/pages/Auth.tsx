@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { GraduationCap, Mail, Lock, User, LogIn, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
