@@ -64,13 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        console.log("Auth state changed:", _event, "email:", session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Use setTimeout to avoid Supabase client deadlock
           setTimeout(async () => {
             await Promise.all([
-              checkRole(session.user.id),
+              checkRole(session.user.id, session.user.email ?? undefined),
               checkSubscription(session.user.id),
             ]);
             setLoading(false);
