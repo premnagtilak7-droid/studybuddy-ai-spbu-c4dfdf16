@@ -15,6 +15,10 @@ import StudyRoom from "./pages/StudyRoom";
 import StudyPlanGenerator from "./pages/StudyPlanGenerator";
 import ExamDates from "./pages/ExamDates";
 import AdminConsole from "./pages/AdminConsole";
+import AIMockTest from "./pages/AIMockTest";
+import AIAnswerChecker from "./pages/AIAnswerChecker";
+import AIFormulaSheet from "./pages/AIFormulaSheet";
+import AIExamPredictor from "./pages/AIExamPredictor";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -55,6 +59,10 @@ const AppRoutes = () => {
       <Route path="/study-plan" element={<ProtectedRoute><StudyPlanGenerator /></ProtectedRoute>} />
       <Route path="/study-room" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
       <Route path="/exam-dates" element={<ProtectedRoute><ExamDates /></ProtectedRoute>} />
+      <Route path="/mock-test" element={<ProtectedRoute><AIMockTest /></ProtectedRoute>} />
+      <Route path="/answer-checker" element={<ProtectedRoute><AIAnswerChecker /></ProtectedRoute>} />
+      <Route path="/formula-sheet" element={<ProtectedRoute><AIFormulaSheet /></ProtectedRoute>} />
+      <Route path="/exam-predictor" element={<ProtectedRoute><AIExamPredictor /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
