@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Clock, Check, Lock, AlertTriangle } from "lucide-react";
 import AppLayout from "../components/AppLayout";
@@ -47,6 +47,9 @@ export default function Timetable() {
   const [selectedDay, setSelectedDay] = useState("Monday");
   const [summaryModal, setSummaryModal] = useState<number | null>(null);
   const [summary, setSummary] = useState("");
+
+  // Mark timetable as visited for Getting Started checklist
+  useEffect(() => { localStorage.setItem("sppu_timetable_visited", "1"); }, []);
 
   const sessions = mockSchedule[selectedDay] || [];
 

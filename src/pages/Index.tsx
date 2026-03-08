@@ -15,6 +15,7 @@ import WeeklyStudyChart from "../components/WeeklyStudyChart";
 import DailyStudyGoal from "../components/DailyStudyGoal";
 import RevisionSchedule from "../components/RevisionSchedule";
 import AchievementBadges from "../components/AchievementBadges";
+import GettingStartedChecklist from "../components/GettingStartedChecklist";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
@@ -201,8 +202,15 @@ export default function Dashboard() {
 
         {subjects.length === 0 && !loading ? (
           <OnboardingWizard />
-        ) : (
+        ) : !loading ? (
           <>
+            <GettingStartedChecklist
+              subjects={subjects}
+              examDates={examDates}
+              totalTopics={totalTopics}
+              completedTopics={completedTopics}
+              hasTimetable={!!localStorage.getItem("sppu_timetable_visited")}
+            />
             <ExamCountdown exam={nextExam?.exam} daysLeft={nextExam?.daysLeft} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <DailyStudyGoal />
@@ -258,7 +266,7 @@ export default function Dashboard() {
               </div>
             </div>
           </>
-        )}
+        ) : null}
       </div>
       <QuickExamModal
         open={examModalOpen}
