@@ -19,7 +19,9 @@ import {
   User,
   Sparkles,
   Loader2,
+  HelpCircle,
 } from "lucide-react";
+import SupportTicketModal from "./SupportTicketModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStudyStreak } from "@/lib/study-tracker";
 import { ThemeToggle } from "./ThemeToggle";
