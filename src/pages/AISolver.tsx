@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, X, Sparkles, Languages, History, ArrowLeft } from "lucide-react";
+import { Send, Upload, X, Sparkles, Languages, History, ArrowLeft, Copy, Check, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import AppLayout from "../components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PaywallGate } from "@/components/PaywallGate";
 import { streamChat } from "@/lib/ai-stream";
 import { saveDoubt, getDoubts, deleteDoubt, type DoubtEntry } from "@/lib/doubt-store";
+import { getSubjects, type UserSubject } from "@/lib/subjects-store";
 import { toast } from "sonner";
 
 type Msg = { role: "user" | "assistant"; content: string; image?: string };
@@ -17,6 +19,28 @@ const LANGUAGES = [
   { value: "marathi", label: "मराठी" },
   { value: "hindi", label: "हिन्दी" },
 ];
+
+const QUESTION_TYPES = [
+  { value: "concept", label: "Concept" },
+  { value: "numerical", label: "Numerical" },
+  { value: "formula", label: "Formula" },
+  { value: "definition", label: "Definition" },
+];
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={handleCopy} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1">
+      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
 
 function DoubtHistory({ onClose }: { onClose: () => void }) {
   const [doubts, setDoubts] = useState<DoubtEntry[]>([]);
@@ -48,25 +72,22 @@ function DoubtHistory({ onClose }: { onClose: () => void }) {
         ) : doubts.length === 0 ? (
           <div className="text-center py-16">
             <History className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">No saved doubts yet. Ask questions in the AI Solver!</p>
+            <p className="text-sm text-muted-foreground">No saved doubts yet.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {doubts.map((d) => (
               <div key={d.id} className="glass-card p-4 space-y-2">
                 <div className="flex items-start justify-between">
-                  <p className="text-xs text-muted-foreground font-mono">
-                    {new Date(d.created_at).toLocaleDateString()}
-                  </p>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(d.id)} className="text-destructive h-6 px-2">
-                    <X className="w-3 h-3" />
-                  </Button>
+                  <p className="text-xs text-muted-foreground font-mono">{new Date(d.created_at).toLocaleDateString()}</p>
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(d.id)} className="text-destructive h-6 px-2"><X className="w-3 h-3" /></Button>
                 </div>
                 {d.image_url && <img src={d.image_url} alt="Query" className="max-h-32 rounded-lg" />}
                 <p className="text-sm font-medium text-foreground">{d.question}</p>
                 <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground border-t border-border pt-2 mt-2">
                   <ReactMarkdown>{d.answer.slice(0, 300) + (d.answer.length > 300 ? "..." : "")}</ReactMarkdown>
                 </div>
+                <CopyButton text={d.answer} />
               </div>
             ))}
           </div>
@@ -82,11 +103,15 @@ function AISolverChat() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [language, setLanguage] = useState("english");
+  const [questionType, setQuestionType] = useState("concept");
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [subjects, setSubjects] = useState<UserSubject[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => { getSubjects().then(setSubjects).catch(() => {}); }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,6 +130,7 @@ function AISolverChat() {
       ? [...(text ? [{ type: "text" as const, text }] : []), { type: "image_url" as const, image_url: { url: imagePreview } }]
       : text;
 
+    const subjectName = subjects.find(s => s.id === selectedSubject)?.name;
     const userMsg: Msg = { role: "user", content: text || "(image uploaded)", image: imagePreview || undefined };
     const savedImage = imagePreview || undefined;
     setMessages((prev) => [...prev, userMsg]);
@@ -122,6 +148,8 @@ function AISolverChat() {
       await streamChat({
         messages: apiMessages as any,
         language,
+        questionType,
+        subject: subjectName,
         onDelta: (chunk) => {
           assistantSoFar += chunk;
           setMessages((prev) => {
@@ -134,10 +162,7 @@ function AISolverChat() {
         },
         onDone: () => {
           setIsLoading(false);
-          // Save to doubt history
-          if (assistantSoFar) {
-            saveDoubt(text || "(image uploaded)", assistantSoFar, savedImage);
-          }
+          if (assistantSoFar) saveDoubt(text || "(image uploaded)", assistantSoFar, savedImage);
         },
         onError: (err) => { toast.error(err); setIsLoading(false); },
       });
@@ -155,21 +180,50 @@ function AISolverChat() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)]">
-      <div className="flex items-center justify-between pb-4">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">AI Doubt Solver</h1>
-          <p className="text-sm text-muted-foreground mt-1">SPPU Expert · 2024 Pattern</p>
+          <p className="text-sm text-muted-foreground mt-1">Powered by Gemini · SPPU 2024 Pattern</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowHistory(true)}>
-            <History className="w-4 h-4 mr-1" /> History
-          </Button>
+        <Button variant="outline" size="sm" onClick={() => setShowHistory(true)}>
+          <History className="w-4 h-4 mr-1" /> History
+        </Button>
+      </div>
+
+      {/* Controls bar */}
+      <div className="flex flex-wrap items-center gap-2 pb-3">
+        <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+          <SelectTrigger className="w-[180px] h-8 text-xs">
+            <BookOpen className="w-3 h-3 mr-1" />
+            <SelectValue placeholder="Select Subject" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="general">General</SelectItem>
+            {subjects.map(s => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={questionType} onValueChange={setQuestionType}>
+          <SelectTrigger className="w-[140px] h-8 text-xs">
+            <SelectValue placeholder="Question Type" />
+          </SelectTrigger>
+          <SelectContent>
+            {QUESTION_TYPES.map(qt => (
+              <SelectItem key={qt.value} value={qt.value}>{qt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="flex items-center gap-1 ml-auto">
           <Languages className="w-4 h-4 text-muted-foreground" />
           {LANGUAGES.map((lang) => (
             <button
               key={lang.value}
               onClick={() => setLanguage(lang.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`px-2 py-1 rounded-md text-xs font-medium transition-all ${
                 language === lang.value ? "gradient-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"
               }`}
             >
@@ -179,7 +233,8 @@ function AISolverChat() {
         </div>
       </div>
 
-      <ScrollArea className="flex-1 glass-card p-4 mb-4">
+      {/* Chat area */}
+      <ScrollArea className="flex-1 glass-card p-4 mb-3">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
             <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mb-4">
@@ -187,7 +242,7 @@ function AISolverChat() {
             </div>
             <h3 className="text-lg font-bold text-foreground">Ask any SPPU doubt</h3>
             <p className="text-sm text-muted-foreground max-w-md mt-2">
-              Upload circuit diagrams, handwritten notes, or type your question. All queries are saved to your Doubt History.
+              Select your subject & question type above, then ask your doubt. Upload diagrams or handwritten notes too.
             </p>
           </div>
         )}
@@ -199,7 +254,10 @@ function AISolverChat() {
               }`}>
                 {msg.image && <img src={msg.image} alt="Uploaded" className="max-h-48 rounded-lg mb-2" />}
                 {msg.role === "assistant" ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
+                  <div>
+                    <div className="prose prose-sm dark:prose-invert max-w-none"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
+                    <CopyButton text={msg.content} />
+                  </div>
                 ) : (
                   <p className="text-sm">{msg.content}</p>
                 )}
@@ -221,6 +279,7 @@ function AISolverChat() {
         </div>
       </ScrollArea>
 
+      {/* Input area */}
       <div className="glass-card p-3">
         {imagePreview && (
           <div className="flex items-center gap-2 mb-2 p-2 bg-secondary rounded-lg">
