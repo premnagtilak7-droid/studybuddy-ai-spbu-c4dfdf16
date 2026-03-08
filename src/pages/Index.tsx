@@ -239,6 +239,11 @@ export default function Dashboard() {
           </>
         )}
       </div>
+      <QuickExamModal
+        open={examModalOpen}
+        onOpenChange={setExamModalOpen}
+        onExamAdded={() => getExamDates().then(setExamDates)}
+      />
     </AppLayout>
   );
 }
