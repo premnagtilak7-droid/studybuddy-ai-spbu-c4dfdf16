@@ -1,22 +1,24 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Send, Sparkles, Languages, History, Copy, Check, BookOpen,
   HelpCircle, Calculator, FunctionSquare, FileText, Loader2, X, Trash2, ChevronDown, ChevronUp,
+  Camera, Upload, Image as ImageIcon,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import AppLayout from "../components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { PaywallGate } from "@/components/PaywallGate";
+import { Progress } from "@/components/ui/progress";
 import { streamChat } from "@/lib/ai-stream";
 import { saveDoubt, getDoubts, deleteDoubt, type DoubtEntry } from "@/lib/doubt-store";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const QUESTION_TYPES = [
@@ -31,6 +33,9 @@ const LANGUAGES = [
   { value: "marathi", label: "मरा" },
   { value: "hindi", label: "हिं" },
 ];
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 /* ─── Copy Button ─── */
 function CopyButton({ text }: { text: string }) {
@@ -49,13 +54,17 @@ function CopyButton({ text }: { text: string }) {
 }
 
 /* ─── Response Card ─── */
-function ResponseCard({ content }: { content: string }) {
-  // Parse markdown into sections by detecting ## headers
+function ResponseCard({ content, imageUrl }: { content: string; imageUrl?: string | null }) {
   const sections = content.split(/(?=^##\s)/m).filter(Boolean);
 
   return (
     <Card className="border-primary/20">
       <CardContent className="p-4 space-y-3">
+        {imageUrl && (
+          <div className="mb-3">
+            <img src={imageUrl} alt="Question image" className="max-h-48 rounded-lg border border-border object-contain" />
+          </div>
+        )}
         {sections.length > 1 ? (
           sections.map((sec, i) => (
             <div key={i}>
@@ -78,6 +87,69 @@ function ResponseCard({ content }: { content: string }) {
   );
 }
 
+/* ─── Image Upload Hook ─── */
+function useImageUpload() {
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const handleFile = useCallback((file: File) => {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error("Only JPG, PNG, and WebP images are supported");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Image must be under 2MB");
+      return;
+    }
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  }, []);
+
+  const clearImage = useCallback(() => {
+    setImageFile(null);
+    setImagePreview(null);
+    setUploadProgress(0);
+  }, []);
+
+  const uploadImage = useCallback(async (): Promise<string | null> => {
+    if (!imageFile) return null;
+    setUploading(true);
+    setUploadProgress(10);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const ext = imageFile.name.split(".").pop() || "jpg";
+      const path = `${user.id}/${Date.now()}.${ext}`;
+
+      setUploadProgress(30);
+
+      const { error } = await supabase.storage
+        .from("doubt-images")
+        .upload(path, imageFile, { contentType: imageFile.type, upsert: false });
+
+      if (error) throw error;
+      setUploadProgress(80);
+
+      const { data: urlData } = supabase.storage.from("doubt-images").getPublicUrl(path);
+      setUploadProgress(100);
+      return urlData.publicUrl;
+    } catch (err: any) {
+      toast.error(err.message || "Image upload failed");
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  }, [imageFile]);
+
+  return { imageFile, imagePreview, uploading, uploadProgress, handleFile, clearImage, uploadImage };
+}
+
 /* ─── Main Component ─── */
 function AISolverChat() {
   const [subjects, setSubjects] = useState<UserSubject[]>([]);
@@ -89,6 +161,7 @@ function AISolverChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState("");
   const [streamingDone, setStreamingDone] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
 
   // History state
   const [doubts, setDoubts] = useState<DoubtEntry[]>([]);
@@ -98,6 +171,11 @@ function AISolverChat() {
   const [showHistory, setShowHistory] = useState(false);
 
   const responseRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const { imageFile, imagePreview, uploading, uploadProgress, handleFile, clearImage, uploadImage } = useImageUpload();
 
   useEffect(() => { getSubjects().then(setSubjects).catch(() => {}); }, []);
   useEffect(() => { loadHistory(); }, [historyFilter]);
@@ -111,18 +189,48 @@ function AISolverChat() {
     setHistoryLoading(false);
   };
 
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  }, [handleFile]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => setIsDragging(false), []);
+
   const send = async () => {
     const text = doubtText.trim();
-    if (!text) { toast.error("Please enter your doubt"); return; }
+    if (!text && !imageFile) { toast.error("Please enter your doubt or upload an image"); return; }
 
     setIsLoading(true);
     setResponse("");
     setStreamingDone(false);
+    setCurrentImageUrl(null);
+
+    // Upload image first if present
+    let uploadedUrl: string | null = null;
+    if (imageFile) {
+      uploadedUrl = await uploadImage();
+      if (!uploadedUrl && !text) {
+        setIsLoading(false);
+        return;
+      }
+      setCurrentImageUrl(uploadedUrl);
+    }
 
     const subjectName = subjects.find(s => s.id === selectedSubject)?.name || "General";
-    const fullQuestion = topicInput
-      ? `[Subject: ${subjectName}] [Topic: ${topicInput}]\n\n${text}`
-      : `[Subject: ${subjectName}]\n\n${text}`;
+    let fullQuestion = topicInput
+      ? `[Subject: ${subjectName}] [Topic: ${topicInput}]\n\n${text || "Please analyze this image and help me understand the problem."}`
+      : `[Subject: ${subjectName}]\n\n${text || "Please analyze this image and help me understand the problem."}`;
+
+    if (uploadedUrl) {
+      fullQuestion += `\n\n[Image attached: ${uploadedUrl}]`;
+    }
 
     let assistantSoFar = "";
     const messages = [{ role: "user" as const, content: fullQuestion }];
@@ -142,9 +250,10 @@ function AISolverChat() {
           setStreamingDone(true);
           if (assistantSoFar) {
             const subId = selectedSubject && selectedSubject !== "general" ? selectedSubject : null;
-            await saveDoubt(text, assistantSoFar, undefined, subId);
+            await saveDoubt(text || "Image question", assistantSoFar, uploadedUrl || undefined, subId);
             loadHistory();
           }
+          clearImage();
           setTimeout(() => responseRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         },
         onError: (err) => { toast.error(err); setIsLoading(false); },
@@ -172,7 +281,7 @@ function AISolverChat() {
             <Sparkles className="w-6 h-6 text-primary" />
             AI Doubt Solver
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Powered by Gemini · SPPU 2024 Pattern</p>
+          <p className="text-sm text-muted-foreground mt-1">Powered by Gemini · SPPU 2024 Pattern · Free for all</p>
         </div>
         <div className="flex items-center gap-1">
           {LANGUAGES.map((lang) => (
@@ -248,21 +357,72 @@ function AISolverChat() {
           </div>
 
           {/* Row 3: Doubt text */}
-          <div>
+          <div
+            ref={dropZoneRef}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            className={`relative rounded-lg transition-all ${isDragging ? "ring-2 ring-primary ring-offset-2" : ""}`}
+          >
             <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Your Doubt</label>
             <Textarea
               value={doubtText}
               onChange={e => setDoubtText(e.target.value)}
-              placeholder="Type your doubt here... e.g. Explain Kirchhoff's Current Law with an example"
+              placeholder="Type your doubt here... or drag & drop an image"
               className="min-h-[120px] text-sm"
               onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) send(); }}
             />
+            {isDragging && (
+              <div className="absolute inset-0 flex items-center justify-center bg-primary/10 rounded-lg border-2 border-dashed border-primary">
+                <div className="text-center">
+                  <Upload className="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p className="text-sm font-medium text-primary">Drop image here</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Send button */}
+          {/* Image Preview */}
+          {imagePreview && (
+            <div className="relative inline-block">
+              <img src={imagePreview} alt="Upload preview" className="max-h-32 rounded-lg border border-border object-contain" />
+              <button
+                onClick={clearImage}
+                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90"
+              >
+                <X className="w-3 h-3" />
+              </button>
+              {uploading && (
+                <div className="absolute bottom-0 left-0 right-0 p-1">
+                  <Progress value={uploadProgress} className="h-1.5" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Send button row */}
           <div className="flex items-center justify-between">
-            <p className="text-[10px] text-muted-foreground">Ctrl+Enter to send</p>
-            <Button onClick={send} disabled={isLoading || !doubtText.trim()} className="gap-2">
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
+              >
+                <Camera className="w-4 h-4" />
+                Upload Image
+              </Button>
+              <p className="text-[10px] text-muted-foreground">Ctrl+Enter to send</p>
+            </div>
+            <Button onClick={send} disabled={isLoading || (!doubtText.trim() && !imageFile)} className="gap-2">
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               {isLoading ? "Thinking..." : "Ask Gemini"}
             </Button>
@@ -279,7 +439,7 @@ function AISolverChat() {
             {isLoading && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
           </h3>
           {response ? (
-            <ResponseCard content={response} />
+            <ResponseCard content={response} imageUrl={currentImageUrl} />
           ) : (
             <Card>
               <CardContent className="p-6 flex items-center justify-center">
@@ -307,7 +467,6 @@ function AISolverChat() {
 
         {showHistory && (
           <div className="mt-3 space-y-3">
-            {/* Subject filter */}
             <Select value={historyFilter} onValueChange={setHistoryFilter}>
               <SelectTrigger className="w-[200px] h-8 text-xs">
                 <SelectValue placeholder="Filter by subject" />
@@ -347,6 +506,7 @@ function AISolverChat() {
                                 {subjectMatch && (
                                   <Badge variant="secondary" className="text-[10px] h-5">{subjectMatch.name}</Badge>
                                 )}
+                                {d.image_url && <ImageIcon className="w-3 h-3 text-muted-foreground" />}
                                 <span className="text-[10px] text-muted-foreground">
                                   {new Date(d.created_at).toLocaleDateString()}
                                 </span>
@@ -367,7 +527,7 @@ function AISolverChat() {
                           </div>
                           {isExpanded && (
                             <div className="mt-3 pt-3 border-t border-border">
-                              <ResponseCard content={d.answer} />
+                              <ResponseCard content={d.answer} imageUrl={d.image_url} />
                             </div>
                           )}
                         </CardContent>
@@ -388,7 +548,7 @@ export default function AISolver() {
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto pb-8">
-        <PaywallGate featureName="AI Doubt Solver"><AISolverChat /></PaywallGate>
+        <AISolverChat />
       </div>
     </AppLayout>
   );
