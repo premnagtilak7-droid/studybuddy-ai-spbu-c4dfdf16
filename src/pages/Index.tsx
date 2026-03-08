@@ -200,7 +200,10 @@ export default function Dashboard() {
         ) : (
           <>
             <ExamCountdown exam={nextExam?.exam} daysLeft={nextExam?.daysLeft} />
-            <WeeklyReport subjects={subjects} subjectProgress={subjectProgress} syllabusPercent={syllabusPercent} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <DailyStudyGoal />
+              <WeeklyReport subjects={subjects} subjectProgress={subjectProgress} syllabusPercent={syllabusPercent} />
+            </div>
 
             <StudyHeatmap />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
