@@ -137,8 +137,21 @@ export default function AppSidebar() {
         )}
       </nav>
 
+      {/* Support Ticket Modal */}
+      <SupportTicketModal open={showSupport} onClose={() => setShowSupport(false)} />
+
       {/* User profile dropdown, Sign Out & Collapse */}
       <div className="px-2 pb-4 space-y-1 border-t border-sidebar-border pt-3">
+        {/* Help & Feedback */}
+        <button
+          onClick={() => setShowSupport(true)}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors text-sm font-medium ${
+            collapsed ? "justify-center" : ""
+          }`}
+        >
+          <HelpCircle className="w-5 h-5 flex-shrink-0" />
+          {!collapsed && <span>Help & Feedback</span>}
+        </button>
         {/* Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
