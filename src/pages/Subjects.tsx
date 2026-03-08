@@ -5,6 +5,7 @@ import { BookOpen, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AppLayout from "../components/AppLayout";
 import CircularProgress from "../components/CircularProgress";
+import SubjectProgressBar from "../components/SubjectProgressBar";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
 import { getUnitsWithTopics } from "@/lib/units-store";
 
