@@ -69,11 +69,16 @@ export default function PomodoroTimer() {
         if (prev <= 1) {
           clearTimer();
           setRunning(false);
+          playTimerSound();
 
           // Advance phase
           if (phase === "focus") {
             const newSessions = sessions + 1;
             setSessions(newSessions);
+            // Award XP for completing a focus session
+            awardXP("focus_session").then((amount) => {
+              if (amount > 0) toast.success(`+${amount} XP for focus session!`);
+            });
             if (newSessions % 4 === 0) {
               setPhase("long-break");
               return DURATIONS["long-break"];
