@@ -59,7 +59,13 @@ export async function addTopic(unitId: string, name: string, priority: "high" | 
 }
 
 export async function toggleTopic(id: string, isCompleted: boolean) {
-  const { error } = await supabase.from("topics").update({ is_completed: isCompleted }).eq("id", id);
+  const updates: Record<string, any> = { is_completed: isCompleted };
+  if (isCompleted) {
+    updates.completed_at = new Date().toISOString();
+  } else {
+    updates.completed_at = null;
+  }
+  const { error } = await supabase.from("topics").update(updates).eq("id", id);
   if (error) throw error;
 }
 
