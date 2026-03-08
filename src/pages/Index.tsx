@@ -213,6 +213,14 @@ export default function Dashboard() {
 
             <WeeklyStudyChart />
 
+            <AchievementBadges
+              subjectCount={subjects.length}
+              streak={streak}
+              syllabusPercent={syllabusPercent}
+              examCount={examDates.length}
+              pomodoroSessions={0}
+            />
+
             <StudyHeatmap />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <SubjectChart subjects={subjects} />
