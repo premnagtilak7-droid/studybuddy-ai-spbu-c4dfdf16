@@ -198,7 +198,7 @@ export default function Dashboard() {
           <OnboardingWizard />
         ) : (
           <>
-            {nextExam && <ExamCountdown exam={nextExam.exam} daysLeft={nextExam.daysLeft} />}
+            <ExamCountdown exam={nextExam?.exam} daysLeft={nextExam?.daysLeft} />
             <WeeklyReport subjects={subjects} subjectProgress={subjectProgress} syllabusPercent={syllabusPercent} />
 
             <StudyHeatmap />
