@@ -24,6 +24,12 @@ import DoubtForum from "./pages/DoubtForum";
 import StudyBuddy from "./pages/StudyBuddy";
 import ShareProgress from "./pages/ShareProgress";
 import BatchFeed from "./pages/BatchFeed";
+import FlashcardMaker from "./pages/FlashcardMaker";
+import FormulaBank from "./pages/FormulaBank";
+import AttendanceTracker from "./pages/AttendanceTracker";
+import MarksTracker from "./pages/MarksTracker";
+import AssignmentTracker from "./pages/AssignmentTracker";
+import FocusMode from "./pages/FocusMode";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
