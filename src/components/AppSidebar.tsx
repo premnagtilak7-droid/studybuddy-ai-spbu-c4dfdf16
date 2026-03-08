@@ -14,8 +14,10 @@ import {
   Zap,
   Shield,
   LogOut,
+  Flame,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { getStudyStreak } from "@/lib/study-tracker";
 
 const baseNavItems = [
   { icon: BarChart3, label: "Stats Center", path: "/" },
@@ -31,6 +33,7 @@ export default function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { isAdmin, user, signOut } = useAuth();
+  const streak = getStudyStreak();
 
   const navItems = isAdmin
     ? [...baseNavItems, { icon: Shield, label: "Admin Console", path: "/admin" }]
@@ -55,8 +58,18 @@ export default function AppSidebar() {
         )}
       </div>
 
+      {/* Streak badge */}
+      {streak > 0 && (
+        <div className="mx-2 mt-3 px-3 py-2 rounded-lg bg-sidebar-accent flex items-center gap-2">
+          <Flame className="w-4 h-4 text-accent flex-shrink-0" />
+          {!collapsed && (
+            <span className="text-xs font-mono text-sidebar-accent-foreground">{streak} day streak 🔥</span>
+          )}
+        </div>
+      )}
+
       {/* Nav */}
-      <nav className="flex-1 py-4 px-2 space-y-1">
+      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (

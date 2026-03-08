@@ -8,6 +8,7 @@ export type UserSubject = {
   target_units: number;
   completed_units: number;
   color: string;
+  target_grade: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -20,7 +21,7 @@ export async function getSubjects(): Promise<UserSubject[]> {
     .select("*")
     .order("created_at", { ascending: true });
   if (error) throw error;
-  return data || [];
+  return (data || []) as UserSubject[];
 }
 
 export async function addSubject(name: string, code: string, targetUnits: number): Promise<UserSubject> {
@@ -42,10 +43,10 @@ export async function addSubject(name: string, code: string, targetUnits: number
     .select()
     .single();
   if (error) throw error;
-  return data;
+  return data as UserSubject;
 }
 
-export async function updateSubject(id: string, updates: { name?: string; code?: string; target_units?: number; completed_units?: number }): Promise<UserSubject> {
+export async function updateSubject(id: string, updates: { name?: string; code?: string; target_units?: number; completed_units?: number; target_grade?: number | null }): Promise<UserSubject> {
   const { data, error } = await supabase
     .from("subjects")
     .update(updates)
@@ -53,7 +54,7 @@ export async function updateSubject(id: string, updates: { name?: string; code?:
     .select()
     .single();
   if (error) throw error;
-  return data;
+  return data as UserSubject;
 }
 
 export async function deleteSubject(id: string): Promise<void> {

@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import type { UserSubject } from "@/lib/subjects-store";
 
@@ -9,7 +10,7 @@ const chartColors = [
   "hsl(350, 80%, 60%)",
 ];
 
-export default function SubjectChart({ subjects }: { subjects: UserSubject[] }) {
+const SubjectChart = forwardRef<HTMLDivElement, { subjects: UserSubject[] }>(({ subjects }, ref) => {
   const chartData = subjects.map((s) => ({
     name: s.code,
     units: s.completed_units,
@@ -18,14 +19,14 @@ export default function SubjectChart({ subjects }: { subjects: UserSubject[] }) 
 
   if (chartData.length === 0) {
     return (
-      <div className="glass-card p-5 flex items-center justify-center h-[300px]">
+      <div ref={ref} className="glass-card p-5 flex items-center justify-center h-[300px]">
         <p className="text-muted-foreground text-sm">Add subjects to see charts</p>
       </div>
     );
   }
 
   return (
-    <div className="glass-card p-5">
+    <div ref={ref} className="glass-card p-5">
       <h3 className="font-semibold text-foreground mb-1">Subject Progress</h3>
       <p className="text-xs text-muted-foreground font-mono mb-4">Units completed per subject</p>
 
@@ -58,4 +59,7 @@ export default function SubjectChart({ subjects }: { subjects: UserSubject[] }) 
       </ResponsiveContainer>
     </div>
   );
-}
+});
+
+SubjectChart.displayName = "SubjectChart";
+export default SubjectChart;
