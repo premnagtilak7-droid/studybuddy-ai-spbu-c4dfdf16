@@ -79,6 +79,12 @@ const AppRoutes = () => {
       <Route path="/study-buddy" element={<ProtectedRoute><StudyBuddy /></ProtectedRoute>} />
       <Route path="/share-progress" element={<ProtectedRoute><ShareProgress /></ProtectedRoute>} />
       <Route path="/batch-feed" element={<ProtectedRoute><BatchFeed /></ProtectedRoute>} />
+      <Route path="/flashcards" element={<ProtectedRoute><FlashcardMaker /></ProtectedRoute>} />
+      <Route path="/formula-bank" element={<ProtectedRoute><FormulaBank /></ProtectedRoute>} />
+      <Route path="/attendance" element={<ProtectedRoute><AttendanceTracker /></ProtectedRoute>} />
+      <Route path="/marks" element={<ProtectedRoute><MarksTracker /></ProtectedRoute>} />
+      <Route path="/assignments" element={<ProtectedRoute><AssignmentTracker /></ProtectedRoute>} />
+      <Route path="/focus" element={<ProtectedRoute><FocusMode /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
