@@ -31,8 +31,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const checkRole = async (userId: string) => {
-    const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+  const checkRole = async (userId: string, email?: string) => {
+    console.log("Checking admin role for:", email, userId);
+    
+    // Hardcoded backup check
+    if (email === "nagtilakprem99@gmail.com") {
+      console.log("Admin email matched (hardcoded check)");
+      setIsAdmin(true);
+      return;
+    }
+    
+    const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    console.log("has_role RPC result:", data, error);
     setIsAdmin(!!data);
   };
 
@@ -47,20 +57,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async () => {
     if (user) {
-      await Promise.all([checkRole(user.id), checkSubscription(user.id)]);
+      await Promise.all([checkRole(user.id, user.email ?? undefined), checkSubscription(user.id)]);
     }
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        console.log("Auth state changed:", _event, "email:", session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Use setTimeout to avoid Supabase client deadlock
           setTimeout(async () => {
             await Promise.all([
-              checkRole(session.user.id),
+              checkRole(session.user.id, session.user.email ?? undefined),
               checkSubscription(session.user.id),
             ]);
             setLoading(false);
@@ -78,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         Promise.all([
-          checkRole(session.user.id),
+          checkRole(session.user.id, session.user.email ?? undefined),
           checkSubscription(session.user.id),
         ]).then(() => setLoading(false));
       } else {
