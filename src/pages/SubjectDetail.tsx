@@ -17,6 +17,7 @@ import {
   type Unit,
 } from "@/lib/units-store";
 import { recordStudySession, setLastStudied } from "@/lib/study-tracker";
+import { awardXP } from "@/lib/xp-store";
 import { toast } from "sonner";
 
 const priorityColors: Record<string, string> = {
