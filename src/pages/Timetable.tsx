@@ -48,6 +48,9 @@ export default function Timetable() {
   const [summaryModal, setSummaryModal] = useState<number | null>(null);
   const [summary, setSummary] = useState("");
 
+  // Mark timetable as visited for Getting Started checklist
+  useState(() => { localStorage.setItem("sppu_timetable_visited", "1"); });
+
   const sessions = mockSchedule[selectedDay] || [];
 
   const handleComplete = (idx: number) => {
