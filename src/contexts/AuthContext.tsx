@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async () => {
     if (user) {
-      await Promise.all([checkRole(user.id), checkSubscription(user.id)]);
+      await Promise.all([checkRole(user.id, user.email ?? undefined), checkSubscription(user.id)]);
     }
   };
 
