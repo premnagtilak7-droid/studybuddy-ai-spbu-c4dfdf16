@@ -18,6 +18,7 @@ import {
   Settings,
   User,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStudyStreak } from "@/lib/study-tracker";
