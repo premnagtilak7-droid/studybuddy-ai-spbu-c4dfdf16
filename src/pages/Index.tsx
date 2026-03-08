@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [examDates, setExamDates] = useState<ExamDate[]>([]);
   const [subjectProgress, setSubjectProgress] = useState<Record<string, { total: number; done: number; unitsDone: number }>>({});
   const [allUnits, setAllUnits] = useState<Record<string, Unit[]>>({});
+  const [examModalOpen, setExamModalOpen] = useState(false);
 
   const lastStudied = getLastStudied();
   const streak = getStudyStreak();
