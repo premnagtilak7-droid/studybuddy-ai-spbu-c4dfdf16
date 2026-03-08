@@ -116,6 +116,22 @@ export default function AppSidebar() {
             </Link>
           );
         })}
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
+              location.pathname === "/admin"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            }`}
+          >
+            <Shield className="w-5 h-5 flex-shrink-0" />
+            {!collapsed && <span>Admin Dashboard</span>}
+            {location.pathname === "/admin" && !collapsed && (
+              <Zap className="w-3.5 h-3.5 ml-auto" />
+            )}
+          </Link>
+        )}
       </nav>
 
       {/* User profile dropdown, Sign Out & Collapse */}
