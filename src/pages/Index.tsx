@@ -15,6 +15,7 @@ import WeeklyStudyChart from "../components/WeeklyStudyChart";
 import DailyStudyGoal from "../components/DailyStudyGoal";
 import RevisionSchedule from "../components/RevisionSchedule";
 import AchievementBadges from "../components/AchievementBadges";
+import GettingStartedChecklist from "../components/GettingStartedChecklist";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
