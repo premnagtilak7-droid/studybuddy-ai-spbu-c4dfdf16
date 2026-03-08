@@ -40,6 +40,10 @@ const navItems = [
   { icon: BookOpen, label: "Manage Subjects", path: "/subject-management" },
   { icon: MessageSquare, label: "AI Doubt Solver", path: "/ai-solver" },
   { icon: Sparkles, label: "AI Study Plan", path: "/study-plan" },
+  { icon: FileText, label: "AI Mock Test", path: "/mock-test" },
+  { icon: CheckCircle, label: "Answer Checker", path: "/answer-checker" },
+  { icon: Calculator, label: "Formula Sheet", path: "/formula-sheet" },
+  { icon: Target, label: "Exam Predictor", path: "/exam-predictor" },
   { icon: CalendarClock, label: "Exam Dates", path: "/exam-dates" },
   { icon: Trophy, label: "Study Room", path: "/study-room" },
 ];
