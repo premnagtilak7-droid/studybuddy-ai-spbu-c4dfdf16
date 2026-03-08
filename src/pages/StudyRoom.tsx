@@ -1,13 +1,5 @@
-import { Trophy, Users, Crown } from "lucide-react";
+import { Trophy, Users, BookOpen } from "lucide-react";
 import AppLayout from "../components/AppLayout";
-
-const leaderboard = [
-  { name: "You", hours: 42, rank: 1, avatar: "🎯" },
-  { name: "Rohan K.", hours: 38, rank: 2, avatar: "📚" },
-  { name: "Priya M.", hours: 35, rank: 3, avatar: "⚡" },
-  { name: "Aman S.", hours: 30, rank: 4, avatar: "🔥" },
-  { name: "Sneha D.", hours: 28, rank: 5, avatar: "💡" },
-];
 
 export default function StudyRoom() {
   return (
@@ -29,28 +21,12 @@ export default function StudyRoom() {
             </button>
           </div>
 
-          <div className="divide-y divide-border">
-            {leaderboard.map((user) => (
-              <div
-                key={user.rank}
-                className={`flex items-center justify-between px-5 py-4 ${
-                  user.rank === 1 ? "bg-accent/5" : ""
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <span className="w-8 text-center font-bold font-mono text-muted-foreground">
-                    {user.rank === 1 ? <Crown className="w-5 h-5 text-accent mx-auto" /> : `#${user.rank}`}
-                  </span>
-                  <span className="text-2xl">{user.avatar}</span>
-                  <div>
-                    <p className={`text-sm font-semibold ${user.name === "You" ? "text-primary" : "text-foreground"}`}>
-                      {user.name}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-sm font-mono font-bold text-foreground">{user.hours}h</p>
-              </div>
-            ))}
+          <div className="p-12 text-center">
+            <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-foreground mb-2">No Data Yet</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Start studying by completing topics in your subjects. Your study activity will appear here once you log your first session.
+            </p>
           </div>
         </div>
       </div>
