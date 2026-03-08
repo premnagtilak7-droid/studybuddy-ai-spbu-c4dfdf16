@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useActivityTracker } from "@/hooks/useActivityTracker";
 import Index from "./pages/Index";
 import Timetable from "./pages/Timetable";
 import Subjects from "./pages/Subjects";
@@ -40,22 +41,25 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-const AppRoutes = () => (
-  <Routes>
-    <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-    <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-    <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
-    <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
-    <Route path="/subject-management" element={<ProtectedRoute><SubjectManagement /></ProtectedRoute>} />
-    <Route path="/subject/:id" element={<ProtectedRoute><SubjectDetail /></ProtectedRoute>} />
-    <Route path="/ai-solver" element={<ProtectedRoute><AISolver /></ProtectedRoute>} />
-    <Route path="/study-plan" element={<ProtectedRoute><StudyPlanGenerator /></ProtectedRoute>} />
-    <Route path="/study-room" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
-    <Route path="/exam-dates" element={<ProtectedRoute><ExamDates /></ProtectedRoute>} />
-    <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
-    <Route path="*" element={<NotFound />} />
-  </Routes>
-);
+const AppRoutes = () => {
+  useActivityTracker();
+  return (
+    <Routes>
+      <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+      <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
+      <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
+      <Route path="/subject-management" element={<ProtectedRoute><SubjectManagement /></ProtectedRoute>} />
+      <Route path="/subject/:id" element={<ProtectedRoute><SubjectDetail /></ProtectedRoute>} />
+      <Route path="/ai-solver" element={<ProtectedRoute><AISolver /></ProtectedRoute>} />
+      <Route path="/study-plan" element={<ProtectedRoute><StudyPlanGenerator /></ProtectedRoute>} />
+      <Route path="/study-room" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
+      <Route path="/exam-dates" element={<ProtectedRoute><ExamDates /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
