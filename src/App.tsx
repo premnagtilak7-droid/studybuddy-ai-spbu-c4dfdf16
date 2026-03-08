@@ -11,6 +11,7 @@ import SubjectManagement from "./pages/SubjectManagement";
 import SubjectDetail from "./pages/SubjectDetail";
 import AISolver from "./pages/AISolver";
 import StudyRoom from "./pages/StudyRoom";
+import StudyPlanGenerator from "./pages/StudyPlanGenerator";
 import ExamDates from "./pages/ExamDates";
 import AdminConsole from "./pages/AdminConsole";
 import Auth from "./pages/Auth";
