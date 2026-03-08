@@ -36,7 +36,7 @@ export function useActivityTracker() {
 
     supabase.from("activity_logs").insert([{
       user_id: user.id,
-      feature: resolvedFeature,
+      feature,
       action: "page_view",
       device_type: getDeviceType(),
       metadata: { path } as any,
