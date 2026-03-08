@@ -118,12 +118,13 @@ export default function AppSidebar() {
         })}
       </nav>
 
-      {/* User profile dropdown & Collapse */}
-      <div className="px-2 pb-4 space-y-2">
+      {/* User profile dropdown, Sign Out & Collapse */}
+      <div className="px-2 pb-4 space-y-1 border-t border-sidebar-border pt-3">
+        {/* Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors text-left">
-              <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                 <User className="w-4 h-4 text-primary" />
               </div>
               {!collapsed && (
@@ -131,13 +132,15 @@ export default function AppSidebar() {
                   <p className="text-xs font-medium text-sidebar-accent-foreground truncate">
                     {user?.email}
                   </p>
+                  <p className="text-[10px] text-sidebar-foreground/60">Manage account</p>
                 </div>
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="w-52">
-            <div className="px-2 py-1.5">
-              <p className="text-xs font-medium text-foreground truncate">{user?.email}</p>
+          <DropdownMenuContent side="top" align="start" className="w-56">
+            <div className="px-3 py-2">
+              <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">SPPU Study Account</p>
             </div>
             <DropdownMenuSeparator />
             {isAdmin && (
@@ -151,13 +154,31 @@ export default function AppSidebar() {
                 <DropdownMenuSeparator />
               </>
             )}
-            <DropdownMenuItem onClick={handleSignOut} disabled={signingOut} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
+            <DropdownMenuItem className="flex items-center justify-between cursor-default focus:bg-transparent" onSelect={e => e.preventDefault()}>
+              <span className="text-sm">Theme</span>
+              <ThemeToggle />
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut} disabled={signingOut} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
               {signingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
               {signingOut ? "Signing out..." : "Sign Out"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Standalone Sign Out button */}
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-destructive hover:bg-destructive/10 transition-colors text-sm font-medium disabled:opacity-50 ${
+            collapsed ? "justify-center" : ""
+          }`}
+        >
+          {signingOut ? <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" /> : <LogOut className="w-5 h-5 flex-shrink-0" />}
+          {!collapsed && <span>{signingOut ? "Signing out..." : "Sign Out"}</span>}
+        </button>
+
+        {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="w-full p-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors flex items-center justify-center"
