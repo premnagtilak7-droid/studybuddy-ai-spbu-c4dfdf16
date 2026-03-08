@@ -287,6 +287,81 @@ export type Database = {
           },
         ]
       }
+      formula_sheets: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          subject: string
+          units: string[]
+          user_id: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          subject: string
+          units?: string[]
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          subject?: string
+          units?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mock_tests: {
+        Row: {
+          answers: Json | null
+          completed_at: string | null
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          num_questions: number
+          question_type: string
+          questions: Json
+          score: number | null
+          subject: string
+          topic: string | null
+          total: number | null
+          user_id: string
+        }
+        Insert: {
+          answers?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          num_questions?: number
+          question_type?: string
+          questions?: Json
+          score?: number | null
+          subject: string
+          topic?: string | null
+          total?: number | null
+          user_id: string
+        }
+        Update: {
+          answers?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          num_questions?: number
+          question_type?: string
+          questions?: Json
+          score?: number | null
+          subject?: string
+          topic?: string | null
+          total?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           ban_reason: string | null
