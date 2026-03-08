@@ -1,27 +1,31 @@
 type Msg = { role: "user" | "assistant"; content: string };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+const GEMINI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-ai`;
 
 export async function streamChat({
   messages,
   language,
+  questionType,
+  subject,
   onDelta,
   onDone,
   onError,
 }: {
   messages: Msg[];
   language: string;
+  questionType?: string;
+  subject?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
 }) {
-  const resp = await fetch(CHAT_URL, {
+  const resp = await fetch(GEMINI_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ messages, language }),
+    body: JSON.stringify({ type: "doubt", messages, language, questionType, subject }),
   });
 
   if (!resp.ok) {
