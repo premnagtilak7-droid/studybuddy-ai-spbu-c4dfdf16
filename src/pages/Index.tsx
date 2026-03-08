@@ -234,9 +234,7 @@ export default function Dashboard() {
                               {subj.target_grade ? ` · Target: ${subj.target_grade}` : ""}
                             </p>
                           </div>
-                        </div>
                         <SubjectProgressBar done={prog.done} total={prog.total} className="mt-2" />
-                        </div>
                       </div>
                     );
                   })}
