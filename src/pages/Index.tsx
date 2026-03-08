@@ -13,6 +13,7 @@ import OnboardingWizard from "../components/OnboardingWizard";
 import QuickExamModal from "../components/QuickExamModal";
 import WeeklyStudyChart from "../components/WeeklyStudyChart";
 import DailyStudyGoal from "../components/DailyStudyGoal";
+import RevisionSchedule from "../components/RevisionSchedule";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
@@ -206,6 +207,8 @@ export default function Dashboard() {
               <DailyStudyGoal />
               <WeeklyReport subjects={subjects} subjectProgress={subjectProgress} syllabusPercent={syllabusPercent} />
             </div>
+
+            <RevisionSchedule subjects={subjects} />
 
             <WeeklyStudyChart />
 
