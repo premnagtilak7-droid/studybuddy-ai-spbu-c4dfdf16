@@ -235,6 +235,8 @@ export default function Dashboard() {
                             </p>
                           </div>
                         </div>
+                        <SubjectProgressBar done={prog.done} total={prog.total} className="mt-2" />
+                        </div>
                       </div>
                     );
                   })}

@@ -80,6 +80,7 @@ export default function Subjects() {
                       <p className="text-xs font-mono text-muted-foreground">{subj.code}</p>
                     </div>
                   </div>
+                  <SubjectProgressBar done={p.topicsDone} total={p.topicsTotal} className="mb-2" />
                   <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
                     <span>{p.topicsDone}/{p.topicsTotal} topics</span>
                     <ChevronRight className="w-4 h-4" />
