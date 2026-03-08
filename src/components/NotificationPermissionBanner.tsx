@@ -1,17 +1,16 @@
-import { useState, useEffect, forwardRef } from "react";
+import { useState, useEffect } from "react";
 import { BellRing, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requestNotificationPermission, getPermissionStatus } from "@/lib/notifications";
 import { toast } from "sonner";
 
-const NotificationPermissionBanner = forwardRef<HTMLDivElement>(function NotificationPermissionBanner(_props, ref) {
+export default function NotificationPermissionBanner() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
     const perm = getPermissionStatus();
     const dismissed = localStorage.getItem("notif_perm_dismissed");
     if (perm === "default" && !dismissed) {
-      // Delay showing to not overwhelm on first load
       const timer = setTimeout(() => setShow(true), 3000);
       return () => clearTimeout(timer);
     }
@@ -35,7 +34,7 @@ const NotificationPermissionBanner = forwardRef<HTMLDivElement>(function Notific
   };
 
   return (
-    <div ref={ref} className="fixed top-4 right-4 z-[100] w-80 bg-card border border-border rounded-xl shadow-lg p-4">
+    <div className="fixed top-4 right-4 z-[100] w-80 bg-card border border-border rounded-xl shadow-lg p-4">
       <button onClick={handleDismiss} className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-foreground">
         <X className="w-4 h-4" />
       </button>
@@ -54,6 +53,4 @@ const NotificationPermissionBanner = forwardRef<HTMLDivElement>(function Notific
       </div>
     </div>
   );
-});
-
-export default NotificationPermissionBanner;
+}
