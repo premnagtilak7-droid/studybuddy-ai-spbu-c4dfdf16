@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { awardXP, emitXP } from "@/lib/xp-store";
+import { awardXP } from "@/lib/xp-store";
+import { emitXP } from "@/components/XPNotification";
 import { toast } from "sonner";
 import { Play, Pause, RotateCcw, Brain, Zap, Clock, Flame } from "lucide-react";
 
