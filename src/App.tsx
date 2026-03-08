@@ -19,6 +19,11 @@ import AIMockTest from "./pages/AIMockTest";
 import AIAnswerChecker from "./pages/AIAnswerChecker";
 import AIFormulaSheet from "./pages/AIFormulaSheet";
 import AIExamPredictor from "./pages/AIExamPredictor";
+import StudyGroups from "./pages/StudyGroups";
+import DoubtForum from "./pages/DoubtForum";
+import StudyBuddy from "./pages/StudyBuddy";
+import ShareProgress from "./pages/ShareProgress";
+import BatchFeed from "./pages/BatchFeed";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
