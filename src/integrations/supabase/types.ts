@@ -113,6 +113,81 @@ export type Database = {
         }
         Relationships: []
       }
+      batch_profiles: {
+        Row: {
+          branch: string
+          created_at: string
+          id: string
+          user_id: string
+          year: string
+        }
+        Insert: {
+          branch: string
+          created_at?: string
+          id?: string
+          user_id: string
+          year: string
+        }
+        Update: {
+          branch?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          year?: string
+        }
+        Relationships: []
+      }
+      buddy_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          preferred_time: string
+          study_hours_per_day: number
+          subjects: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          preferred_time?: string
+          study_hours_per_day?: number
+          subjects?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          preferred_time?: string
+          study_hours_per_day?: number
+          subjects?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      buddy_requests: {
+        Row: {
+          created_at: string
+          from_user_id: string
+          id: string
+          status: string
+          to_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_user_id: string
+          id?: string
+          status?: string
+          to_user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          status?: string
+          to_user_id?: string
+        }
+        Relationships: []
+      }
       challenge_progress: {
         Row: {
           challenge_id: string
@@ -352,6 +427,167 @@ export type Database = {
         }
         Relationships: []
       }
+      forum_answers: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          is_best: boolean
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          is_best?: boolean
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          is_best?: boolean
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_answers_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_posts: {
+        Row: {
+          best_answer_id: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          question: string
+          subject: string
+          topic: string | null
+          user_id: string
+        }
+        Insert: {
+          best_answer_id?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          question: string
+          subject: string
+          topic?: string | null
+          user_id: string
+        }
+        Update: {
+          best_answer_id?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          question?: string
+          subject?: string
+          topic?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      forum_votes: {
+        Row: {
+          answer_id: string
+          created_at: string
+          id: string
+          user_id: string
+          vote_type: string
+        }
+        Insert: {
+          answer_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+          vote_type: string
+        }
+        Update: {
+          answer_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_votes_answer_id_fkey"
+            columns: ["answer_id"]
+            isOneToOne: false
+            referencedRelation: "forum_answers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_messages: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          message: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          message: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          message?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mock_tests: {
         Row: {
           answers: Json | null
@@ -436,6 +672,36 @@ export type Database = {
           premium_expires_at?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      study_groups: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          join_code: string
+          max_members: number
+          name: string
+          subject_focus: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          join_code: string
+          max_members?: number
+          name: string
+          subject_focus: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          join_code?: string
+          max_members?: number
+          name?: string
+          subject_focus?: string
         }
         Relationships: []
       }

@@ -2,28 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  BarChart3,
-  BookOpen,
-  CalendarClock,
-  Calendar,
-  Trophy,
-  MessageSquare,
-  ChevronLeft,
-  ChevronRight,
-  GraduationCap,
-  Zap,
-  Shield,
-  LogOut,
-  Flame,
-  Settings,
-  User,
-  Sparkles,
-  Loader2,
-  HelpCircle,
-  FileText,
-  CheckCircle,
-  Calculator,
-  Target,
+  BarChart3, BookOpen, CalendarClock, Calendar, Trophy, MessageSquare, ChevronLeft, ChevronRight, GraduationCap, Zap, Shield, LogOut, Flame, User, Sparkles, Loader2, HelpCircle, FileText, CheckCircle, Calculator, Target, Users, Heart, Share2, Rss,
 } from "lucide-react";
 import SupportTicketModal from "./SupportTicketModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,6 +30,11 @@ const navItems = [
   { icon: Target, label: "Exam Predictor", path: "/exam-predictor" },
   { icon: CalendarClock, label: "Exam Dates", path: "/exam-dates" },
   { icon: Trophy, label: "Study Room", path: "/study-room" },
+  { icon: Users, label: "Study Groups", path: "/study-groups" },
+  { icon: MessageSquare, label: "Doubt Forum", path: "/doubt-forum" },
+  { icon: Heart, label: "Study Buddy", path: "/study-buddy" },
+  { icon: Share2, label: "Share Progress", path: "/share-progress" },
+  { icon: Rss, label: "Batch Feed", path: "/batch-feed" },
 ];
 
 export default function AppSidebar() {
