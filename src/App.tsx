@@ -49,6 +49,7 @@ const AppRoutes = () => (
     <Route path="/subject-management" element={<ProtectedRoute><SubjectManagement /></ProtectedRoute>} />
     <Route path="/subject/:id" element={<ProtectedRoute><SubjectDetail /></ProtectedRoute>} />
     <Route path="/ai-solver" element={<ProtectedRoute><AISolver /></ProtectedRoute>} />
+    <Route path="/study-plan" element={<ProtectedRoute><StudyPlanGenerator /></ProtectedRoute>} />
     <Route path="/study-room" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
     <Route path="/exam-dates" element={<ProtectedRoute><ExamDates /></ProtectedRoute>} />
     <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />

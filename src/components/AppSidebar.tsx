@@ -17,6 +17,7 @@ import {
   Flame,
   Settings,
   User,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStudyStreak } from "@/lib/study-tracker";
