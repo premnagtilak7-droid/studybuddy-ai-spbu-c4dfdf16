@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         Promise.all([
-          checkRole(session.user.id),
+          checkRole(session.user.id, session.user.email ?? undefined),
           checkSubscription(session.user.id),
         ]).then(() => setLoading(false));
       } else {
