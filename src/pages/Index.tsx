@@ -8,6 +8,7 @@ import WeeklyReport from "../components/WeeklyReport";
 import AppLayout from "../components/AppLayout";
 import CircularProgress from "../components/CircularProgress";
 import DashboardSearch from "../components/DashboardSearch";
+import OnboardingWizard from "../components/OnboardingWizard";
 import { Button } from "@/components/ui/button";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
 import { getExamDates, getNextExam, type ExamDate } from "@/lib/exam-store";
