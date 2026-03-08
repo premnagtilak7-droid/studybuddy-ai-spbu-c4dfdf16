@@ -207,6 +207,8 @@ export default function Dashboard() {
               <WeeklyReport subjects={subjects} subjectProgress={subjectProgress} syllabusPercent={syllabusPercent} />
             </div>
 
+            <WeeklyStudyChart />
+
             <StudyHeatmap />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <SubjectChart subjects={subjects} />
