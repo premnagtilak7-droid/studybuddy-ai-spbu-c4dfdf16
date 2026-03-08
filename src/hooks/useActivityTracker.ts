@@ -46,11 +46,11 @@ export function useActivityTracker() {
 }
 
 export async function trackAction(userId: string, feature: string, action: string, metadata: Record<string, unknown> = {}) {
-  await supabase.from("activity_logs").insert({
+  await supabase.from("activity_logs").insert([{
     user_id: userId,
     feature,
     action,
     device_type: getDeviceType(),
-    metadata,
-  });
+    metadata: metadata as any,
+  }]);
 }
