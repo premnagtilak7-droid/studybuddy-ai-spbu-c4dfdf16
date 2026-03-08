@@ -9,6 +9,7 @@ import AppLayout from "../components/AppLayout";
 import CircularProgress from "../components/CircularProgress";
 import DashboardSearch from "../components/DashboardSearch";
 import OnboardingWizard from "../components/OnboardingWizard";
+import QuickExamModal from "../components/QuickExamModal";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const [examDates, setExamDates] = useState<ExamDate[]>([]);
   const [subjectProgress, setSubjectProgress] = useState<Record<string, { total: number; done: number; unitsDone: number }>>({});
   const [allUnits, setAllUnits] = useState<Record<string, Unit[]>>({});
+  const [examModalOpen, setExamModalOpen] = useState(false);
 
   const lastStudied = getLastStudied();
   const streak = getStudyStreak();
@@ -80,7 +82,7 @@ export default function Dashboard() {
   const statCards = [
     { label: "Syllabus Done", value: `${syllabusPercent}%`, icon: Target, change: `${completedTopics}/${totalTopics} topics`, color: "primary" },
     { label: "Subjects", value: `${subjects.length}`, icon: BookOpen, change: "Click to manage", color: "success", onClick: () => navigate("/subject-management") },
-    { label: "Next Exam", value: nextExam ? `${nextExam.daysLeft}d` : "—", icon: CalendarClock, change: nextExam?.exam.label || "Set exam dates", color: isRevisionMode ? "destructive" : "accent" },
+    { label: "Next Exam", value: nextExam ? `${nextExam.daysLeft}d` : "—", icon: CalendarClock, change: nextExam?.exam.label || "Set exam dates", color: isRevisionMode ? "destructive" : "accent", onClick: () => setExamModalOpen(true) },
     { label: "Study Streak", value: `${streak}`, icon: Flame, change: streak > 0 ? `${streak} day streak 🔥` : "Complete a topic!", color: "accent", tooltip: "Your streak increases by 1 each day you complete at least 1 topic. Don't miss a day or it resets!" },
   ];
 
@@ -237,6 +239,11 @@ export default function Dashboard() {
           </>
         )}
       </div>
+      <QuickExamModal
+        open={examModalOpen}
+        onOpenChange={setExamModalOpen}
+        onExamAdded={() => getExamDates().then(setExamDates)}
+      />
     </AppLayout>
   );
 }
