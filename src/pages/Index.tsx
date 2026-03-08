@@ -213,8 +213,9 @@ export default function Dashboard() {
               hasTimetable={!!localStorage.getItem("sppu_timetable_visited")}
             />
             <ExamCountdown exam={nextExam?.exam} daysLeft={nextExam?.daysLeft} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <DailyStudyGoal />
+              <TimetableDayProgress />
               <WeeklyReport subjects={subjects} subjectProgress={subjectProgress} syllabusPercent={syllabusPercent} />
             </div>
 
