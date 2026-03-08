@@ -190,6 +190,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          target_grade: number | null
           target_units: number
           updated_at: string
           user_id: string
@@ -201,6 +202,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          target_grade?: number | null
           target_units?: number
           updated_at?: string
           user_id: string
@@ -212,6 +214,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          target_grade?: number | null
           target_units?: number
           updated_at?: string
           user_id?: string
