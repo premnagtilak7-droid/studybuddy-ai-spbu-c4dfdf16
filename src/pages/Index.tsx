@@ -82,7 +82,7 @@ export default function Dashboard() {
   const statCards = [
     { label: "Syllabus Done", value: `${syllabusPercent}%`, icon: Target, change: `${completedTopics}/${totalTopics} topics`, color: "primary" },
     { label: "Subjects", value: `${subjects.length}`, icon: BookOpen, change: "Click to manage", color: "success", onClick: () => navigate("/subject-management") },
-    { label: "Next Exam", value: nextExam ? `${nextExam.daysLeft}d` : "—", icon: CalendarClock, change: nextExam?.exam.label || "Set exam dates", color: isRevisionMode ? "destructive" : "accent" },
+    { label: "Next Exam", value: nextExam ? `${nextExam.daysLeft}d` : "—", icon: CalendarClock, change: nextExam?.exam.label || "Set exam dates", color: isRevisionMode ? "destructive" : "accent", onClick: () => setExamModalOpen(true) },
     { label: "Study Streak", value: `${streak}`, icon: Flame, change: streak > 0 ? `${streak} day streak 🔥` : "Complete a topic!", color: "accent", tooltip: "Your streak increases by 1 each day you complete at least 1 topic. Don't miss a day or it resets!" },
   ];
 
