@@ -15,11 +15,20 @@ import {
   Shield,
   LogOut,
   Flame,
+  Settings,
+  User,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStudyStreak } from "@/lib/study-tracker";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-const baseNavItems = [
+const navItems = [
   { icon: BarChart3, label: "Stats Center", path: "/" },
   { icon: Calendar, label: "Timetable", path: "/timetable" },
   { icon: BookOpen, label: "Subjects", path: "/subjects" },
@@ -34,10 +43,6 @@ export default function AppSidebar() {
   const location = useLocation();
   const { isAdmin, user, signOut } = useAuth();
   const streak = getStudyStreak();
-
-  const navItems = isAdmin
-    ? [...baseNavItems, { icon: Shield, label: "Admin Console", path: "/admin" }]
-    : baseNavItems;
 
   return (
     <motion.aside
@@ -92,29 +97,52 @@ export default function AppSidebar() {
         })}
       </nav>
 
-      {/* User & Collapse */}
+      {/* User profile dropdown & Collapse */}
       <div className="px-2 pb-4 space-y-2">
-        {user && !collapsed && (
-          <div className="px-3 py-2 text-xs text-sidebar-foreground truncate font-mono">
-            {user.email}
-          </div>
-        )}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-          >
-            {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-          </button>
-          {!collapsed && (
-            <button
-              onClick={signOut}
-              className="flex-1 flex items-center gap-2 p-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors text-sm"
-            >
-              <LogOut className="w-4 h-4" /> Sign Out
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors text-left">
+              <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <User className="w-4 h-4 text-primary" />
+              </div>
+              {!collapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-sidebar-accent-foreground truncate">
+                    {user?.email}
+                  </p>
+                </div>
+              )}
             </button>
-          )}
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-52">
+            <div className="px-2 py-1.5">
+              <p className="text-xs font-medium text-foreground truncate">{user?.email}</p>
+            </div>
+            <DropdownMenuSeparator />
+            {isAdmin && (
+              <>
+                <DropdownMenuItem asChild>
+                  <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
+                    <Shield className="w-4 h-4" />
+                    Admin Console
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="w-full p-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors flex items-center justify-center"
+        >
+          {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+        </button>
       </div>
     </motion.aside>
   );
