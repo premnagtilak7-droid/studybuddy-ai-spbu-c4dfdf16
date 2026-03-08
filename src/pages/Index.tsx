@@ -208,6 +208,8 @@ export default function Dashboard() {
               <WeeklyReport subjects={subjects} subjectProgress={subjectProgress} syllabusPercent={syllabusPercent} />
             </div>
 
+            <RevisionSchedule subjects={subjects} />
+
             <WeeklyStudyChart />
 
             <StudyHeatmap />
