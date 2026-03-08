@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -7,7 +7,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-export default function PWAInstallPrompt() {
+const PWAInstallPrompt = forwardRef<HTMLDivElement>(function PWAInstallPrompt(_props, ref) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -42,7 +42,7 @@ export default function PWAInstallPrompt() {
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm bg-card border border-border rounded-xl shadow-lg p-4 flex items-center gap-3">
+    <div ref={ref} className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm bg-card border border-border rounded-xl shadow-lg p-4 flex items-center gap-3">
       <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
         <Download className="w-5 h-5 text-primary" />
       </div>
@@ -56,4 +56,6 @@ export default function PWAInstallPrompt() {
       </button>
     </div>
   );
-}
+});
+
+export default PWAInstallPrompt;

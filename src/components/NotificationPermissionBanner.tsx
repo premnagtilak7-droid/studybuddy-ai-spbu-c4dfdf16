@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { BellRing, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requestNotificationPermission, getPermissionStatus } from "@/lib/notifications";
 import { toast } from "sonner";
 
-export default function NotificationPermissionBanner() {
+const NotificationPermissionBanner = forwardRef<HTMLDivElement>(function NotificationPermissionBanner(_props, ref) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function NotificationPermissionBanner() {
   };
 
   return (
-    <div className="fixed top-4 right-4 z-[100] w-80 bg-card border border-border rounded-xl shadow-lg p-4">
+    <div ref={ref} className="fixed top-4 right-4 z-[100] w-80 bg-card border border-border rounded-xl shadow-lg p-4">
       <button onClick={handleDismiss} className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-foreground">
         <X className="w-4 h-4" />
       </button>
@@ -54,4 +54,6 @@ export default function NotificationPermissionBanner() {
       </div>
     </div>
   );
-}
+});
+
+export default NotificationPermissionBanner;
