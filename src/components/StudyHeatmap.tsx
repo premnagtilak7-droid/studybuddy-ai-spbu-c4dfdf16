@@ -1,6 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, forwardRef } from "react";
 
-// Generate mock heatmap data for the last 365 days
 function generateHeatmapData() {
   const data: { date: string; hours: number }[] = [];
   const today = new Date();
@@ -8,7 +7,6 @@ function generateHeatmapData() {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split("T")[0];
-    // Random study hours 0-6 with some patterns
     const dayOfWeek = d.getDay();
     const base = dayOfWeek === 0 ? 1 : dayOfWeek === 6 ? 2 : 3;
     const hours = Math.max(0, Math.floor(Math.random() * (base + 3)));
@@ -35,14 +33,12 @@ const levelColors = [
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export default function StudyHeatmap() {
+const StudyHeatmap = forwardRef<HTMLDivElement>((_props, ref) => {
   const data = useMemo(generateHeatmapData, []);
 
-  // Group by weeks
   const weeks: { date: string; hours: number }[][] = [];
   let currentWeek: { date: string; hours: number }[] = [];
 
-  // Pad the first week
   const firstDay = new Date(data[0].date).getDay();
   for (let i = 0; i < firstDay; i++) {
     currentWeek.push({ date: "", hours: -1 });
@@ -68,7 +64,7 @@ export default function StudyHeatmap() {
   })();
 
   return (
-    <div className="glass-card p-5">
+    <div ref={ref} className="glass-card p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="font-semibold text-foreground">Study Consistency</h3>
@@ -101,7 +97,6 @@ export default function StudyHeatmap() {
             </div>
           ))}
         </div>
-        {/* Month labels */}
         <div className="flex mt-1 min-w-[720px]">
           {months.map((m, i) => (
             <span key={i} className="text-[10px] text-muted-foreground font-mono" style={{ width: `${100 / 12}%` }}>
@@ -112,4 +107,7 @@ export default function StudyHeatmap() {
       </div>
     </div>
   );
-}
+});
+
+StudyHeatmap.displayName = "StudyHeatmap";
+export default StudyHeatmap;

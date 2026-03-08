@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Clock, Flame, BookOpen, Target, TrendingUp, Plus, AlertTriangle, CalendarClock } from "lucide-react";
+import { Clock, Flame, BookOpen, Target, TrendingUp, Plus, AlertTriangle, CalendarClock, PlayCircle, Search } from "lucide-react";
 import StudyHeatmap from "../components/StudyHeatmap";
 import SubjectChart from "../components/SubjectChart";
 import ExamCountdown from "../components/ExamCountdown";
 import WeeklyReport from "../components/WeeklyReport";
 import AppLayout from "../components/AppLayout";
 import CircularProgress from "../components/CircularProgress";
+import DashboardSearch from "../components/DashboardSearch";
 import { Button } from "@/components/ui/button";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
 import { getExamDates, getNextExam, type ExamDate } from "@/lib/exam-store";
-import { getUnitsWithTopics } from "@/lib/units-store";
+import { getUnitsWithTopics, type Unit } from "@/lib/units-store";
+import { getLastStudied, getStudyStreak } from "@/lib/study-tracker";
 import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
@@ -19,6 +21,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [examDates, setExamDates] = useState<ExamDate[]>([]);
   const [subjectProgress, setSubjectProgress] = useState<Record<string, { total: number; done: number; unitsDone: number }>>({});
+  const [allUnits, setAllUnits] = useState<Record<string, Unit[]>>({});
+
+  const lastStudied = getLastStudied();
+  const streak = getStudyStreak();
 
   useEffect(() => {
     Promise.all([
@@ -28,12 +34,13 @@ export default function Dashboard() {
       setSubjects(subs);
       setExamDates(exams);
 
-      // Load unit/topic progress for each subject
       const progress: Record<string, { total: number; done: number; unitsDone: number }> = {};
+      const unitsMap: Record<string, Unit[]> = {};
       await Promise.all(
         subs.map(async (s) => {
           try {
             const units = await getUnitsWithTopics(s.id);
+            unitsMap[s.id] = units;
             const total = units.reduce((a, u) => a + (u.topics?.length || 0), 0);
             const done = units.reduce((a, u) => a + (u.topics?.filter(t => t.is_completed).length || 0), 0);
             const unitsDone = units.filter(u => {
@@ -45,6 +52,7 @@ export default function Dashboard() {
         })
       );
       setSubjectProgress(progress);
+      setAllUnits(unitsMap);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -56,11 +64,22 @@ export default function Dashboard() {
   const completedTopics = Object.values(subjectProgress).reduce((a, p) => a + p.done, 0);
   const syllabusPercent = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
 
+  // Goal warning: check if any subject with target_grade has low progress vs days left
+  const goalWarnings = subjects.filter(s => {
+    if (!s.target_grade || !nextExam) return false;
+    const prog = subjectProgress[s.id];
+    if (!prog || prog.total === 0) return false;
+    const progressPct = (prog.done / prog.total) * 100;
+    // Warn if progress% is less than (100 - daysLeft) — i.e. behind schedule
+    const expectedPct = Math.max(0, 100 - nextExam.daysLeft * 2);
+    return progressPct < expectedPct;
+  });
+
   const statCards = [
     { label: "Syllabus Done", value: `${syllabusPercent}%`, icon: Target, change: `${completedTopics}/${totalTopics} topics`, color: "primary" },
     { label: "Subjects", value: `${subjects.length}`, icon: BookOpen, change: "Click to manage", color: "success", onClick: () => navigate("/subject-management") },
     { label: "Next Exam", value: nextExam ? `${nextExam.daysLeft}d` : "—", icon: CalendarClock, change: nextExam?.exam.label || "Set exam dates", color: isRevisionMode ? "destructive" : "accent" },
-    { label: "Topics Today", value: "0", icon: Flame, change: "Start studying!", color: "accent" },
+    { label: "Study Streak", value: `${streak}`, icon: Flame, change: streak > 0 ? `${streak} day streak 🔥` : "Complete a topic!", color: "accent" },
   ];
 
   return (
@@ -78,10 +97,60 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Stats Center</h1>
-          <p className="text-sm text-muted-foreground mt-1">Track your SPPU study progress</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Stats Center</h1>
+            <p className="text-sm text-muted-foreground mt-1">Track your SPPU study progress</p>
+          </div>
+          {streak > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/15 border border-accent/30">
+              <Flame className="w-4 h-4 text-accent" />
+              <span className="text-sm font-bold font-mono text-accent">{streak}</span>
+            </div>
+          )}
         </div>
+
+        {/* Search Bar */}
+        <DashboardSearch subjects={subjects} allUnits={allUnits} />
+
+        {/* Resume Study */}
+        {lastStudied && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <button
+              onClick={() => navigate(`/subject/${lastStudied.subjectId}`)}
+              className="w-full flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/15 transition-colors text-left"
+            >
+              <PlayCircle className="w-5 h-5 text-primary flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-foreground">Resume Study</p>
+                <p className="text-xs text-muted-foreground font-mono truncate">
+                  {lastStudied.topicName} · {lastStudied.subjectName} › {lastStudied.unitName}
+                </p>
+              </div>
+              <span className="text-[10px] text-muted-foreground font-mono flex-shrink-0">
+                {new Date(lastStudied.timestamp).toLocaleDateString()}
+              </span>
+            </button>
+          </motion.div>
+        )}
+
+        {/* Goal Warnings */}
+        {goalWarnings.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="p-4 rounded-xl bg-accent/10 border border-accent/30"
+          >
+            <p className="text-sm font-bold text-accent mb-1">⚠️ Behind Schedule</p>
+            {goalWarnings.map(s => {
+              const prog = subjectProgress[s.id];
+              const pct = prog ? Math.round((prog.done / prog.total) * 100) : 0;
+              return (
+                <p key={s.id} className="text-xs text-accent/80">
+                  {s.name}: {pct}% done — Target Grade: {s.target_grade} CGPA
+                </p>
+              );
+            })}
+          </motion.div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat, i) => (
@@ -150,6 +219,7 @@ export default function Dashboard() {
                             <p className="text-sm font-medium text-foreground">{subj.name}</p>
                             <p className="text-[11px] font-mono text-muted-foreground">
                               {prog.done}/{prog.total} topics · {prog.unitsDone}/6 units
+                              {subj.target_grade ? ` · Target: ${subj.target_grade}` : ""}
                             </p>
                           </div>
                         </div>

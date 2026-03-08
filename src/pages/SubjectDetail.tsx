@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, ChevronDown, ChevronRight, Trash2, Check, Tag } from "lucide-react";
+import { ArrowLeft, Plus, ChevronDown, ChevronRight, Trash2, Check, Target } from "lucide-react";
 import AppLayout from "../components/AppLayout";
 import CircularProgress from "../components/CircularProgress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { getSubjects, type UserSubject } from "@/lib/subjects-store";
+import { getSubjects, updateSubject, type UserSubject } from "@/lib/subjects-store";
 import {
   getUnitsWithTopics,
   addTopic,
@@ -17,6 +16,7 @@ import {
   deleteTopic,
   type Unit,
 } from "@/lib/units-store";
+import { recordStudySession, setLastStudied } from "@/lib/study-tracker";
 import { toast } from "sonner";
 
 const priorityColors: Record<string, string> = {
@@ -35,13 +35,17 @@ export default function SubjectDetail() {
   const [newTopic, setNewTopic] = useState("");
   const [addingUnit, setAddingUnit] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingGrade, setEditingGrade] = useState(false);
+  const [gradeInput, setGradeInput] = useState("");
 
   const loadData = async () => {
     if (!id) return;
     try {
       const [subs, unitsData] = await Promise.all([getSubjects(), getUnitsWithTopics(id)]);
-      setSubject(subs.find((s) => s.id === id) || null);
+      const found = subs.find((s) => s.id === id) || null;
+      setSubject(found);
       setUnits(unitsData);
+      if (found) setGradeInput(found.target_grade?.toString() || "");
       if (unitsData.length > 0 && !expanded) setExpanded(unitsData[0].id);
     } catch (err: any) {
       toast.error(err.message);
@@ -62,9 +66,20 @@ export default function SubjectDetail() {
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const handleToggle = async (topicId: string, current: boolean) => {
+  const handleToggle = async (topicId: string, current: boolean, topicName: string, unitName: string) => {
     try {
       await toggleTopic(topicId, !current);
+      // Track study activity
+      if (!current && subject) {
+        recordStudySession();
+        setLastStudied({
+          subjectId: subject.id,
+          subjectName: subject.name,
+          topicName,
+          unitName,
+          timestamp: Date.now(),
+        });
+      }
       loadData();
     } catch (err: any) { toast.error(err.message); }
   };
@@ -83,12 +98,34 @@ export default function SubjectDetail() {
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const handleSaveGrade = async () => {
+    if (!subject) return;
+    const val = gradeInput.trim() ? parseFloat(gradeInput) : null;
+    if (val !== null && (isNaN(val) || val < 0 || val > 10)) {
+      toast.error("Enter a valid grade (0-10)");
+      return;
+    }
+    try {
+      await updateSubject(subject.id, { target_grade: val });
+      toast.success(val ? `Target grade set to ${val}` : "Target grade removed");
+      setEditingGrade(false);
+      loadData();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
   if (loading) {
     return <AppLayout><div className="flex items-center justify-center h-64"><p className="text-muted-foreground">Loading...</p></div></AppLayout>;
   }
 
   if (!subject) {
-    return <AppLayout><div className="text-center py-16"><p className="text-muted-foreground">Subject not found</p><Button onClick={() => navigate("/subjects")} className="mt-4">Back to Subjects</Button></div></AppLayout>;
+    return (
+      <AppLayout>
+        <div className="text-center py-16">
+          <p className="text-muted-foreground">Subject not found</p>
+          <Button onClick={() => navigate("/subjects")} className="mt-4">Back to Subjects</Button>
+        </div>
+      </AppLayout>
+    );
   }
 
   const segments = units.map((u) => {
@@ -110,12 +147,43 @@ export default function SubjectDetail() {
           </Button>
           <div className="flex items-center gap-4 flex-1">
             <CircularProgress segments={segments} size={72} label="units" />
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-foreground">{subject.name}</h1>
               <p className="text-sm text-muted-foreground font-mono mt-0.5">
                 {subject.code} · {completedTopics}/{totalTopics} topics done
               </p>
             </div>
+          </div>
+          {/* Target Grade */}
+          <div className="flex items-center gap-2">
+            {editingGrade ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  value={gradeInput}
+                  onChange={(e) => setGradeInput(e.target.value)}
+                  placeholder="e.g. 9.0"
+                  className="w-20 text-sm"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  autoFocus
+                  onKeyDown={(e) => e.key === "Enter" && handleSaveGrade()}
+                />
+                <Button size="sm" onClick={handleSaveGrade}><Check className="w-3 h-3" /></Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditingGrade(false)}>✕</Button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setEditingGrade(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+              >
+                <Target className="w-4 h-4 text-primary" />
+                <span className="text-xs font-mono text-foreground">
+                  {subject.target_grade ? `${subject.target_grade} CGPA` : "Set Target"}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -156,7 +224,7 @@ export default function SubjectDetail() {
                         <div key={topic.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors group">
                           <Checkbox
                             checked={topic.is_completed}
-                            onCheckedChange={() => handleToggle(topic.id, topic.is_completed)}
+                            onCheckedChange={() => handleToggle(topic.id, topic.is_completed, topic.name, unit.name)}
                           />
                           <span className={`flex-1 text-sm ${topic.is_completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
                             {topic.name}
