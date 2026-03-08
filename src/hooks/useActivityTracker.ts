@@ -32,12 +32,11 @@ export function useActivityTracker() {
     if (path === lastPath.current) return;
     lastPath.current = path;
 
-    const feature = featureMap[path] || path.startsWith("/subject/") ? "subject_detail" : "unknown";
-    const resolvedFeature = featureMap[path] || feature;
+    const feature = featureMap[path] || (path.startsWith("/subject/") ? "subject_detail" : "unknown");
 
     supabase.from("activity_logs").insert([{
       user_id: user.id,
-      feature: resolvedFeature,
+      feature,
       action: "page_view",
       device_type: getDeviceType(),
       metadata: { path } as any,

@@ -2,7 +2,25 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Play, Pause, RotateCcw, Coffee, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { awardXP } from "@/lib/xp-store";
+import { toast } from "sonner";
 
+function playTimerSound() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.15);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch {}
+}
 type Phase = "focus" | "short-break" | "long-break";
 
 const DURATIONS: Record<Phase, number> = {
@@ -51,11 +69,16 @@ export default function PomodoroTimer() {
         if (prev <= 1) {
           clearTimer();
           setRunning(false);
+          playTimerSound();
 
           // Advance phase
           if (phase === "focus") {
             const newSessions = sessions + 1;
             setSessions(newSessions);
+            // Award XP for completing a focus session
+            awardXP("focus_session").then((amount) => {
+              if (amount > 0) toast.success(`+${amount} XP for focus session!`);
+            });
             if (newSessions % 4 === 0) {
               setPhase("long-break");
               return DURATIONS["long-break"];

@@ -41,23 +41,23 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>;
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground animate-pulse">Loading...</p></div>;
   if (!user) return <Navigate to="/auth" replace />;
-  return <>{children}</>;
+  return children;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isAdmin, user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>;
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground animate-pulse">Loading...</p></div>;
   if (!isAdmin && user?.email !== "nagtilakprem99@gmail.com") return <Navigate to="/" replace />;
-  return <>{children}</>;
+  return children;
 }
 
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (user) return <Navigate to="/" replace />;
-  return <>{children}</>;
+  return children;
 }
 
 const AppRoutes = () => {
