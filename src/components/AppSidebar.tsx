@@ -30,6 +30,11 @@ const navItems = [
   { icon: Target, label: "Exam Predictor", path: "/exam-predictor" },
   { icon: CalendarClock, label: "Exam Dates", path: "/exam-dates" },
   { icon: Trophy, label: "Study Room", path: "/study-room" },
+  { icon: Users, label: "Study Groups", path: "/study-groups" },
+  { icon: MessageSquare, label: "Doubt Forum", path: "/doubt-forum" },
+  { icon: Heart, label: "Study Buddy", path: "/study-buddy" },
+  { icon: Share2, label: "Share Progress", path: "/share-progress" },
+  { icon: Rss, label: "Batch Feed", path: "/batch-feed" },
 ];
 
 export default function AppSidebar() {

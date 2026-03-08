@@ -68,6 +68,11 @@ const AppRoutes = () => {
       <Route path="/answer-checker" element={<ProtectedRoute><AIAnswerChecker /></ProtectedRoute>} />
       <Route path="/formula-sheet" element={<ProtectedRoute><AIFormulaSheet /></ProtectedRoute>} />
       <Route path="/exam-predictor" element={<ProtectedRoute><AIExamPredictor /></ProtectedRoute>} />
+      <Route path="/study-groups" element={<ProtectedRoute><StudyGroups /></ProtectedRoute>} />
+      <Route path="/doubt-forum" element={<ProtectedRoute><DoubtForum /></ProtectedRoute>} />
+      <Route path="/study-buddy" element={<ProtectedRoute><StudyBuddy /></ProtectedRoute>} />
+      <Route path="/share-progress" element={<ProtectedRoute><ShareProgress /></ProtectedRoute>} />
+      <Route path="/batch-feed" element={<ProtectedRoute><BatchFeed /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
