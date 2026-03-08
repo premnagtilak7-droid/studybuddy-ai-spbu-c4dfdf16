@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { awardXP, emitXP } from "@/lib/xp-store";
+import { awardXP } from "@/lib/xp-store";
 import { MessageSquare, Plus, ThumbsUp, ThumbsDown, CheckCircle, Filter } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
