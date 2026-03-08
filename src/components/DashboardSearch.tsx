@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Search, BookOpen, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
 import type { Unit } from "@/lib/units-store";
 import type { UserSubject } from "@/lib/subjects-store";
@@ -20,9 +21,10 @@ type SearchResult = {
 export default function DashboardSearch({ subjects, allUnits }: DashboardSearchProps) {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const disabled = subjects.length === 0;
 
   const results = useMemo(() => {
-    if (query.trim().length < 2) return [];
+    if (disabled || query.trim().length < 2) return [];
     const q = query.toLowerCase();
     const out: SearchResult[] = [];
 
@@ -40,19 +42,29 @@ export default function DashboardSearch({ subjects, allUnits }: DashboardSearchP
       }
     }
     return out.slice(0, 8);
-  }, [query, subjects, allUnits]);
+  }, [query, subjects, allUnits, disabled]);
 
   return (
     <div className="relative">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search topics & units across all subjects..."
-          className="pl-9 bg-secondary/50 border-border/50"
-        />
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="relative">
+            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${disabled ? "text-muted-foreground/40" : "text-muted-foreground"}`} />
+            <Input
+              value={query}
+              onChange={(e) => !disabled && setQuery(e.target.value)}
+              placeholder={disabled ? "Add subjects first to enable search" : "Search topics & units across all subjects..."}
+              className={`pl-9 bg-secondary/50 border-border/50 ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={disabled}
+            />
+          </div>
+        </TooltipTrigger>
+        {disabled && (
+          <TooltipContent>
+            <p>Add subjects first to enable search</p>
+          </TooltipContent>
+        )}
+      </Tooltip>
       {results.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
           {results.map((r, i) => (
