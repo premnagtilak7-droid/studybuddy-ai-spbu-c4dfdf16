@@ -6,7 +6,9 @@ export type XPReason =
   | "streak_bonus"
   | "mock_test"
   | "ai_doubt"
-  | "study_plan";
+  | "study_plan"
+  | "focus_session"
+  | "forum_answer";
 
 const XP_AMOUNTS: Record<XPReason, number> = {
   topic_complete: 10,
@@ -15,6 +17,8 @@ const XP_AMOUNTS: Record<XPReason, number> = {
   mock_test: 20,
   ai_doubt: 5,
   study_plan: 10,
+  focus_session: 15,
+  forum_answer: 15,
 };
 
 export interface LevelDef {
