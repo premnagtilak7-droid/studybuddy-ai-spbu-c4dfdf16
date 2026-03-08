@@ -14,6 +14,7 @@ import QuickExamModal from "../components/QuickExamModal";
 import WeeklyStudyChart from "../components/WeeklyStudyChart";
 import DailyStudyGoal from "../components/DailyStudyGoal";
 import RevisionSchedule from "../components/RevisionSchedule";
+import AchievementBadges from "../components/AchievementBadges";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
@@ -211,6 +212,14 @@ export default function Dashboard() {
             <RevisionSchedule subjects={subjects} />
 
             <WeeklyStudyChart />
+
+            <AchievementBadges
+              subjectCount={subjects.length}
+              streak={streak}
+              syllabusPercent={syllabusPercent}
+              examCount={examDates.length}
+              pomodoroSessions={0}
+            />
 
             <StudyHeatmap />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
