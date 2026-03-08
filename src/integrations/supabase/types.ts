@@ -44,6 +44,48 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_notifications: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_sent: boolean
+          message: string
+          scheduled_at: string | null
+          sent_at: string | null
+          target: string
+          target_email: string | null
+          template_type: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_sent?: boolean
+          message: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          target?: string
+          target_email?: string | null
+          template_type?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_sent?: boolean
+          message?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          target?: string
+          target_email?: string | null
+          template_type?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           created_at: string
@@ -106,9 +148,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           discount_percent: number
+          discount_type: string
+          expiry_date: string | null
+          flat_amount: number | null
           id: string
           is_active: boolean
           max_uses: number | null
+          plan_type: string
           used_count: number
         }
         Insert: {
@@ -116,9 +162,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           discount_percent?: number
+          discount_type?: string
+          expiry_date?: string | null
+          flat_amount?: number | null
           id?: string
           is_active?: boolean
           max_uses?: number | null
+          plan_type?: string
           used_count?: number
         }
         Update: {
@@ -126,9 +176,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           discount_percent?: number
+          discount_type?: string
+          expiry_date?: string | null
+          flat_amount?: number | null
           id?: string
           is_active?: boolean
           max_uses?: number | null
+          plan_type?: string
           used_count?: number
         }
         Relationships: []
@@ -235,29 +289,38 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ban_reason: string | null
           created_at: string
           display_name: string | null
           email: string
           id: string
+          is_banned: boolean
           is_subscribed: boolean
+          premium_expires_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          ban_reason?: string | null
           created_at?: string
           display_name?: string | null
           email: string
           id?: string
+          is_banned?: boolean
           is_subscribed?: boolean
+          premium_expires_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          ban_reason?: string | null
           created_at?: string
           display_name?: string | null
           email?: string
           id?: string
+          is_banned?: boolean
           is_subscribed?: boolean
+          premium_expires_at?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -360,6 +423,48 @@ export type Database = {
           target_grade?: number | null
           target_units?: number
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          admin_reply: string | null
+          created_at: string
+          id: string
+          message: string
+          priority: string
+          replied_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_email: string
+          user_id: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          priority?: string
+          replied_at?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_email: string
+          user_id: string
+        }
+        Update: {
+          admin_reply?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          priority?: string
+          replied_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_email?: string
           user_id?: string
         }
         Relationships: []
