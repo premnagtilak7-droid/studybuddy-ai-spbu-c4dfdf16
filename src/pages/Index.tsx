@@ -10,6 +10,7 @@ import CircularProgress from "../components/CircularProgress";
 import DashboardSearch from "../components/DashboardSearch";
 import OnboardingWizard from "../components/OnboardingWizard";
 import QuickExamModal from "../components/QuickExamModal";
+import DailyStudyGoal from "../components/DailyStudyGoal";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
