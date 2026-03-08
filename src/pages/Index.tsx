@@ -266,7 +266,7 @@ export default function Dashboard() {
               </div>
             </div>
           </>
-        )}
+        ) : null}
       </div>
       <QuickExamModal
         open={examModalOpen}
