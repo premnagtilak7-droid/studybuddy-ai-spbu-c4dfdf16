@@ -1,5 +1,6 @@
 import { Trophy, Users, BookOpen } from "lucide-react";
 import AppLayout from "../components/AppLayout";
+import PomodoroTimer from "../components/PomodoroTimer";
 
 export default function StudyRoom() {
   return (
@@ -7,8 +8,10 @@ export default function StudyRoom() {
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Study Room</h1>
-          <p className="text-sm text-muted-foreground mt-1">Compete with friends — This Week's Leaderboard</p>
+          <p className="text-sm text-muted-foreground mt-1">Focus sessions & leaderboard</p>
         </div>
+
+        <PomodoroTimer />
 
         <div className="glass-card overflow-hidden">
           <div className="p-5 border-b border-border flex items-center justify-between">
