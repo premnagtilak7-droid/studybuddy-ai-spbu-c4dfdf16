@@ -180,7 +180,9 @@ export default function AppSidebar() {
                   <p className="text-xs font-medium text-sidebar-accent-foreground truncate">
                     {user?.email}
                   </p>
-                  <p className="text-[10px] text-sidebar-foreground/60">Manage account</p>
+                  <p className="text-[10px] text-sidebar-foreground/60 flex items-center gap-1">
+                    {level.emoji} {level.name} · {xp} XP
+                  </p>
                 </div>
               )}
             </button>

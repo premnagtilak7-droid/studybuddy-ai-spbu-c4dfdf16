@@ -59,9 +59,9 @@ export default function Leaderboard() {
   }
 
   const rankIcons = [
-    <Crown className="w-4 h-4 text-yellow-500" />,
-    <Medal className="w-4 h-4 text-gray-400" />,
-    <Medal className="w-4 h-4 text-amber-600" />,
+    <Crown className="w-4 h-4 text-accent" />,
+    <Medal className="w-4 h-4 text-muted-foreground" />,
+    <Medal className="w-4 h-4 text-primary" />,
   ];
 
   const tabs: { key: Tab; label: string }[] = [
