@@ -28,6 +28,7 @@ import {
 import SupportTicketModal from "./SupportTicketModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStudyStreak } from "@/lib/study-tracker";
+import { getUserXP, getLevel } from "@/lib/xp-store";
 import { ThemeToggle } from "./ThemeToggle";
 import {
   DropdownMenu,
