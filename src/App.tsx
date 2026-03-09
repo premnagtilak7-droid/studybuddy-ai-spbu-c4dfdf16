@@ -30,6 +30,7 @@ import AttendanceTracker from "./pages/AttendanceTracker";
 import MarksTracker from "./pages/MarksTracker";
 import AssignmentTracker from "./pages/AssignmentTracker";
 import FocusMode from "./pages/FocusMode";
+import StudyTimer from "./pages/StudyTimer";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
