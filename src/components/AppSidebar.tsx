@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  BarChart3, BookOpen, CalendarClock, Calendar, Trophy, MessageSquare, ChevronLeft, ChevronRight, GraduationCap, Zap, Shield, LogOut, Flame, User, Sparkles, Loader2, HelpCircle, FileText, CheckCircle, Calculator, Target, Users, Heart, Share2, Rss, Layers, BookMarked, ClipboardList, Award, FlaskConical, Brain, Menu, X,
+  BarChart3, BookOpen, CalendarClock, Calendar, Trophy, MessageSquare, ChevronLeft, ChevronRight, GraduationCap, Zap, Shield, LogOut, Flame, User, Sparkles, Loader2, HelpCircle, FileText, CheckCircle, Calculator, Target, Users, Heart, Share2, Rss, Layers, BookMarked, ClipboardList, Award, FlaskConical, Brain, Menu, X, Timer,
 } from "lucide-react";
 import { BellRing } from "lucide-react";
 import SupportTicketModal from "./SupportTicketModal";
@@ -37,6 +37,7 @@ const navItems = [
   { icon: Target, label: "Exam Predictor", path: "/exam-predictor" },
   { icon: CalendarClock, label: "Exam Dates", path: "/exam-dates" },
   { icon: Trophy, label: "Study Room", path: "/study-room" },
+  { icon: Timer, label: "Study Timer", path: "/study-timer" },
   { icon: Users, label: "Study Groups", path: "/study-groups" },
   { icon: MessageSquare, label: "Doubt Forum", path: "/doubt-forum" },
   { icon: Heart, label: "Study Buddy", path: "/study-buddy" },

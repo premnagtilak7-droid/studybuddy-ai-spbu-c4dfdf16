@@ -30,6 +30,7 @@ import AttendanceTracker from "./pages/AttendanceTracker";
 import MarksTracker from "./pages/MarksTracker";
 import AssignmentTracker from "./pages/AssignmentTracker";
 import FocusMode from "./pages/FocusMode";
+import StudyTimer from "./pages/StudyTimer";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -92,6 +93,7 @@ const AppRoutes = () => {
       <Route path="/marks" element={<ProtectedRoute><MarksTracker /></ProtectedRoute>} />
       <Route path="/assignments" element={<ProtectedRoute><AssignmentTracker /></ProtectedRoute>} />
       <Route path="/focus" element={<ProtectedRoute><FocusMode /></ProtectedRoute>} />
+      <Route path="/study-timer" element={<ProtectedRoute><StudyTimer /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
