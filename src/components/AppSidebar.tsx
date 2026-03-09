@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  BarChart3, BookOpen, CalendarClock, Calendar, Trophy, MessageSquare, ChevronLeft, ChevronRight, GraduationCap, Zap, Shield, LogOut, Flame, User, Sparkles, Loader2, HelpCircle, FileText, CheckCircle, Calculator, Target, Users, Heart, Share2, Rss, Layers, BookMarked, ClipboardList, Award, FlaskConical, Brain, Menu, X,
+  BarChart3, BookOpen, CalendarClock, Calendar, Trophy, MessageSquare, ChevronLeft, ChevronRight, GraduationCap, Zap, Shield, LogOut, Flame, User, Sparkles, Loader2, HelpCircle, FileText, CheckCircle, Calculator, Target, Users, Heart, Share2, Rss, Layers, BookMarked, ClipboardList, Award, FlaskConical, Brain, Menu, X, Timer,
 } from "lucide-react";
 import { BellRing } from "lucide-react";
 import SupportTicketModal from "./SupportTicketModal";
