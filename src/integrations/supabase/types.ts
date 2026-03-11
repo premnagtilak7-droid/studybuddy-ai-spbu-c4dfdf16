@@ -1029,6 +1029,27 @@ export type Database = {
         }
         Relationships: []
       }
+      study_dates: {
+        Row: {
+          created_at: string
+          id: string
+          study_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          study_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          study_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       study_groups: {
         Row: {
           created_at: string
@@ -1064,6 +1085,8 @@ export type Database = {
           duration_minutes: number
           id: string
           logged_at: string
+          mode: string | null
+          notes: string | null
           subject_id: string | null
           user_id: string
         }
@@ -1071,6 +1094,8 @@ export type Database = {
           duration_minutes?: number
           id?: string
           logged_at?: string
+          mode?: string | null
+          notes?: string | null
           subject_id?: string | null
           user_id: string
         }
@@ -1078,6 +1103,8 @@ export type Database = {
           duration_minutes?: number
           id?: string
           logged_at?: string
+          mode?: string | null
+          notes?: string | null
           subject_id?: string | null
           user_id?: string
         }
@@ -1160,6 +1187,47 @@ export type Database = {
         }
         Relationships: []
       }
+      subtopics: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          difficulty: string
+          id: string
+          is_completed: boolean
+          name: string
+          notes: string | null
+          topic_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          difficulty?: string
+          id?: string
+          is_completed?: boolean
+          name: string
+          notes?: string | null
+          topic_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          difficulty?: string
+          id?: string
+          is_completed?: boolean
+          name?: string
+          notes?: string | null
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subtopics_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
           admin_reply: string | null
@@ -1198,6 +1266,110 @@ export type Database = {
           subject?: string
           updated_at?: string
           user_email?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      timer_sessions: {
+        Row: {
+          countdown_target_seconds: number | null
+          created_at: string
+          elapsed_seconds: number
+          id: string
+          is_running: boolean
+          mode: string
+          paused_at: string | null
+          pomodoro_phase: string | null
+          pomodoro_sessions_done: number | null
+          started_at: string
+          subject_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          countdown_target_seconds?: number | null
+          created_at?: string
+          elapsed_seconds?: number
+          id?: string
+          is_running?: boolean
+          mode?: string
+          paused_at?: string | null
+          pomodoro_phase?: string | null
+          pomodoro_sessions_done?: number | null
+          started_at?: string
+          subject_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          countdown_target_seconds?: number | null
+          created_at?: string
+          elapsed_seconds?: number
+          id?: string
+          is_running?: boolean
+          mode?: string
+          paused_at?: string | null
+          pomodoro_phase?: string | null
+          pomodoro_sessions_done?: number | null
+          started_at?: string
+          subject_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timer_sessions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timetable_sessions: {
+        Row: {
+          color: string
+          created_at: string
+          day_of_week: string
+          duration: string
+          id: string
+          is_completed: boolean
+          repeat_type: string
+          session_type: string
+          sort_order: number
+          start_time: string
+          subject: string
+          topic: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          day_of_week: string
+          duration?: string
+          id?: string
+          is_completed?: boolean
+          repeat_type?: string
+          session_type?: string
+          sort_order?: number
+          start_time: string
+          subject: string
+          topic?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          day_of_week?: string
+          duration?: string
+          id?: string
+          is_completed?: boolean
+          repeat_type?: string
+          session_type?: string
+          sort_order?: number
+          start_time?: string
+          subject?: string
+          topic?: string | null
           user_id?: string
         }
         Relationships: []
