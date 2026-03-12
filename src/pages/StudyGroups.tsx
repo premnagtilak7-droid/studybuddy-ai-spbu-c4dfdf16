@@ -43,6 +43,7 @@ export default function StudyGroups() {
   const [newGroup, setNewGroup] = useState({ name: "", subject_focus: "", max_members: 10 });
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("chat");
+  const [meetActive, setMeetActive] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { loadMyGroups(); }, []);
