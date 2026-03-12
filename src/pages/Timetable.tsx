@@ -1,24 +1,24 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Clock, Check, Plus, MoreVertical, Pencil, Trash2, ArrowRightLeft,
-  AlertTriangle, BookOpen, Beaker, Wrench, FlaskConical, GripVertical,
-  LayoutList, LayoutGrid, CalendarClock, Bell, Copy,
+  Clock, Check, Plus, MoreVertical, Pencil, Trash2,
+  BookOpen, Beaker, Wrench, FlaskConical, GripVertical,
+  ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertTriangle,
 } from "lucide-react";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isSameMonth, isToday, addMonths, addWeeks, addDays, getHours, getMinutes } from "date-fns";
 import AppLayout from "../components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -30,14 +30,12 @@ import {
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
 import { logStudyMinutes } from "@/lib/daily-goal-store";
 import { recordStudySession } from "@/lib/study-tracker";
-import {
-  getReminder, setReminder as saveReminder, clearReminder,
-  requestNotificationPermission, scheduleAllReminders,
-} from "@/lib/timetable-helpers";
+import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { toast } from "sonner";
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const DURATIONS = ["30min", "1h", "1.5h", "2h", "2.5h", "3h"];
+type ViewMode = "month" | "week" | "day";
+
 const SESSION_TYPES = ["Study", "Revision", "Practice", "Lab"] as const;
 type SessionType = (typeof SESSION_TYPES)[number];
 const REPEAT_TYPES = ["once", "weekly", "daily"] as const;
@@ -46,6 +44,51 @@ type RepeatType = (typeof REPEAT_TYPES)[number];
 const SESSION_TYPE_ICONS: Record<SessionType, typeof BookOpen> = {
   Study: BookOpen, Revision: Beaker, Practice: Wrench, Lab: FlaskConical,
 };
+
+const DURATIONS = ["30min", "1h", "1.5h", "2h", "2.5h", "3h"];
+const HOURS = Array.from({ length: 18 }, (_, i) => i + 5); // 5 AM to 10 PM
+
+type TimetableSession = {
+  id: string;
+  user_id: string;
+  subject: string;
+  topic: string | null;
+  start_time: string;
+  duration: string;
+  session_type: string;
+  is_completed: boolean;
+  color: string;
+  repeat_type: string;
+  day_of_week: string;
+  sort_order: number;
+  created_at: string;
+};
+
+type ExamDate = {
+  id: string;
+  exam_date: string;
+  label: string | null;
+  subject_id: string | null;
+};
+
+function parseDuration(d: string): number {
+  if (d.endsWith("min")) return parseInt(d) / 60;
+  return parseFloat(d.replace("h", ""));
+}
+
+function timeToMinutes(t: string): number {
+  const [time, period] = t.split(" ");
+  let [h, m] = time.split(":").map(Number);
+  if (period === "PM" && h !== 12) h += 12;
+  if (period === "AM" && h === 12) h = 0;
+  return h * 60 + m;
+}
+
+function formatTimeSlot(hour: number): string {
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const h = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+  return `${h}:00 ${ampm}`;
+}
 
 const TIME_OPTIONS = [
   "5:00 AM", "5:30 AM", "6:00 AM", "6:30 AM", "7:00 AM", "7:30 AM",
@@ -57,100 +100,29 @@ const TIME_OPTIONS = [
   "11:00 PM",
 ];
 
-const STORAGE_KEY = "sppu_timetable_sessions";
-const STRICT_KEY = "sppu_strict_mode";
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-type Session = {
-  id: string;
-  subject: string;
-  topic: string;
-  time: string;
-  duration: string;
-  sessionType: SessionType;
-  completed: boolean;
-  color: string;
-  repeat: RepeatType;
-};
-
-type Schedule = Record<string, Session[]>;
-
-function parseDuration(d: string): number {
-  if (d.endsWith("min")) return parseInt(d) / 60;
-  return parseFloat(d.replace("h", ""));
-}
-
-function toMin(t: string): number {
-  const [time, period] = t.split(" ");
-  let [h, m] = time.split(":").map(Number);
-  if (period === "PM" && h !== 12) h += 12;
-  if (period === "AM" && h === 12) h = 0;
-  return h * 60 + m;
-}
-
-function loadSchedule(): Schedule {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return DAYS.reduce((acc, d) => ({ ...acc, [d]: [] }), {} as Schedule);
-}
-
-function saveSchedule(s: Schedule) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-  localStorage.setItem("sppu_timetable_visited", "1");
-}
-
-function genId() {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-function DaySummaryBar({ sessions }: { sessions: Session[] }) {
-  const total = sessions.length;
-  const completed = sessions.filter((s) => s.completed).length;
-  const totalHours = sessions.reduce((a, s) => a + parseDuration(s.duration), 0);
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-  if (total === 0) return null;
-  return (
-    <div className="glass-card px-4 py-3 flex items-center gap-4">
-      <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground flex-1">
-        <span className="flex items-center gap-1.5"><CalendarClock className="w-3.5 h-3.5" />{total} session{total !== 1 ? "s" : ""}</span>
-        <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{totalHours.toFixed(1)}h</span>
-        <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />{completed}/{total}</span>
-      </div>
-      <div className="w-32"><Progress value={pct} className="h-2" /></div>
-      <span className="text-xs font-mono text-muted-foreground w-10 text-right">{pct}%</span>
-    </div>
-  );
+function getDayName(date: Date): string {
+  return format(date, "EEEE");
 }
 
 export default function Timetable() {
-  const [selectedDay, setSelectedDay] = useState("Monday");
-  const [schedule, setSchedule] = useState<Schedule>(loadSchedule);
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [sessions, setSessions] = useState<TimetableSession[]>([]);
   const [subjects, setSubjects] = useState<UserSubject[]>([]);
-  const [weekView, setWeekView] = useState(false);
-  const [strictMode, setStrictMode] = useState(() => {
-    const stored = localStorage.getItem(STRICT_KEY);
-    return stored === null ? true : stored === "true";
-  });
+  const [examDates, setExamDates] = useState<ExamDate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [strictMode, setStrictMode] = useState(false);
 
+  // Form state
   const [addOpen, setAddOpen] = useState(false);
   const [addDay, setAddDay] = useState("Monday");
-  const [editSession, setEditSession] = useState<Session | null>(null);
-  const [editDay, setEditDay] = useState("Monday");
+  const [addTime, setAddTime] = useState("8:00 AM");
+  const [editSession, setEditSession] = useState<TimetableSession | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleteDay, setDeleteDay] = useState("Monday");
-  const [summarySession, setSummarySession] = useState<Session | null>(null);
-  const [summaryDay, setSummaryDay] = useState("Monday");
+  const [summarySession, setSummarySession] = useState<TimetableSession | null>(null);
   const [summary, setSummary] = useState("");
-
-  // Copy dialog
-  const [copySession, setCopySession] = useState<Session | null>(null);
-  const [copyFromDay, setCopyFromDay] = useState("Monday");
-  const [copyDays, setCopyDays] = useState<string[]>([]);
-
-  // Reminder dialog
-  const [reminderSession, setReminderSession] = useState<Session | null>(null);
-  const [reminderValue, setReminderValue] = useState<string>("");
 
   const [formSubject, setFormSubject] = useState("");
   const [formTopic, setFormTopic] = useState("");
@@ -158,213 +130,237 @@ export default function Timetable() {
   const [formDuration, setFormDuration] = useState("1h");
   const [formType, setFormType] = useState<SessionType>("Study");
   const [formRepeat, setFormRepeat] = useState<RepeatType>("once");
+  const [formDay, setFormDay] = useState("Monday");
 
-  const dragItem = useRef<{ day: string; index: number } | null>(null);
-  const dragOver = useRef<{ day: string; index: number } | null>(null);
+  // Drag state
+  const [dragSession, setDragSession] = useState<TimetableSession | null>(null);
 
-  useEffect(() => { getSubjects().then(setSubjects).catch(() => {}); }, []);
-  useEffect(() => { localStorage.setItem(STRICT_KEY, String(strictMode)); }, [strictMode]);
-  useEffect(() => { scheduleAllReminders(); }, [schedule]);
-
-  const persist = useCallback((next: Schedule) => {
-    setSchedule(next);
-    saveSchedule(next);
+  const loadData = useCallback(async () => {
+    try {
+      const [subs, sessRes, examRes] = await Promise.all([
+        getSubjects(),
+        supabase.from("timetable_sessions").select("*").order("sort_order", { ascending: true }),
+        supabase.from("exam_dates").select("*"),
+      ]);
+      setSubjects(subs);
+      if (sessRes.error) throw sessRes.error;
+      setSessions((sessRes.data || []) as TimetableSession[]);
+      if (!examRes.error) setExamDates((examRes.data || []) as ExamDate[]);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const resetForm = () => {
-    setFormSubject(""); setFormTopic(""); setFormTime("8:00 AM");
-    setFormDuration("1h"); setFormType("Study"); setFormRepeat("once");
-  };
-
-  const openAdd = (day: string) => { resetForm(); setAddDay(day); setAddOpen(true); };
-
-  const openEdit = (s: Session, day: string) => {
-    setFormSubject(s.subject); setFormTopic(s.topic); setFormTime(s.time);
-    setFormDuration(s.duration); setFormType(s.sessionType);
-    setFormRepeat(s.repeat || "once"); setEditSession(s); setEditDay(day);
-  };
+  useEffect(() => { loadData(); }, [loadData]);
+  useRealtimeSubscription("timetable_sessions", loadData);
 
   const getColor = (name: string) => subjects.find((s) => s.name === name)?.color || "chart-1";
 
-  const handleSave = (isEdit: boolean) => {
+  const getSessionsForDay = useCallback((dayName: string) => {
+    return sessions
+      .filter(s => s.day_of_week === dayName)
+      .sort((a, b) => timeToMinutes(a.start_time) - timeToMinutes(b.start_time));
+  }, [sessions]);
+
+  const resetForm = () => {
+    setFormSubject(""); setFormTopic(""); setFormTime("8:00 AM");
+    setFormDuration("1h"); setFormType("Study"); setFormRepeat("once"); setFormDay("Monday");
+  };
+
+  const openAddForSlot = (dayName: string, time?: string) => {
+    resetForm();
+    setFormDay(dayName);
+    if (time) setFormTime(time);
+    setAddOpen(true);
+  };
+
+  const openEdit = (s: TimetableSession) => {
+    setFormSubject(s.subject);
+    setFormTopic(s.topic || "");
+    setFormTime(s.start_time);
+    setFormDuration(s.duration);
+    setFormType(s.session_type as SessionType);
+    setFormRepeat(s.repeat_type as RepeatType);
+    setFormDay(s.day_of_week);
+    setEditSession(s);
+  };
+
+  const handleSave = async (isEdit: boolean) => {
     if (!formSubject) { toast.error("Please select a subject"); return; }
-    const next = { ...schedule };
-    if (isEdit && editSession) {
-      next[editDay] = next[editDay].map((s) =>
-        s.id === editSession.id
-          ? { ...s, subject: formSubject, topic: formTopic, time: formTime, duration: formDuration, sessionType: formType, color: getColor(formSubject), repeat: formRepeat }
-          : s
-      );
-      setEditSession(null);
-      toast.success("Session updated");
-    } else {
-      const newSession: Session = {
-        id: genId(), subject: formSubject, topic: formTopic, time: formTime,
-        duration: formDuration, sessionType: formType, completed: false,
-        color: getColor(formSubject), repeat: formRepeat,
-      };
-      if (formRepeat === "daily") {
-        DAYS.forEach((d) => { next[d] = [...(next[d] || []), { ...newSession, id: d === addDay ? newSession.id : genId() }]; });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("Not authenticated"); return; }
+
+    try {
+      if (isEdit && editSession) {
+        const { error } = await supabase.from("timetable_sessions").update({
+          subject: formSubject, topic: formTopic || null, start_time: formTime,
+          duration: formDuration, session_type: formType, color: getColor(formSubject),
+          repeat_type: formRepeat, day_of_week: formDay,
+        }).eq("id", editSession.id);
+        if (error) throw error;
+        setEditSession(null);
+        toast.success("Session updated");
       } else {
-        next[addDay] = [...(next[addDay] || []), newSession];
+        const daysToAdd = formRepeat === "daily" ? DAYS : [formDay];
+        const inserts = daysToAdd.map(day => ({
+          user_id: user.id, subject: formSubject, topic: formTopic || null,
+          start_time: formTime, duration: formDuration, session_type: formType,
+          color: getColor(formSubject), repeat_type: formRepeat, day_of_week: day,
+          sort_order: sessions.length,
+        }));
+        const { error } = await supabase.from("timetable_sessions").insert(inserts);
+        if (error) throw error;
+        setAddOpen(false);
+        toast.success(formRepeat === "daily" ? "Session added to all days" : "Session added");
       }
-      setAddOpen(false);
-      toast.success(formRepeat === "daily" ? "Session added to all days" : "Session added");
-    }
-    persist(next); resetForm();
+      resetForm();
+      loadData();
+    } catch (err: any) { toast.error(err.message); }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteId) return;
-    const next = { ...schedule };
-    next[deleteDay] = next[deleteDay].filter((s) => s.id !== deleteId);
-    persist(next); setDeleteId(null); toast.success("Session deleted");
+    const { error } = await supabase.from("timetable_sessions").delete().eq("id", deleteId);
+    if (error) toast.error(error.message);
+    else { toast.success("Session deleted"); loadData(); }
+    setDeleteId(null);
   };
 
-  const handleMove = (sessionId: string, fromDay: string, targetDay: string) => {
-    const session = (schedule[fromDay] || []).find((s) => s.id === sessionId);
-    if (!session) return;
-    const next = { ...schedule };
-    next[fromDay] = next[fromDay].filter((s) => s.id !== sessionId);
-    next[targetDay] = [...(next[targetDay] || []), session];
-    persist(next); toast.success(`Moved to ${targetDay}`);
-  };
-
-  const handleCopy = () => {
-    if (!copySession || copyDays.length === 0) return;
-    const next = { ...schedule };
-    copyDays.forEach((d) => {
-      next[d] = [...(next[d] || []), { ...copySession, id: genId(), completed: false }];
-    });
-    persist(next);
-    setCopySession(null); setCopyDays([]);
-    toast.success(`Copied to ${copyDays.length} day${copyDays.length > 1 ? "s" : ""}`);
-  };
-
-  const handleSetReminder = async () => {
-    if (!reminderSession || !reminderValue) return;
-    const granted = await requestNotificationPermission();
-    if (!granted) {
-      toast.error("Please allow notifications in your browser settings");
+  const handleComplete = async (session: TimetableSession) => {
+    if (strictMode && !session.is_completed) {
+      setSummarySession(session); setSummary("");
       return;
     }
-    saveReminder(reminderSession.id, parseInt(reminderValue));
-    scheduleAllReminders();
-    setReminderSession(null);
-    toast.success(`Reminder set for ${reminderValue} min before`);
+    await toggleComplete(session);
   };
 
-  const handleClearReminder = (sessionId: string) => {
-    clearReminder(sessionId);
-    scheduleAllReminders();
-    toast.success("Reminder cleared");
-  };
-
-  const handleComplete = (session: Session, day: string) => {
-    if (strictMode) {
-      setSummarySession(session); setSummaryDay(day); setSummary("");
-    } else {
-      toggleComplete(session.id, day, session);
-    }
-  };
-
-  const toggleComplete = async (id: string, day: string, session?: Session) => {
-    const next = { ...schedule };
-    const s = next[day].find((s) => s.id === id);
-    if (!s) return;
-    const wasCompleted = s.completed;
-    next[day] = next[day].map((s) => s.id === id ? { ...s, completed: !s.completed } : s);
-    persist(next);
-
-    // Log to study_logs when marking complete (not when un-marking)
-    if (!wasCompleted) {
-      const durationMinutes = Math.round(parseDuration(s.duration) * 60);
-      const subj = subjects.find((sub) => sub.name === s.subject);
-      try {
-        await logStudyMinutes(durationMinutes, subj?.id);
-        recordStudySession();
-      } catch {
-        // silent - still mark complete locally
-      }
+  const toggleComplete = async (session: TimetableSession) => {
+    const newVal = !session.is_completed;
+    const { error } = await supabase.from("timetable_sessions").update({ is_completed: newVal }).eq("id", session.id);
+    if (error) { toast.error(error.message); return; }
+    if (newVal) {
+      const mins = Math.round(parseDuration(session.duration) * 60);
+      const subj = subjects.find(s => s.name === session.subject);
+      try { await logStudyMinutes(mins, subj?.id); recordStudySession(); } catch {}
       toast.success("Session completed! Study time logged.");
-    } else {
-      toast.success("Session unmarked");
     }
+    loadData();
   };
 
-  const submitSummary = () => {
+  const submitSummary = async () => {
     if (!summarySession) return;
-    toggleComplete(summarySession.id, summaryDay, summarySession);
+    await toggleComplete(summarySession);
     setSummarySession(null); setSummary("");
   };
 
-  const handleDragStart = (day: string, index: number) => { dragItem.current = { day, index }; };
-  const handleDragEnter = (day: string, index: number) => { dragOver.current = { day, index }; };
-  const handleDragEnd = () => {
-    if (!dragItem.current || !dragOver.current) return;
-    if (dragItem.current.day !== dragOver.current.day || dragItem.current.index === dragOver.current.index) {
-      dragItem.current = null; dragOver.current = null; return;
-    }
-    const day = dragItem.current.day;
-    const next = { ...schedule };
-    const list = [...(next[day] || [])];
-    const [removed] = list.splice(dragItem.current.index, 1);
-    list.splice(dragOver.current.index, 0, removed);
-    next[day] = list;
-    persist(next);
-    dragItem.current = null; dragOver.current = null;
+  const handleDrop = async (targetDay: string, targetTime?: string) => {
+    if (!dragSession) return;
+    const updates: any = { day_of_week: targetDay };
+    if (targetTime) updates.start_time = targetTime;
+    const { error } = await supabase.from("timetable_sessions").update(updates).eq("id", dragSession.id);
+    if (error) toast.error(error.message);
+    else { toast.success(`Moved to ${targetDay}${targetTime ? ` at ${targetTime}` : ""}`); loadData(); }
+    setDragSession(null);
   };
 
-  const sortSessions = (sessions: Session[]) => [...sessions].sort((a, b) => toMin(a.time) - toMin(b.time));
-
-  const sentenceCount = summary.split(/[.!?]+/).filter((s) => s.trim().length > 0).length;
-  const wordCount = summary.trim().split(/\s+/).filter(Boolean).length;
+  const sentenceCount = summary.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
   const canSubmitSummary = sentenceCount >= 3;
 
+  // Navigation
+  const navigate = (dir: number) => {
+    if (viewMode === "month") setCurrentDate(addMonths(currentDate, dir));
+    else if (viewMode === "week") setCurrentDate(addWeeks(currentDate, dir));
+    else setCurrentDate(addDays(currentDate, dir));
+  };
+
+  const goToday = () => setCurrentDate(new Date());
+
+  const headerLabel = useMemo(() => {
+    if (viewMode === "month") return format(currentDate, "MMMM yyyy");
+    if (viewMode === "week") {
+      const ws = startOfWeek(currentDate, { weekStartsOn: 1 });
+      const we = endOfWeek(currentDate, { weekStartsOn: 1 });
+      return `${format(ws, "MMM d")} — ${format(we, "MMM d, yyyy")}`;
+    }
+    return format(currentDate, "EEEE, MMMM d, yyyy");
+  }, [currentDate, viewMode]);
+
+  // Calendar days for month view
+  const monthDays = useMemo(() => {
+    const ms = startOfMonth(currentDate);
+    const me = endOfMonth(currentDate);
+    const ws = startOfWeek(ms, { weekStartsOn: 1 });
+    const we = endOfWeek(me, { weekStartsOn: 1 });
+    return eachDayOfInterval({ start: ws, end: we });
+  }, [currentDate]);
+
+  // Week days
+  const weekDays = useMemo(() => {
+    const ws = startOfWeek(currentDate, { weekStartsOn: 1 });
+    return Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  }, [currentDate]);
+
+  const getExamsForDate = (date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return examDates.filter(e => e.exam_date === dateStr);
+  };
+
+  // Session form
   const sessionFormContent = (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>Subject</Label>
-        <Select value={formSubject} onValueChange={setFormSubject}>
-          <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
-          <SelectContent>{subjects.map((s) => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}</SelectContent>
-        </Select>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label>Day</Label>
+          <Select value={formDay} onValueChange={setFormDay}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{DAYS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Subject</Label>
+          <Select value={formSubject} onValueChange={setFormSubject}>
+            <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+            <SelectContent>{subjects.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="space-y-2">
-        <Label>Topic</Label>
-        <Input placeholder="e.g. Kirchhoff's Laws" value={formTopic} onChange={(e) => setFormTopic(e.target.value)} />
+        <Label>Topic (optional)</Label>
+        <Input placeholder="e.g. Kirchhoff's Laws" value={formTopic} onChange={e => setFormTopic(e.target.value)} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label>Start Time</Label>
           <Select value={formTime} onValueChange={setFormTime}>
             <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent className="max-h-60">{TIME_OPTIONS.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}</SelectContent>
+            <SelectContent className="max-h-60">{TIME_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
           <Label>Duration</Label>
           <Select value={formDuration} onValueChange={setFormDuration}>
             <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{DURATIONS.map((d) => (<SelectItem key={d} value={d}>{d}</SelectItem>))}</SelectContent>
+            <SelectContent>{DURATIONS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
           </Select>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label>Session Type</Label>
-          <Select value={formType} onValueChange={(v) => setFormType(v as SessionType)}>
+          <Label>Type</Label>
+          <Select value={formType} onValueChange={v => setFormType(v as SessionType)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{SESSION_TYPES.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}</SelectContent>
+            <SelectContent>{SESSION_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
           <Label>Repeat</Label>
-          <Select value={formRepeat} onValueChange={(v) => setFormRepeat(v as RepeatType)}>
+          <Select value={formRepeat} onValueChange={v => setFormRepeat(v as RepeatType)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="once">One-time</SelectItem>
-              <SelectItem value="weekly">Weekly Recurring</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
               <SelectItem value="daily">Daily</SelectItem>
             </SelectContent>
           </Select>
@@ -373,109 +369,68 @@ export default function Timetable() {
     </div>
   );
 
-  const renderSessionCard = (session: Session, index: number, day: string, compact = false) => {
-    const TypeIcon = SESSION_TYPE_ICONS[session.sessionType] || BookOpen;
-    const reminder = getReminder(session.id);
+  // Render a compact session pill
+  const renderPill = (s: TimetableSession) => {
+    const TypeIcon = SESSION_TYPE_ICONS[s.session_type as SessionType] || BookOpen;
     return (
       <div
-        key={session.id}
+        key={s.id}
         draggable
-        onDragStart={() => handleDragStart(day, index)}
-        onDragEnter={() => handleDragEnter(day, index)}
-        onDragEnd={handleDragEnd}
-        onDragOver={(e) => e.preventDefault()}
-        className={`glass-card ${compact ? "p-2.5" : "p-4"} flex items-center justify-between border-l-4 ${session.completed ? "opacity-60" : ""} cursor-default`}
-        style={{ borderLeftColor: `hsl(var(--${session.color}))` }}
+        onDragStart={() => setDragSession(s)}
+        className={`text-[10px] px-1.5 py-0.5 rounded border-l-2 truncate cursor-grab active:cursor-grabbing flex items-center gap-1 ${s.is_completed ? "opacity-50 line-through" : ""}`}
+        style={{ borderLeftColor: `hsl(var(--${s.color}))`, backgroundColor: `hsl(var(--${s.color}) / 0.1)` }}
+        onClick={(e) => { e.stopPropagation(); openEdit(s); }}
+        title={`${s.subject}${s.topic ? ` — ${s.topic}` : ""} · ${s.start_time} · ${s.duration}`}
+      >
+        <TypeIcon className="w-2.5 h-2.5 flex-shrink-0" style={{ color: `hsl(var(--${s.color}))` }} />
+        <span className="truncate font-medium">{s.subject}</span>
+      </div>
+    );
+  };
+
+  // Full session card for day/week detail
+  const renderCard = (s: TimetableSession) => {
+    const TypeIcon = SESSION_TYPE_ICONS[s.session_type as SessionType] || BookOpen;
+    return (
+      <div
+        key={s.id}
+        draggable
+        onDragStart={() => setDragSession(s)}
+        className={`glass-card p-3 border-l-4 flex items-center justify-between cursor-grab active:cursor-grabbing ${s.is_completed ? "opacity-60" : ""}`}
+        style={{ borderLeftColor: `hsl(var(--${s.color}))` }}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <button className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground flex-shrink-0 touch-none" aria-label="Drag to reorder">
-            <GripVertical className="w-4 h-4" />
-          </button>
-          {!compact && (
-            <div className="text-center flex-shrink-0">
-              <Clock className="w-4 h-4 text-muted-foreground mx-auto" />
-              <p className="text-xs font-mono text-muted-foreground mt-1">{session.time}</p>
-            </div>
-          )}
+          <GripVertical className="w-3.5 h-3.5 text-muted-foreground/40 flex-shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <p className={`${compact ? "text-xs" : "text-sm"} font-semibold text-foreground ${session.completed ? "line-through" : ""} truncate`}>
-                {session.subject}
-              </p>
-              {session.repeat && session.repeat !== "once" && (
-                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 flex-shrink-0">
-                  {session.repeat === "weekly" ? "🔁 Weekly" : "🔁 Daily"}
-                </Badge>
-              )}
-              {session.repeat === "once" && (
-                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 flex-shrink-0">1️⃣ Once</Badge>
-              )}
-              {reminder != null && (
-                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 flex-shrink-0">
-                  🔔 {reminder}m
-                </Badge>
+              <span className={`text-sm font-semibold text-foreground truncate ${s.is_completed ? "line-through" : ""}`}>{s.subject}</span>
+              {s.repeat_type !== "once" && (
+                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">🔁 {s.repeat_type}</Badge>
               )}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              {compact && <span className="text-[10px] font-mono text-muted-foreground">{session.time}</span>}
-              {session.topic && <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">{session.topic}</p>}
-              <span className="flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground bg-muted px-1 py-0.5 rounded flex-shrink-0">
-                <TypeIcon className="w-2.5 h-2.5" />{session.sessionType}
+              <span className="text-[10px] font-mono text-muted-foreground">{s.start_time}</span>
+              {s.topic && <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{s.topic}</span>}
+              <span className="flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground bg-muted px-1 py-0.5 rounded">
+                <TypeIcon className="w-2.5 h-2.5" />{s.session_type}
               </span>
-              <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0">{session.duration}</span>
+              <span className="text-[10px] font-mono text-muted-foreground">{s.duration}</span>
             </div>
           </div>
         </div>
-
         <div className="flex items-center gap-1 flex-shrink-0">
-          {session.completed ? (
-            <button onClick={() => toggleComplete(session.id, day, session)}
-              className={`flex items-center gap-1 text-[10px] font-medium text-success bg-success/10 ${compact ? "px-2 py-1" : "px-3 py-1.5"} rounded-lg hover:bg-success/20 transition-colors`}>
-              <Check className="w-3 h-3" /> Done
-            </button>
-          ) : (
-            <button onClick={() => handleComplete(session, day)}
-              className={`flex items-center gap-1 text-[10px] font-medium gradient-primary text-primary-foreground ${compact ? "px-2 py-1" : "px-3 py-1.5"} rounded-lg hover:opacity-90 transition-opacity`}>
-              <Check className="w-3 h-3" />
-            </button>
-          )}
-
+          <button onClick={() => handleComplete(s)}
+            className={`flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-lg transition-colors ${s.is_completed ? "text-[hsl(var(--success))] bg-[hsl(var(--success)/0.1)]" : "gradient-primary text-primary-foreground"}`}>
+            <Check className="w-3 h-3" /> {s.is_completed ? "Done" : ""}
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-                <MoreVertical className="w-3.5 h-3.5" />
-              </button>
+              <button className="p-1 rounded-lg hover:bg-muted text-muted-foreground"><MoreVertical className="w-3.5 h-3.5" /></button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => openEdit(session, day)}>
-                <Pencil className="w-4 h-4 mr-2" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setCopySession(session); setCopyFromDay(day); setCopyDays([]); }}>
-                <Copy className="w-4 h-4 mr-2" /> Copy to Days
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                setReminderSession(session);
-                setReminderValue(String(getReminder(session.id) || "15"));
-              }}>
-                <Bell className="w-4 h-4 mr-2" /> {getReminder(session.id) != null ? "Change Reminder" : "Set Reminder"}
-              </DropdownMenuItem>
-              {getReminder(session.id) != null && (
-                <DropdownMenuItem onClick={() => handleClearReminder(session.id)}>
-                  <Bell className="w-4 h-4 mr-2 opacity-50" /> Clear Reminder
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger><ArrowRightLeft className="w-4 h-4 mr-2" /> Move to</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  {DAYS.filter((d) => d !== day).map((d) => (
-                    <DropdownMenuItem key={d} onClick={() => handleMove(session.id, day, d)}>{d}</DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
+              <DropdownMenuItem onClick={() => openEdit(s)}><Pencil className="w-4 h-4 mr-2" /> Edit</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleteId(session.id); setDeleteDay(day); }}>
-                <Trash2 className="w-4 h-4 mr-2" /> Delete
-              </DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(s.id)}><Trash2 className="w-4 h-4 mr-2" /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -483,121 +438,251 @@ export default function Timetable() {
     );
   };
 
-  const sessions = schedule[selectedDay] || [];
-  const sortedSessions = sortSessions(sessions);
+  // ─── MONTH VIEW ───
+  const renderMonthView = () => (
+    <div className="glass-card overflow-hidden">
+      <div className="grid grid-cols-7 border-b border-border">
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => (
+          <div key={d} className="text-center text-xs font-semibold text-muted-foreground py-2 border-r border-border last:border-r-0">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {monthDays.map((day, i) => {
+          const dayName = getDayName(day);
+          const daySessions = getSessionsForDay(dayName);
+          const dayExams = getExamsForDate(day);
+          const inMonth = isSameMonth(day, currentDate);
+          const today = isToday(day);
+          return (
+            <div
+              key={i}
+              className={`min-h-[100px] p-1.5 border-r border-b border-border last:border-r-0 cursor-pointer hover:bg-muted/30 transition-colors ${!inMonth ? "opacity-40" : ""} ${today ? "bg-primary/5 ring-1 ring-inset ring-primary/20" : ""}`}
+              onClick={() => openAddForSlot(dayName)}
+              onDragOver={e => e.preventDefault()}
+              onDrop={() => handleDrop(dayName)}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className={`text-xs font-mono ${today ? "bg-primary text-primary-foreground w-6 h-6 rounded-full flex items-center justify-center font-bold" : "text-muted-foreground"}`}>
+                  {format(day, "d")}
+                </span>
+                {dayExams.length > 0 && <span className="text-[9px] bg-destructive/10 text-destructive px-1 rounded">📝 Exam</span>}
+              </div>
+              <div className="space-y-0.5">
+                {daySessions.slice(0, 3).map(renderPill)}
+                {daySessions.length > 3 && <span className="text-[9px] text-muted-foreground">+{daySessions.length - 3} more</span>}
+              </div>
+              {dayExams.map(ex => (
+                <div key={ex.id} className="text-[9px] mt-0.5 px-1 py-0.5 rounded bg-destructive/10 text-destructive truncate">
+                  {ex.label || "Exam"}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 
-  return (
-    <AppLayout>
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Smart Timetable</h1>
-            <p className="text-sm text-muted-foreground mt-1">Weekly recurring scheduler</p>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1 rounded-lg bg-card border border-border p-1">
-              <button onClick={() => setWeekView(false)}
-                className={`p-1.5 rounded-md transition-colors ${!weekView ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                aria-label="Day view"><LayoutList className="w-4 h-4" /></button>
-              <button onClick={() => setWeekView(true)}
-                className={`p-1.5 rounded-md transition-colors ${weekView ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                aria-label="Week view"><LayoutGrid className="w-4 h-4" /></button>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border">
-              <AlertTriangle className={`w-4 h-4 ${strictMode ? "text-accent" : "text-muted-foreground"}`} />
-              <Label htmlFor="strict-mode" className="text-xs font-medium cursor-pointer select-none">Strict Mode</Label>
-              <Switch id="strict-mode" checked={strictMode} onCheckedChange={setStrictMode} />
-            </div>
-          </div>
+  // ─── WEEK VIEW ───
+  const renderWeekView = () => (
+    <div className="glass-card overflow-auto">
+      <div className="min-w-[800px]">
+        {/* Header */}
+        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border sticky top-0 bg-card z-10">
+          <div className="p-2 border-r border-border" />
+          {weekDays.map((day, i) => {
+            const today = isToday(day);
+            const dayExams = getExamsForDate(day);
+            return (
+              <div key={i} className={`text-center py-2 border-r border-border last:border-r-0 ${today ? "bg-primary/5" : ""}`}>
+                <span className="text-[10px] text-muted-foreground font-mono">{format(day, "EEE")}</span>
+                <div className={`text-sm font-bold ${today ? "bg-primary text-primary-foreground w-7 h-7 rounded-full flex items-center justify-center mx-auto" : "text-foreground"}`}>
+                  {format(day, "d")}
+                </div>
+                {dayExams.length > 0 && <Badge variant="destructive" className="text-[8px] px-1 py-0 mt-0.5">Exam</Badge>}
+              </div>
+            );
+          })}
         </div>
-
-        {weekView ? (
-          <div className="grid grid-cols-7 gap-2 overflow-x-auto">
-            {DAYS.map((day) => {
-              const daySessions = sortSessions(schedule[day] || []);
+        {/* Time slots */}
+        {HOURS.map(hour => (
+          <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border/50 min-h-[60px]">
+            <div className="text-[10px] font-mono text-muted-foreground p-1 border-r border-border text-right pr-2 pt-1">
+              {formatTimeSlot(hour)}
+            </div>
+            {weekDays.map((day, i) => {
+              const dayName = getDayName(day);
+              const slotSessions = getSessionsForDay(dayName).filter(s => {
+                const mins = timeToMinutes(s.start_time);
+                return Math.floor(mins / 60) === hour;
+              });
+              const timeStr = formatTimeSlot(hour);
               return (
-                <div key={day} className="min-w-[160px]">
-                  <div className={`text-center text-xs font-semibold py-2 rounded-t-lg ${day === selectedDay ? "gradient-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
-                    {day.slice(0, 3)}<span className="ml-1 opacity-70">({daySessions.length})</span>
-                  </div>
-                  <div className="border border-t-0 border-border rounded-b-lg p-1.5 space-y-1.5 min-h-[120px] bg-card/50">
-                    {daySessions.length === 0 ? (
-                      <button onClick={() => openAdd(day)} className="w-full py-6 text-center text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50 rounded-lg transition-colors">
-                        <Plus className="w-5 h-5 mx-auto mb-1" /><span className="text-[10px]">Add</span>
-                      </button>
-                    ) : (
-                      <>
-                        {daySessions.map((s, i) => renderSessionCard(s, i, day, true))}
-                        <button onClick={() => openAdd(day)} className="w-full py-1 text-center text-[10px] text-muted-foreground/50 hover:text-muted-foreground border border-dashed border-border rounded-lg transition-colors">
-                          <Plus className="w-3 h-3 inline mr-0.5" />Add
-                        </button>
-                      </>
-                    )}
-                  </div>
+                <div
+                  key={i}
+                  className={`border-r border-border/50 last:border-r-0 p-0.5 cursor-pointer hover:bg-muted/20 transition-colors ${isToday(day) ? "bg-primary/[0.02]" : ""}`}
+                  onClick={() => openAddForSlot(dayName, timeStr)}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={() => handleDrop(dayName, timeStr)}
+                >
+                  {slotSessions.map(s => (
+                    <div
+                      key={s.id}
+                      draggable
+                      onDragStart={(e) => { e.stopPropagation(); setDragSession(s); }}
+                      onClick={(e) => { e.stopPropagation(); openEdit(s); }}
+                      className={`text-[10px] px-1 py-0.5 rounded mb-0.5 truncate cursor-grab active:cursor-grabbing border-l-2 ${s.is_completed ? "opacity-50 line-through" : ""}`}
+                      style={{ borderLeftColor: `hsl(var(--${s.color}))`, backgroundColor: `hsl(var(--${s.color}) / 0.12)` }}
+                      title={`${s.subject}${s.topic ? ` — ${s.topic}` : ""}`}
+                    >
+                      <span className="font-medium">{s.subject}</span>
+                      <span className="text-muted-foreground ml-1">{s.duration}</span>
+                    </div>
+                  ))}
                 </div>
               );
             })}
           </div>
-        ) : (
-          <>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {DAYS.map((d) => {
-                const count = (schedule[d] || []).length;
-                return (
-                  <button key={d} onClick={() => setSelectedDay(d)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${selectedDay === d ? "gradient-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}>
-                    {d.slice(0, 3)}
-                    {count > 0 && <span className={`ml-1.5 text-[10px] font-mono ${selectedDay === d ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{count}</span>}
-                  </button>
-                );
-              })}
+        ))}
+      </div>
+    </div>
+  );
+
+  // ─── DAY VIEW ───
+  const renderDayView = () => {
+    const dayName = getDayName(currentDate);
+    const daySessions = getSessionsForDay(dayName);
+    const dayExams = getExamsForDate(currentDate);
+    const today = isToday(currentDate);
+
+    return (
+      <div className="space-y-4">
+        {dayExams.length > 0 && (
+          <div className="glass-card p-3 border-l-4 border-l-destructive">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+              <span className="text-sm font-semibold text-destructive">Exam Day</span>
             </div>
+            {dayExams.map(ex => (
+              <p key={ex.id} className="text-xs text-muted-foreground mt-1">{ex.label || "Exam"}</p>
+            ))}
+          </div>
+        )}
 
-            <DaySummaryBar sessions={sessions} />
-
-            <div className="space-y-3">
-              {sortedSessions.length === 0 ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16 glass-card">
-                  <Clock className="w-10 h-10 mx-auto mb-3 text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground font-medium">No sessions yet for {selectedDay}</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1 mb-4">Plan your study sessions to stay on track</p>
-                  <Button onClick={() => openAdd(selectedDay)} size="lg"><Plus className="w-4 h-4 mr-1" /> Add First Session</Button>
-                </motion.div>
-              ) : (
-                <>
-                  <AnimatePresence mode="popLayout">
-                    {sortedSessions.map((session, i) => (
-                      <motion.div key={session.id} layout initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ delay: i * 0.05 }}>
-                        {renderSessionCard(session, i, selectedDay)}
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                  <Button variant="outline" className="w-full border-dashed" onClick={() => openAdd(selectedDay)}>
-                    <Plus className="w-4 h-4 mr-1" /> Add Session
-                  </Button>
-                </>
-              )}
+        {/* Summary */}
+        {daySessions.length > 0 && (
+          <div className="glass-card px-4 py-3 flex items-center gap-4">
+            <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground flex-1">
+              <span>{daySessions.length} session{daySessions.length !== 1 ? "s" : ""}</span>
+              <span>{daySessions.reduce((a, s) => a + parseDuration(s.duration), 0).toFixed(1)}h total</span>
+              <span>{daySessions.filter(s => s.is_completed).length}/{daySessions.length} done</span>
             </div>
+            <div className="w-32">
+              <Progress value={daySessions.length > 0 ? Math.round((daySessions.filter(s => s.is_completed).length / daySessions.length) * 100) : 0} className="h-2" />
+            </div>
+          </div>
+        )}
 
-            {strictMode && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card p-4 border-l-4 border-l-accent">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-semibold text-foreground">Strict Mode Active</h4>
-                    <p className="text-xs text-muted-foreground mt-1">You must write a 3-sentence summary of what you learned before a session can be marked complete.</p>
-                  </div>
+        {/* Hourly grid */}
+        <div className="glass-card overflow-hidden">
+          {HOURS.map(hour => {
+            const slotSessions = daySessions.filter(s => Math.floor(timeToMinutes(s.start_time) / 60) === hour);
+            const timeStr = formatTimeSlot(hour);
+            return (
+              <div
+                key={hour}
+                className="flex border-b border-border/50 min-h-[64px] hover:bg-muted/10 transition-colors cursor-pointer"
+                onClick={() => openAddForSlot(dayName, timeStr)}
+                onDragOver={e => e.preventDefault()}
+                onDrop={() => handleDrop(dayName, timeStr)}
+              >
+                <div className="w-16 flex-shrink-0 text-[11px] font-mono text-muted-foreground p-2 text-right border-r border-border">
+                  {timeStr}
                 </div>
-              </motion.div>
-            )}
-          </>
+                <div className="flex-1 p-1.5 space-y-1">
+                  {slotSessions.map(s => (
+                    <div key={s.id} onClick={e => e.stopPropagation()}>
+                      {renderCard(s)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {daySessions.length === 0 && (
+          <div className="text-center py-12">
+            <Clock className="w-10 h-10 mx-auto mb-3 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">No sessions for {dayName}</p>
+            <Button onClick={() => openAddForSlot(dayName)} className="mt-3"><Plus className="w-4 h-4 mr-1" /> Add Session</Button>
+          </div>
         )}
       </div>
+    );
+  };
 
-      {/* Add Session Dialog */}
+  if (loading) {
+    return <AppLayout><div className="flex items-center justify-center h-64"><p className="text-muted-foreground">Loading...</p></div></AppLayout>;
+  }
+
+  return (
+    <AppLayout>
+      <div className="max-w-6xl mx-auto space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Timetable</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Plan & track your study schedule</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border">
+              <AlertTriangle className={`w-3.5 h-3.5 ${strictMode ? "text-accent" : "text-muted-foreground"}`} />
+              <Label htmlFor="strict" className="text-xs cursor-pointer">Strict</Label>
+              <Switch id="strict" checked={strictMode} onCheckedChange={setStrictMode} />
+            </div>
+            <Button onClick={() => openAddForSlot(getDayName(currentDate))} size="sm"><Plus className="w-4 h-4 mr-1" /> Add</Button>
+          </div>
+        </div>
+
+        {/* View toggle & navigation */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-1 rounded-lg bg-card border border-border p-1">
+            {(["month", "week", "day"] as ViewMode[]).map(v => (
+              <button
+                key={v}
+                onClick={() => setViewMode(v)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navigate(-1)}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <button onClick={goToday} className="text-sm font-medium text-foreground hover:text-primary transition-colors px-2">
+              {headerLabel}
+            </button>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navigate(1)}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={goToday} className="text-xs">Today</Button>
+          </div>
+        </div>
+
+        {/* View content */}
+        {viewMode === "month" && renderMonthView()}
+        {viewMode === "week" && renderWeekView()}
+        {viewMode === "day" && renderDayView()}
+      </div>
+
+      {/* Add Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Add Session — {addDay}</DialogTitle><DialogDescription>Create a new study session.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Add Session</DialogTitle><DialogDescription>Create a new study session.</DialogDescription></DialogHeader>
           {sessionFormContent}
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
@@ -606,22 +691,22 @@ export default function Timetable() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Session Dialog */}
-      <Dialog open={!!editSession} onOpenChange={(v) => !v && setEditSession(null)}>
+      {/* Edit Dialog */}
+      <Dialog open={!!editSession} onOpenChange={v => !v && setEditSession(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Edit Session</DialogTitle><DialogDescription>Update this study session.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Edit Session</DialogTitle><DialogDescription>Update this session.</DialogDescription></DialogHeader>
           {sessionFormContent}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditSession(null)}>Cancel</Button>
-            <Button onClick={() => handleSave(true)}>Save Changes</Button>
+            <Button onClick={() => handleSave(true)}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteId} onOpenChange={(v) => !v && setDeleteId(null)}>
+      {/* Delete */}
+      <AlertDialog open={!!deleteId} onOpenChange={v => !v && setDeleteId(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete Session</AlertDialogTitle><AlertDialogDescription>Are you sure? This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Delete Session</AlertDialogTitle><AlertDialogDescription>This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
@@ -629,73 +714,15 @@ export default function Timetable() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Strict Mode Summary Dialog */}
-      <Dialog open={!!summarySession} onOpenChange={(v) => !v && setSummarySession(null)}>
+      {/* Strict Mode Summary */}
+      <Dialog open={!!summarySession} onOpenChange={v => !v && setSummarySession(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Mandatory Summary</DialogTitle><DialogDescription>Write at least <strong>3 sentences</strong> about what you learned.</DialogDescription></DialogHeader>
-          <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={5} className="font-mono"
-            placeholder="I learned about Star-Delta transformation and its application in circuit analysis. The key insight was..." />
-          <div className="flex items-center justify-between">
-            <p className={`text-xs font-mono ${canSubmitSummary ? "text-success" : "text-muted-foreground"}`}>{sentenceCount}/3 sentences · {wordCount} words</p>
-          </div>
+          <DialogHeader><DialogTitle>Session Summary</DialogTitle><DialogDescription>Write at least 3 sentences about what you learned.</DialogDescription></DialogHeader>
+          <Textarea value={summary} onChange={e => setSummary(e.target.value)} rows={5} placeholder="I learned about..." className="font-mono" />
+          <p className={`text-xs font-mono ${canSubmitSummary ? "text-[hsl(var(--success))]" : "text-muted-foreground"}`}>{sentenceCount}/3 sentences</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSummarySession(null)}>Cancel</Button>
             <Button disabled={!canSubmitSummary} onClick={submitSummary}>Submit & Complete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Copy Session Dialog */}
-      <Dialog open={!!copySession} onOpenChange={(v) => !v && setCopySession(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Copy Session to Days</DialogTitle>
-            <DialogDescription>Select which days to copy "{copySession?.subject}" to.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            {DAYS.filter((d) => d !== copyFromDay).map((d) => (
-              <div key={d} className="flex items-center gap-2">
-                <Checkbox
-                  id={`copy-${d}`}
-                  checked={copyDays.includes(d)}
-                  onCheckedChange={(checked) => {
-                    setCopyDays(checked ? [...copyDays, d] : copyDays.filter((x) => x !== d));
-                  }}
-                />
-                <Label htmlFor={`copy-${d}`} className="text-sm cursor-pointer">{d}</Label>
-              </div>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCopySession(null)}>Cancel</Button>
-            <Button onClick={handleCopy} disabled={copyDays.length === 0}>
-              Copy to {copyDays.length} day{copyDays.length !== 1 ? "s" : ""}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reminder Dialog */}
-      <Dialog open={!!reminderSession} onOpenChange={(v) => !v && setReminderSession(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Set Reminder</DialogTitle>
-            <DialogDescription>Get a browser notification before "{reminderSession?.subject}" starts.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label>Remind me before</Label>
-            <Select value={reminderValue} onValueChange={setReminderValue}>
-              <SelectTrigger><SelectValue placeholder="Select time" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 minutes before</SelectItem>
-                <SelectItem value="30">30 minutes before</SelectItem>
-                <SelectItem value="60">1 hour before</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReminderSession(null)}>Cancel</Button>
-            <Button onClick={handleSetReminder}>Set Reminder</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -300,19 +300,46 @@ export default function SubjectDetail() {
                             {isTopicExpanded && (
                               <div className="pl-9 pr-3 pb-2.5 space-y-1.5">
                                 {topicSubs.map(sub => (
-                                  <div key={sub.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-secondary/30 transition-colors group/sub">
-                                    <Checkbox checked={sub.is_completed} onCheckedChange={() => handleToggleSubtopic(sub.id, sub.is_completed)} className="scale-90" />
-                                    <span className={`flex-1 text-xs ${sub.is_completed ? "line-through text-muted-foreground" : "text-foreground"}`}>{sub.name}</span>
-                                    <div className="flex items-center gap-1">
-                                      {(["easy", "medium", "hard"] as const).map(d => (
-                                        <button key={d} onClick={() => handleSubtopicDifficulty(sub.id, d)} className={`px-1 py-0.5 rounded text-[9px] font-mono border transition-all ${sub.difficulty === d ? difficultyColors[d] : "border-transparent text-muted-foreground opacity-0 group-hover/sub:opacity-50"}`}>
-                                          {d[0].toUpperCase()}
+                                  <div key={sub.id} className="rounded hover:bg-secondary/30 transition-colors group/sub">
+                                    <div className="flex items-center gap-2 p-1.5">
+                                      <Checkbox checked={sub.is_completed} onCheckedChange={() => handleToggleSubtopic(sub.id, sub.is_completed)} className="scale-90" />
+                                      <span className={`flex-1 text-xs ${sub.is_completed ? "line-through text-muted-foreground" : "text-foreground"}`}>{sub.name}</span>
+                                      <div className="flex items-center gap-1">
+                                        {(["easy", "medium", "hard"] as const).map(d => (
+                                          <button key={d} onClick={() => handleSubtopicDifficulty(sub.id, d)} className={`px-1 py-0.5 rounded text-[9px] font-mono border transition-all ${sub.difficulty === d ? difficultyColors[d] : "border-transparent text-muted-foreground opacity-0 group-hover/sub:opacity-50"}`}>
+                                            {d[0].toUpperCase()}
+                                          </button>
+                                        ))}
+                                        <button onClick={() => setEditingNotes(editingNotes === sub.id ? null : sub.id)} className="p-0.5 text-muted-foreground hover:text-foreground rounded transition-all">
+                                          <StickyNote className="w-2.5 h-2.5" />
                                         </button>
-                                      ))}
-                                      <button onClick={() => handleDeleteSubtopic(sub.id)} className="opacity-0 group-hover/sub:opacity-100 p-0.5 text-destructive hover:bg-destructive/10 rounded transition-all">
-                                        <Trash2 className="w-2.5 h-2.5" />
-                                      </button>
+                                        <button onClick={() => handleDeleteSubtopic(sub.id)} className="opacity-0 group-hover/sub:opacity-100 p-0.5 text-destructive hover:bg-destructive/10 rounded transition-all">
+                                          <Trash2 className="w-2.5 h-2.5" />
+                                        </button>
+                                      </div>
                                     </div>
+                                    {editingNotes === sub.id && (
+                                      <div className="px-7 pb-2">
+                                        <Textarea
+                                          value={notesInput[sub.id] ?? sub.notes ?? ""}
+                                          onChange={e => setNotesInput(prev => ({ ...prev, [sub.id]: e.target.value }))}
+                                          placeholder="Add notes..."
+                                          rows={2}
+                                          className="text-xs h-auto"
+                                        />
+                                        <div className="flex gap-1 mt-1">
+                                          <Button size="sm" className="h-6 text-[10px]" onClick={async () => {
+                                            try {
+                                              await updateSubtopicNotes(sub.id, notesInput[sub.id] ?? sub.notes ?? "");
+                                              toast.success("Notes saved");
+                                              setEditingNotes(null);
+                                              loadData();
+                                            } catch (err: any) { toast.error(err.message); }
+                                          }}>Save</Button>
+                                          <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setEditingNotes(null)}>Cancel</Button>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
 
