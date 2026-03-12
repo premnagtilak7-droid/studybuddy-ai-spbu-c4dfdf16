@@ -183,6 +183,12 @@ export default function StudyTimer() {
     }
   }, []);
 
+  // ── Register service worker & start reminder checker ──
+  useEffect(() => {
+    registerCustomSW();
+    startReminderChecker();
+  }, []);
+
   // ── Load initial data ──
   useEffect(() => {
     getSubjects().then(subs => {
@@ -196,11 +202,6 @@ export default function StudyTimer() {
     getTodayStudyMinutes().then(setTodayMinutes);
     syncStudyDates().then(() => { getStudyStreakFromDB().then(setStreak); });
     loadHistory();
-
-    // Request notification permission early
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
   }, []);
 
   // ── Restore timer from DB ──
