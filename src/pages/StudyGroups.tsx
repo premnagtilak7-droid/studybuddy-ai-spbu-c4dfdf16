@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { toast } from "sonner";
-import { Users, Plus, LogIn, Send, Trophy, Crown, Flame, Clock, BookOpen, Share2 } from "lucide-react";
+import { Users, Plus, LogIn, Send, Trophy, Crown, Flame, Clock, BookOpen, Share2, Video } from "lucide-react";
 
 type Group = { id: string; name: string; subject_focus: string; max_members: number; join_code: string; created_by: string; created_at: string };
 
