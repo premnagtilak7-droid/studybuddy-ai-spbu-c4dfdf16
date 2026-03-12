@@ -1,14 +1,21 @@
 import { useState, useEffect } from "react";
 import { BellRing, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { requestNotificationPermission, getPermissionStatus } from "@/lib/notifications";
+import { requestNotificationPermissionWithPrompt } from "@/lib/service-worker-manager";
+import { registerCustomSW } from "@/lib/service-worker-manager";
+import { startReminderChecker } from "@/lib/study-reminders";
 import { toast } from "sonner";
 
 export default function NotificationPermissionBanner() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    const perm = getPermissionStatus();
+    // Register custom service worker on app load
+    registerCustomSW();
+    // Start reminder checker
+    startReminderChecker();
+
+    const perm = "Notification" in window ? Notification.permission : "denied";
     const dismissed = localStorage.getItem("notif_perm_dismissed");
     if (perm === "default" && !dismissed) {
       const timer = setTimeout(() => setShow(true), 3000);
@@ -19,7 +26,7 @@ export default function NotificationPermissionBanner() {
   if (!show) return null;
 
   const handleAllow = async () => {
-    const result = await requestNotificationPermission();
+    const result = await requestNotificationPermissionWithPrompt();
     if (result === "granted") {
       toast.success("Notifications enabled! You'll get study reminders.");
     } else {
@@ -44,7 +51,7 @@ export default function NotificationPermissionBanner() {
         </div>
         <div>
           <p className="text-sm font-medium text-foreground">Enable Notifications</p>
-          <p className="text-xs text-muted-foreground mt-1">Get exam reminders, streak alerts, and study session notifications</p>
+          <p className="text-xs text-muted-foreground mt-1">Get timer alerts, study reminders, and group notifications even when the app is closed</p>
           <div className="flex gap-2 mt-3">
             <Button size="sm" onClick={handleAllow}>Allow</Button>
             <Button size="sm" variant="ghost" onClick={handleDismiss}>Later</Button>
