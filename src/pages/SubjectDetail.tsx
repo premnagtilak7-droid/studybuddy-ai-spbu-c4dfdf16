@@ -50,6 +50,8 @@ export default function SubjectDetail() {
   const [loading, setLoading] = useState(true);
   const [editingGrade, setEditingGrade] = useState(false);
   const [gradeInput, setGradeInput] = useState("");
+  const [editingNotes, setEditingNotes] = useState<string | null>(null);
+  const [notesInput, setNotesInput] = useState<Record<string, string>>({});
 
   const loadData = useCallback(async () => {
     if (!id) return;

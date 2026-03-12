@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-type TableName = "subjects" | "units" | "topics" | "subtopics" | "study_logs" | "timer_sessions" | "study_dates";
+type TableName = "subjects" | "units" | "topics" | "subtopics" | "study_logs" | "timer_sessions" | "study_dates" | "timetable_sessions" | "exam_dates";
 
 /**
  * Subscribe to realtime changes on a table. Calls `onUpdate` whenever
