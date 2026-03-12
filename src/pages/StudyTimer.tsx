@@ -26,6 +26,9 @@ import {
   Flame, Target, History, BarChart3, StickyNote,
   Volume2, Maximize2, Minimize2,
 } from "lucide-react";
+import StudyRemindersCard from "@/components/StudyRemindersCard";
+import { registerCustomSW, requestNotificationPermissionWithPrompt, sendToSW } from "@/lib/service-worker-manager";
+import { startReminderChecker } from "@/lib/study-reminders";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 // ── Sound ──
@@ -44,9 +47,12 @@ function playBell() {
   } catch {}
 }
 
-// ── Push notification ──
+// ── Push notification via Service Worker ──
 function sendPushNotification(title: string, body: string) {
   try {
+    // Try service worker first (works even when tab is closed)
+    sendToSW({ type: 'TIMER_COMPLETE', data: { title, body } });
+    // Fallback to regular notification
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification(title, { body, icon: "/pwa-192x192.png", tag: "study-timer" });
     }
@@ -180,6 +186,12 @@ export default function StudyTimer() {
     }
   }, []);
 
+  // ── Register service worker & start reminder checker ──
+  useEffect(() => {
+    registerCustomSW();
+    startReminderChecker();
+  }, []);
+
   // ── Load initial data ──
   useEffect(() => {
     getSubjects().then(subs => {
@@ -193,11 +205,6 @@ export default function StudyTimer() {
     getTodayStudyMinutes().then(setTodayMinutes);
     syncStudyDates().then(() => { getStudyStreakFromDB().then(setStreak); });
     loadHistory();
-
-    // Request notification permission early
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
   }, []);
 
   // ── Restore timer from DB ──
@@ -340,7 +347,10 @@ export default function StudyTimer() {
   }
 
   // ── Start/pause via Worker ──
-  function startTimer() {
+  async function startTimer() {
+    // Ask for notification permission on first timer start
+    await requestNotificationPermissionWithPrompt();
+    
     dbStartTimeRef.current = new Date().toISOString();
     setRunning(true);
 
@@ -650,9 +660,11 @@ export default function StudyTimer() {
               </CardContent>
             </Card>
 
+            <StudyRemindersCard />
+
             <Card>
               <CardContent className="pt-5">
-                <div className="flex items-start gap-3"><Volume2 className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p className="text-xs text-muted-foreground">Bell + push notification when timer ends. Timer runs in background via Web Worker & persists across devices!</p></div>
+                <div className="flex items-start gap-3"><Volume2 className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p className="text-xs text-muted-foreground">Bell + push notification when timer ends. Timer runs in background via Service Worker & persists across devices!</p></div>
               </CardContent>
             </Card>
           </div>

@@ -1148,6 +1148,44 @@ export type Database = {
         }
         Relationships: []
       }
+      study_reminders: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          reminder_time: string
+          subject_id: string | null
+          subject_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          reminder_time: string
+          subject_id?: string | null
+          subject_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          reminder_time?: string
+          subject_id?: string | null
+          subject_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_reminders_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           code: string
