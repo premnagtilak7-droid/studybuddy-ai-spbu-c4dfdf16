@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { toast } from "sonner";
-import { Users, Plus, LogIn, Send, Trophy, Crown, Flame, Clock, BookOpen, Share2 } from "lucide-react";
+import { Users, Plus, LogIn, Send, Trophy, Crown, Flame, Clock, BookOpen, Share2, Video } from "lucide-react";
 
 type Group = { id: string; name: string; subject_focus: string; max_members: number; join_code: string; created_by: string; created_at: string };
 
@@ -43,6 +43,7 @@ export default function StudyGroups() {
   const [newGroup, setNewGroup] = useState({ name: "", subject_focus: "", max_members: 10 });
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("chat");
+  const [meetActive, setMeetActive] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { loadMyGroups(); }, []);
@@ -237,8 +238,9 @@ export default function StudyGroups() {
               </Card>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="w-full grid grid-cols-4">
+                <TabsList className="w-full grid grid-cols-5">
                   <TabsTrigger value="chat" className="text-xs">Chat</TabsTrigger>
+                  <TabsTrigger value="meet" className="text-xs"><Video className="w-3 h-3 mr-1" />Meet</TabsTrigger>
                   <TabsTrigger value="progress" className="text-xs">Progress</TabsTrigger>
                   <TabsTrigger value="leaderboard" className="text-xs">Leaderboard</TabsTrigger>
                   <TabsTrigger value="members" className="text-xs">Members</TabsTrigger>
@@ -262,6 +264,37 @@ export default function StudyGroups() {
                       <Input value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." onKeyDown={e => e.key === "Enter" && sendMessage()} className="flex-1" />
                       <Button size="icon" onClick={sendMessage}><Send className="w-4 h-4" /></Button>
                     </div>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="meet">
+                  <Card>
+                    <CardContent className="pt-4">
+                      {!meetActive ? (
+                        <div className="flex flex-col items-center justify-center h-72 gap-4">
+                          <Video className="w-12 h-12 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Start or join a live video call with your group</p>
+                          <Button onClick={() => setMeetActive(true)} className="gap-2">
+                            <Video className="w-4 h-4" />Start Meet
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">Live video call — {selectedGroup.name}</p>
+                            <Button variant="destructive" size="sm" onClick={() => setMeetActive(false)}>Leave</Button>
+                          </div>
+                          <div className="rounded-lg overflow-hidden border border-border" style={{ height: "480px" }}>
+                            <iframe
+                              src={`https://meet.jit.si/StudyBuddy-${selectedGroup.join_code}#userInfo.displayName="${encodeURIComponent(user?.email?.split("@")[0] || "Student")}"`}
+                              allow="camera; microphone; fullscreen; display-capture; compute-pressure"
+                              className="w-full h-full border-0"
+                              title="Group Video Call"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
                   </Card>
                 </TabsContent>
 
