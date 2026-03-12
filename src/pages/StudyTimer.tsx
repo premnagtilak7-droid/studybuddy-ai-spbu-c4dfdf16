@@ -660,9 +660,11 @@ export default function StudyTimer() {
               </CardContent>
             </Card>
 
+            <StudyRemindersCard />
+
             <Card>
               <CardContent className="pt-5">
-                <div className="flex items-start gap-3"><Volume2 className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p className="text-xs text-muted-foreground">Bell + push notification when timer ends. Timer runs in background via Web Worker & persists across devices!</p></div>
+                <div className="flex items-start gap-3"><Volume2 className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p className="text-xs text-muted-foreground">Bell + push notification when timer ends. Timer runs in background via Service Worker & persists across devices!</p></div>
               </CardContent>
             </Card>
           </div>
