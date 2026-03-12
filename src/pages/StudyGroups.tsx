@@ -267,6 +267,37 @@ export default function StudyGroups() {
                   </Card>
                 </TabsContent>
 
+                <TabsContent value="meet">
+                  <Card>
+                    <CardContent className="pt-4">
+                      {!meetActive ? (
+                        <div className="flex flex-col items-center justify-center h-72 gap-4">
+                          <Video className="w-12 h-12 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Start or join a live video call with your group</p>
+                          <Button onClick={() => setMeetActive(true)} className="gap-2">
+                            <Video className="w-4 h-4" />Start Meet
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">Live video call — {selectedGroup.name}</p>
+                            <Button variant="destructive" size="sm" onClick={() => setMeetActive(false)}>Leave</Button>
+                          </div>
+                          <div className="rounded-lg overflow-hidden border border-border" style={{ height: "480px" }}>
+                            <iframe
+                              src={`https://meet.jit.si/StudyBuddy-${selectedGroup.join_code}#userInfo.displayName="${encodeURIComponent(user?.email?.split("@")[0] || "Student")}"`}
+                              allow="camera; microphone; fullscreen; display-capture; compute-pressure"
+                              className="w-full h-full border-0"
+                              title="Group Video Call"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
                 <TabsContent value="progress">
                   <Card><CardContent className="pt-4 space-y-4">
                     {members.map(m => (
