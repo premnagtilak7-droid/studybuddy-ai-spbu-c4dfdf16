@@ -47,9 +47,12 @@ function playBell() {
   } catch {}
 }
 
-// ── Push notification ──
+// ── Push notification via Service Worker ──
 function sendPushNotification(title: string, body: string) {
   try {
+    // Try service worker first (works even when tab is closed)
+    sendToSW({ type: 'TIMER_COMPLETE', data: { title, body } });
+    // Fallback to regular notification
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification(title, { body, icon: "/pwa-192x192.png", tag: "study-timer" });
     }
