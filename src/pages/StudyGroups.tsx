@@ -238,8 +238,9 @@ export default function StudyGroups() {
               </Card>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="w-full grid grid-cols-4">
+                <TabsList className="w-full grid grid-cols-5">
                   <TabsTrigger value="chat" className="text-xs">Chat</TabsTrigger>
+                  <TabsTrigger value="meet" className="text-xs"><Video className="w-3 h-3 mr-1" />Meet</TabsTrigger>
                   <TabsTrigger value="progress" className="text-xs">Progress</TabsTrigger>
                   <TabsTrigger value="leaderboard" className="text-xs">Leaderboard</TabsTrigger>
                   <TabsTrigger value="members" className="text-xs">Members</TabsTrigger>
