@@ -26,6 +26,9 @@ import {
   Flame, Target, History, BarChart3, StickyNote,
   Volume2, Maximize2, Minimize2,
 } from "lucide-react";
+import StudyRemindersCard from "@/components/StudyRemindersCard";
+import { registerCustomSW, requestNotificationPermissionWithPrompt, sendToSW } from "@/lib/service-worker-manager";
+import { startReminderChecker } from "@/lib/study-reminders";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 // ── Sound ──
