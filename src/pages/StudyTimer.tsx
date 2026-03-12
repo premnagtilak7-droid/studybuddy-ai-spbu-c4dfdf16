@@ -344,7 +344,10 @@ export default function StudyTimer() {
   }
 
   // ── Start/pause via Worker ──
-  function startTimer() {
+  async function startTimer() {
+    // Ask for notification permission on first timer start
+    await requestNotificationPermissionWithPrompt();
+    
     dbStartTimeRef.current = new Date().toISOString();
     setRunning(true);
 
