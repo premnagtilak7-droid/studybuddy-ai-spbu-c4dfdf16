@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
 import { getDailyGoal, setDailyGoal, getTodayStudyMinutes, logStudyMinutes } from "@/lib/daily-goal-store";
-import { recordStudySession, getStudyStreak, getStudyDates, syncStudyDates, getStudyStreakFromDB } from "@/lib/study-tracker";
+import { recordStudySession, getStudyDates, syncStudyDates, getStudyStreakFromDB } from "@/lib/study-tracker";
 import { awardXP } from "@/lib/xp-store";
 import { upsertTimer, getActiveTimer, clearTimer as clearTimerDB } from "@/lib/timer-store";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
@@ -41,6 +41,15 @@ function playBell() {
     gain.gain.setValueAtTime(0.3, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
     osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.6);
+  } catch {}
+}
+
+// ── Push notification ──
+function sendPushNotification(title: string, body: string) {
+  try {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { body, icon: "/pwa-192x192.png", tag: "study-timer" });
+    }
   } catch {}
 }
 
@@ -73,8 +82,6 @@ export default function StudyTimer() {
   const [pomPhase, setPomPhase] = useState<PomodoroPhase>("focus");
   const [pomLeft, setPomLeft] = useState(POMODORO.focus);
   const [pomSessions, setPomSessions] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number>(0);
   const workerRef = useRef<Worker | null>(null);
   const [focusUI, setFocusUI] = useState(false);
   const [dailyGoalHours, setDailyGoalHours] = useState(4);
@@ -87,28 +94,93 @@ export default function StudyTimer() {
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [sessionNote, setSessionNote] = useState("");
   const pendingDuration = useRef(0);
+  // Track the real start time for DB persistence
+  const dbStartTimeRef = useRef<string>(new Date().toISOString());
+  const restoredRef = useRef(false);
 
   const studyDatesSet = useMemo(() => new Set(getStudyDates()), []);
 
-  // Init Web Worker
+  // ── Init Web Worker ──
   useEffect(() => {
     try {
       workerRef.current = new Worker("/timer-worker.js");
-      workerRef.current.onmessage = (e) => {
-        const { type, elapsed: workerElapsed, remaining } = e.data;
-        if (type === "tick") {
-          if (mode === "stopwatch") setElapsed(workerElapsed);
-        }
-        if (type === "complete") {
-          playBell();
-          setRunning(false);
-        }
-      };
-    } catch {}
+      workerRef.current.onmessage = handleWorkerMessage;
+    } catch (err) {
+      console.warn("Web Worker not available, falling back to setInterval");
+    }
     return () => { workerRef.current?.terminate(); };
   }, []);
 
-  // Load initial data
+  // Stable handler ref to avoid re-creating worker
+  const handleWorkerMessage = useCallback((e: MessageEvent) => {
+    const { type, elapsed: wElapsed, remaining, phase, completedPhase, nextPhase, sessionsDone } = e.data;
+
+    if (type === "tick") {
+      setMode(prev => {
+        if (prev === "stopwatch") setElapsed(wElapsed);
+        else if (prev === "countdown") setCountdownLeft(remaining ?? 0);
+        else if (prev === "pomodoro") {
+          setPomLeft(remaining ?? 0);
+          if (phase) setPomPhase(phase as PomodoroPhase);
+        }
+        return prev;
+      });
+    }
+
+    if (type === "complete") {
+      // Countdown finished
+      playBell();
+      sendPushNotification("⏰ Countdown Complete!", "Your countdown timer has ended.");
+      setRunning(false);
+      setCountdownLeft(0);
+      setMode(prev => {
+        if (prev === "countdown") {
+          setCountdownTarget(ct => { finishSession(ct); return ct; });
+        }
+        return prev;
+      });
+      clearTimerDB();
+    }
+
+    if (type === "pomodoro_phase_complete") {
+      playBell();
+      setPomPhase(nextPhase as PomodoroPhase);
+      setPomSessions(sessionsDone);
+      setPomLeft(POMODORO[nextPhase as PomodoroPhase]);
+
+      if (completedPhase === "focus") {
+        sendPushNotification("☕ Focus session done!", "Time for a break.");
+        finishSession(25);
+        awardXP("focus_session").then(a => { if (a > 0) toast.success(`+${a} XP!`); });
+        toast.success("Focus session complete! Take a break.");
+      } else {
+        sendPushNotification("🧠 Break over!", "Time to focus again.");
+        toast.info("Break over! Time to focus.");
+      }
+
+      // Auto-start next phase via worker
+      dbStartTimeRef.current = new Date().toISOString();
+      workerRef.current?.postMessage({
+        type: "start",
+        data: {
+          mode: "pomodoro",
+          elapsed: 0,
+          pomodoroPhase: nextPhase,
+          pomodoroSessionsDone: sessionsDone,
+        },
+      });
+      // Keep running = true (auto-switch)
+    }
+
+    if (type === "paused") {
+      setElapsed(wElapsed);
+    }
+    if (type === "stopped") {
+      setElapsed(wElapsed);
+    }
+  }, []);
+
+  // ── Load initial data ──
   useEffect(() => {
     getSubjects().then(subs => {
       setSubjects(subs);
@@ -119,44 +191,109 @@ export default function StudyTimer() {
     });
     getDailyGoal().then(setDailyGoalHours);
     getTodayStudyMinutes().then(setTodayMinutes);
-    syncStudyDates().then(() => {
-      getStudyStreakFromDB().then(setStreak);
-    });
+    syncStudyDates().then(() => { getStudyStreakFromDB().then(setStreak); });
     loadHistory();
 
-    // Restore timer state from DB
+    // Request notification permission early
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // ── Restore timer from DB ──
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+
     getActiveTimer().then(timer => {
-      if (timer) {
-        setMode(timer.mode as TimerMode);
-        if (timer.subject_id) setSelectedSubject(timer.subject_id);
-        if (timer.is_running) {
-          const now = Date.now();
-          const startedAt = new Date(timer.started_at).getTime();
-          const runElapsed = timer.elapsed_seconds + Math.floor((now - startedAt) / 1000);
-          if (timer.mode === "stopwatch") {
-            setElapsed(runElapsed);
+      if (!timer) return;
+      setMode(timer.mode as TimerMode);
+      if (timer.subject_id) setSelectedSubject(timer.subject_id);
+      dbStartTimeRef.current = timer.started_at;
+
+      if (timer.is_running) {
+        const now = Date.now();
+        const startedAt = new Date(timer.started_at).getTime();
+        const runElapsed = timer.elapsed_seconds + Math.floor((now - startedAt) / 1000);
+
+        if (timer.mode === "stopwatch") {
+          setElapsed(runElapsed);
+          setRunning(true);
+          workerRef.current?.postMessage({ type: "start", data: { mode: "stopwatch", elapsed: runElapsed } });
+        } else if (timer.mode === "countdown" && timer.countdown_target_seconds) {
+          const remaining = Math.max(0, timer.countdown_target_seconds - runElapsed);
+          setCountdownTarget(Math.ceil(timer.countdown_target_seconds / 60));
+          setCountdownLeft(remaining);
+          if (remaining > 0) {
             setRunning(true);
-          } else if (timer.mode === "countdown" && timer.countdown_target_seconds) {
-            const remaining = Math.max(0, timer.countdown_target_seconds - runElapsed);
-            setCountdownTarget(Math.ceil(timer.countdown_target_seconds / 60));
-            setCountdownLeft(remaining);
-            if (remaining > 0) setRunning(true);
-          } else if (timer.mode === "pomodoro") {
-            setPomPhase((timer.pomodoro_phase || "focus") as PomodoroPhase);
-            setPomSessions(timer.pomodoro_sessions_done || 0);
-            const phase = (timer.pomodoro_phase || "focus") as PomodoroPhase;
-            const remaining = Math.max(0, POMODORO[phase] - runElapsed);
-            setPomLeft(remaining);
-            if (remaining > 0) setRunning(true);
+            workerRef.current?.postMessage({ type: "start", data: { mode: "countdown", elapsed: runElapsed, targetSeconds: timer.countdown_target_seconds } });
+          } else {
+            playBell();
+            sendPushNotification("⏰ Countdown Complete!", "Your countdown timer has ended.");
+            finishSession(Math.ceil(timer.countdown_target_seconds / 60));
+            clearTimerDB();
           }
-        } else {
-          setElapsed(timer.elapsed_seconds);
+        } else if (timer.mode === "pomodoro") {
+          const phase = (timer.pomodoro_phase || "focus") as PomodoroPhase;
+          const sessions = timer.pomodoro_sessions_done || 0;
+          setPomPhase(phase);
+          setPomSessions(sessions);
+          const remaining = Math.max(0, POMODORO[phase] - runElapsed);
+          setPomLeft(remaining);
+          if (remaining > 0) {
+            setRunning(true);
+            workerRef.current?.postMessage({ type: "start", data: { mode: "pomodoro", elapsed: runElapsed, pomodoroPhase: phase, pomodoroSessionsDone: sessions } });
+          }
+        }
+      } else {
+        setElapsed(timer.elapsed_seconds);
+        if (timer.mode === "countdown" && timer.countdown_target_seconds) {
+          setCountdownTarget(Math.ceil(timer.countdown_target_seconds / 60));
+          setCountdownLeft(Math.max(0, timer.countdown_target_seconds - timer.elapsed_seconds));
+        }
+        if (timer.mode === "pomodoro") {
+          setPomPhase((timer.pomodoro_phase || "focus") as PomodoroPhase);
+          setPomSessions(timer.pomodoro_sessions_done || 0);
+          setPomLeft(Math.max(0, POMODORO[(timer.pomodoro_phase || "focus") as PomodoroPhase] - timer.elapsed_seconds));
         }
       }
     });
   }, []);
 
-  // Realtime sync for study_logs
+  // ── Cross-device sync via realtime ──
+  const handleTimerSync = useCallback(() => {
+    // When timer_sessions changes on another device, reload state
+    getActiveTimer().then(timer => {
+      if (!timer) {
+        // Timer was cleared on another device
+        setRunning(false);
+        setElapsed(0);
+        return;
+      }
+      // Only update if the change came from another device (different updated_at)
+      if (timer.is_running) {
+        const now = Date.now();
+        const startedAt = new Date(timer.started_at).getTime();
+        const runElapsed = timer.elapsed_seconds + Math.floor((now - startedAt) / 1000);
+        setMode(timer.mode as TimerMode);
+        if (timer.subject_id) setSelectedSubject(timer.subject_id);
+
+        if (timer.mode === "stopwatch") setElapsed(runElapsed);
+        else if (timer.mode === "countdown" && timer.countdown_target_seconds) {
+          setCountdownTarget(Math.ceil(timer.countdown_target_seconds / 60));
+          setCountdownLeft(Math.max(0, timer.countdown_target_seconds - runElapsed));
+        } else if (timer.mode === "pomodoro") {
+          const phase = (timer.pomodoro_phase || "focus") as PomodoroPhase;
+          setPomPhase(phase);
+          setPomSessions(timer.pomodoro_sessions_done || 0);
+          setPomLeft(Math.max(0, POMODORO[phase] - runElapsed));
+        }
+      }
+    });
+  }, []);
+  useRealtimeSubscription("timer_sessions", handleTimerSync);
+
+  // ── Realtime sync for study_logs ──
   const reloadHistory = useCallback(() => { loadHistory(); getTodayStudyMinutes().then(setTodayMinutes); }, []);
   useRealtimeSubscription("study_logs", reloadHistory);
 
@@ -170,69 +307,67 @@ export default function StudyTimer() {
     setSubjectStats(subs.filter(s => map.has(s.id)).map(s => ({ name: s.code || s.name, minutes: map.get(s.id)!, color: s.color })));
   }
 
-  // Tab title
+  // ── Tab title ──
   useEffect(() => {
     if (!running) { document.title = "SPPU Study"; return; }
+    const subName = subjects.find(s => s.id === selectedSubject)?.code;
     const label = mode === "stopwatch" ? fmt(elapsed) : mode === "countdown" ? fmt(countdownLeft) : fmt(pomLeft);
-    document.title = `${label} — Study Timer`;
+    document.title = `⏱ ${label}${subName ? ` - ${subName}` : ""} — Study Timer`;
     return () => { document.title = "SPPU Study"; };
-  }, [running, elapsed, countdownLeft, pomLeft, mode]);
+  }, [running, elapsed, countdownLeft, pomLeft, mode, selectedSubject, subjects]);
 
-  const clearTimerInterval = useCallback(() => {
-    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
-  }, []);
-
-  // Persist timer state to DB periodically
+  // ── Persist timer state to DB every 10s ──
   useEffect(() => {
     if (!running || !user) return;
-    const persistInterval = setInterval(() => {
-      const subId = selectedSubject !== "none" ? selectedSubject : null;
-      upsertTimer({
-        mode, subject_id: subId, is_running: true,
-        elapsed_seconds: mode === "stopwatch" ? elapsed : 0,
-        started_at: new Date().toISOString(),
-        countdown_target_seconds: mode === "countdown" ? countdownTarget * 60 : null,
-        pomodoro_phase: pomPhase, pomodoro_sessions_done: pomSessions,
-      }).catch(() => {});
-    }, 10000);
-    return () => clearInterval(persistInterval);
-  }, [running, mode, elapsed, selectedSubject, pomPhase, pomSessions, countdownTarget, user]);
+    // Persist immediately on start
+    persistTimerState();
+    const interval = setInterval(persistTimerState, 10000);
+    return () => clearInterval(interval);
+  }, [running, mode, selectedSubject, pomPhase, pomSessions, countdownTarget, user]);
 
-  // Tick
-  useEffect(() => {
-    if (!running) { clearTimerInterval(); return; }
+  function persistTimerState() {
+    const subId = selectedSubject !== "none" ? selectedSubject : null;
+    upsertTimer({
+      mode,
+      subject_id: subId,
+      is_running: true,
+      elapsed_seconds: 0, // elapsed from the started_at reference point
+      started_at: dbStartTimeRef.current,
+      countdown_target_seconds: mode === "countdown" ? countdownTarget * 60 : null,
+      pomodoro_phase: pomPhase,
+      pomodoro_sessions_done: pomSessions,
+    }).catch(() => {});
+  }
+
+  // ── Start/pause via Worker ──
+  function startTimer() {
+    dbStartTimeRef.current = new Date().toISOString();
+    setRunning(true);
+
     if (mode === "stopwatch") {
-      startTimeRef.current = Date.now() - elapsed * 1000;
-      intervalRef.current = setInterval(() => {
-        setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
-      }, 1000);
+      workerRef.current?.postMessage({ type: "start", data: { mode: "stopwatch", elapsed } });
     } else if (mode === "countdown") {
-      intervalRef.current = setInterval(() => {
-        setCountdownLeft(prev => {
-          if (prev <= 1) { clearTimerInterval(); setRunning(false); playBell(); toast.success("Countdown complete!"); finishSession(countdownTarget); clearTimerDB(); return 0; }
-          return prev - 1;
-        });
-      }, 1000);
+      const elapsedSoFar = countdownTarget * 60 - countdownLeft;
+      workerRef.current?.postMessage({ type: "start", data: { mode: "countdown", elapsed: elapsedSoFar, targetSeconds: countdownTarget * 60 } });
     } else {
-      intervalRef.current = setInterval(() => {
-        setPomLeft(prev => {
-          if (prev <= 1) {
-            clearTimerInterval(); setRunning(false); playBell();
-            if (pomPhase === "focus") {
-              const next = pomSessions + 1;
-              setPomSessions(next);
-              finishSession(25);
-              awardXP("focus_session").then(a => { if (a > 0) toast.success(`+${a} XP!`); });
-              if (next % 4 === 0) { setPomPhase("long-break"); return POMODORO["long-break"]; }
-              else { setPomPhase("short-break"); return POMODORO["short-break"]; }
-            } else { setPomPhase("focus"); toast.info("Break over! Time to focus."); return POMODORO.focus; }
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      const elapsedSoFar = POMODORO[pomPhase] - pomLeft;
+      workerRef.current?.postMessage({ type: "start", data: { mode: "pomodoro", elapsed: elapsedSoFar, pomodoroPhase: pomPhase, pomodoroSessionsDone: pomSessions } });
     }
-    return clearTimerInterval;
-  }, [running, mode]);
+  }
+
+  function pauseTimer() {
+    setRunning(false);
+    workerRef.current?.postMessage({ type: "pause", data: {} });
+    // Persist paused state
+    const subId = selectedSubject !== "none" ? selectedSubject : null;
+    upsertTimer({
+      mode, subject_id: subId, is_running: false,
+      elapsed_seconds: mode === "stopwatch" ? elapsed : mode === "countdown" ? (countdownTarget * 60 - countdownLeft) : (POMODORO[pomPhase] - pomLeft),
+      started_at: dbStartTimeRef.current,
+      countdown_target_seconds: mode === "countdown" ? countdownTarget * 60 : null,
+      pomodoro_phase: pomPhase, pomodoro_sessions_done: pomSessions,
+    }).catch(() => {});
+  }
 
   function finishSession(durationMins: number) {
     if (durationMins < 1) return;
@@ -255,17 +390,26 @@ export default function StudyTimer() {
   }
 
   function stopStopwatch() {
-    clearTimerInterval(); setRunning(false);
+    workerRef.current?.postMessage({ type: "stop", data: {} });
+    setRunning(false);
     const mins = Math.max(1, Math.round(elapsed / 60));
     finishSession(mins); setElapsed(0);
   }
 
   function switchMode(m: TimerMode) {
-    clearTimerInterval(); setRunning(false); setMode(m);
+    workerRef.current?.postMessage({ type: "reset", data: {} });
+    setRunning(false); setMode(m);
     if (m === "stopwatch") setElapsed(0);
     if (m === "countdown") setCountdownLeft(countdownTarget * 60);
     if (m === "pomodoro") { setPomPhase("focus"); setPomLeft(POMODORO.focus); setPomSessions(0); }
     clearTimerDB();
+  }
+
+  function resetCurrentTimer() {
+    workerRef.current?.postMessage({ type: "reset", data: {} });
+    setRunning(false);
+    if (mode === "countdown") setCountdownLeft(countdownTarget * 60);
+    if (mode === "pomodoro") setPomLeft(POMODORO[pomPhase]);
   }
 
   async function handleSaveGoal() {
@@ -289,7 +433,7 @@ export default function StudyTimer() {
     return result;
   }, [studyDatesSet]);
 
-  // Focus mode
+  // ── Focus mode ──
   if (focusUI) {
     return (
       <div className="fixed inset-0 bg-background z-[100] flex flex-col items-center justify-center p-4">
@@ -301,8 +445,8 @@ export default function StudyTimer() {
         {selectedSubject !== "none" && <p className="text-sm text-muted-foreground mt-3">{subjects.find(s => s.id === selectedSubject)?.name}</p>}
         <div className="flex items-center gap-3 mt-8 flex-wrap justify-center">
           {mode === "stopwatch" && running && <Button variant="destructive" size="lg" onClick={stopStopwatch} className="rounded-full gap-2"><Square className="w-4 h-4" /> Stop & Save</Button>}
-          {mode !== "stopwatch" && <Button size="lg" onClick={() => setRunning(!running)} className="rounded-full px-10 gap-2">{running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}{running ? "Pause" : "Start"}</Button>}
-          {mode === "stopwatch" && !running && <Button size="lg" onClick={() => { setElapsed(0); setRunning(true); }} className="rounded-full px-10 gap-2"><Play className="w-4 h-4" /> Start</Button>}
+          {mode === "stopwatch" && !running && <Button size="lg" onClick={startTimer} className="rounded-full px-10 gap-2"><Play className="w-4 h-4" /> Start</Button>}
+          {mode !== "stopwatch" && <Button size="lg" onClick={() => running ? pauseTimer() : startTimer()} className="rounded-full px-10 gap-2">{running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}{running ? "Pause" : "Start"}</Button>}
         </div>
         <NoteDialog open={showNoteDialog} note={sessionNote} setNote={setSessionNote} onSave={saveSession} onSkip={() => saveSession("")} />
       </div>
@@ -354,7 +498,7 @@ export default function StudyTimer() {
                 {mode === "pomodoro" && (
                   <div className="flex gap-1.5 justify-center flex-wrap">
                     {(["focus", "short-break", "long-break"] as PomodoroPhase[]).map(p => (
-                      <button key={p} onClick={() => { clearTimerInterval(); setRunning(false); setPomPhase(p); setPomLeft(POMODORO[p]); }} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${pomPhase === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}>
+                      <button key={p} onClick={() => { workerRef.current?.postMessage({ type: "reset", data: {} }); setRunning(false); setPomPhase(p); setPomLeft(POMODORO[p]); }} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${pomPhase === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}>
                         {p === "focus" ? "Focus" : p === "short-break" ? "Short Break" : "Long Break"}
                       </button>
                     ))}
@@ -381,21 +525,21 @@ export default function StudyTimer() {
                   <div className="flex items-center gap-3 mt-6 flex-wrap justify-center">
                     {mode === "stopwatch" ? (
                       <>
-                        {!running && elapsed === 0 && <Button size="lg" onClick={() => setRunning(true)} className="rounded-full px-8 sm:px-10 gap-2"><Play className="w-4 h-4" /> Start</Button>}
+                        {!running && elapsed === 0 && <Button size="lg" onClick={startTimer} className="rounded-full px-8 sm:px-10 gap-2"><Play className="w-4 h-4" /> Start</Button>}
                         {running && <>
-                          <Button variant="outline" size="lg" onClick={() => setRunning(false)} className="rounded-full gap-2"><Pause className="w-4 h-4" /> Pause</Button>
+                          <Button variant="outline" size="lg" onClick={pauseTimer} className="rounded-full gap-2"><Pause className="w-4 h-4" /> Pause</Button>
                           <Button variant="destructive" size="lg" onClick={stopStopwatch} className="rounded-full gap-2"><Square className="w-4 h-4" /> Stop</Button>
                         </>}
                         {!running && elapsed > 0 && <>
-                          <Button size="lg" onClick={() => setRunning(true)} className="rounded-full gap-2"><Play className="w-4 h-4" /> Resume</Button>
+                          <Button size="lg" onClick={startTimer} className="rounded-full gap-2"><Play className="w-4 h-4" /> Resume</Button>
                           <Button variant="destructive" size="lg" onClick={stopStopwatch} className="rounded-full gap-2"><Square className="w-4 h-4" /> Save</Button>
-                          <Button variant="outline" size="icon" onClick={() => setElapsed(0)} className="rounded-full"><RotateCcw className="w-4 h-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => { setElapsed(0); clearTimerDB(); }} className="rounded-full"><RotateCcw className="w-4 h-4" /></Button>
                         </>}
                       </>
                     ) : (
                       <>
-                        <Button variant="outline" size="icon" onClick={() => { clearTimerInterval(); setRunning(false); if (mode === "countdown") setCountdownLeft(countdownTarget * 60); if (mode === "pomodoro") setPomLeft(POMODORO[pomPhase]); }} className="rounded-full"><RotateCcw className="w-4 h-4" /></Button>
-                        <Button size="lg" onClick={() => setRunning(!running)} className="rounded-full px-8 sm:px-10 gap-2">{running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}{running ? "Pause" : "Start"}</Button>
+                        <Button variant="outline" size="icon" onClick={resetCurrentTimer} className="rounded-full"><RotateCcw className="w-4 h-4" /></Button>
+                        <Button size="lg" onClick={() => running ? pauseTimer() : startTimer()} className="rounded-full px-8 sm:px-10 gap-2">{running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}{running ? "Pause" : "Start"}</Button>
                       </>
                     )}
                   </div>
@@ -508,7 +652,7 @@ export default function StudyTimer() {
 
             <Card>
               <CardContent className="pt-5">
-                <div className="flex items-start gap-3"><Volume2 className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p className="text-xs text-muted-foreground">A bell will ring when your timer ends. Timer persists across devices & browser tabs!</p></div>
+                <div className="flex items-start gap-3"><Volume2 className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p className="text-xs text-muted-foreground">Bell + push notification when timer ends. Timer runs in background via Web Worker & persists across devices!</p></div>
               </CardContent>
             </Card>
           </div>

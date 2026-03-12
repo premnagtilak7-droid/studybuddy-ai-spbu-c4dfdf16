@@ -16,9 +16,12 @@ export type TimerState = {
 };
 
 export async function getActiveTimer(): Promise<TimerState | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
   const { data } = await supabase
     .from("timer_sessions")
     .select("*")
+    .eq("user_id", user.id)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -29,7 +32,6 @@ export async function upsertTimer(state: Partial<TimerState> & { mode: string })
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  // Get existing timer
   const existing = await getActiveTimer();
   
   if (existing) {
@@ -57,13 +59,4 @@ export async function clearTimer(): Promise<void> {
   if (existing) {
     await supabase.from("timer_sessions").delete().eq("id", existing.id);
   }
-}
-
-// Calculate real elapsed time for a running timer
-export function calculateElapsed(timer: TimerState): number {
-  if (!timer.is_running) return timer.elapsed_seconds;
-  const started = new Date(timer.paused_at || timer.started_at).getTime();
-  const now = Date.now();
-  const additionalSeconds = Math.floor((now - started) / 1000);
-  return timer.elapsed_seconds + additionalSeconds;
 }
