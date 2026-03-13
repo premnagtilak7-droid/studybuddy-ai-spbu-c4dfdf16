@@ -510,6 +510,39 @@ export type Database = {
           },
         ]
       }
+      feature_controls: {
+        Row: {
+          description: string | null
+          feature_key: string
+          feature_name: string
+          id: string
+          is_enabled: boolean
+          required_plan: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          feature_key: string
+          feature_name: string
+          id?: string
+          is_enabled?: boolean
+          required_plan?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          feature_key?: string
+          feature_name?: string
+          id?: string
+          is_enabled?: boolean
+          required_plan?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       flashcard_decks: {
         Row: {
           created_at: string
