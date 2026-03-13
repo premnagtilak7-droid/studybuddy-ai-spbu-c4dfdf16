@@ -189,10 +189,17 @@ export default function StudyGroups() {
     }));
   }
 
-  async function loadMessages() {
-    const { data } = await supabase.from("group_messages").select("*").eq("group_id", selectedGroup!.id).order("created_at", { ascending: true }).limit(100);
-    if (!data) return;
-    const userIds = [...new Set(data.map(m => m.user_id))];
+  async function loadMessages(groupId = selectedGroup?.id) {
+    if (!groupId) {
+      setMessages([]);
+      return;
+    }
+
+    const { data } = await supabase.from("group_messages").select("*").eq("group_id", groupId).order("created_at", { ascending: true }).limit(100);
+    if (!data) {
+      setMessages([]);
+      return;
+    }
     const { data: profiles } = await supabase.from("profiles").select("user_id, email, display_name").in("user_id", userIds);
     setMessages(data.map(m => {
       const p = profiles?.find(p => p.user_id === m.user_id);
