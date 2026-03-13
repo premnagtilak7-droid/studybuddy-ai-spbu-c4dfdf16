@@ -79,28 +79,29 @@ const AppRoutes = () => {
       <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
       <Route path="/subject-management" element={<ProtectedRoute><SubjectManagement /></ProtectedRoute>} />
       <Route path="/subject/:id" element={<ProtectedRoute><SubjectDetail /></ProtectedRoute>} />
-      <Route path="/ai-solver" element={<ProtectedRoute><AISolver /></ProtectedRoute>} />
-      <Route path="/study-plan" element={<ProtectedRoute><StudyPlanGenerator /></ProtectedRoute>} />
+      <Route path="/ai-solver" element={<ProtectedRoute><GatedRoute feature="ai_solver" featureName="AI Doubt Solver"><AISolver /></GatedRoute></ProtectedRoute>} />
+      <Route path="/study-plan" element={<ProtectedRoute><GatedRoute feature="study_plan" featureName="AI Study Plan"><StudyPlanGenerator /></GatedRoute></ProtectedRoute>} />
       <Route path="/study-room" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
       <Route path="/exam-dates" element={<ProtectedRoute><ExamDates /></ProtectedRoute>} />
-      <Route path="/mock-test" element={<ProtectedRoute><AIMockTest /></ProtectedRoute>} />
-      <Route path="/answer-checker" element={<ProtectedRoute><AIAnswerChecker /></ProtectedRoute>} />
-      <Route path="/formula-sheet" element={<ProtectedRoute><AIFormulaSheet /></ProtectedRoute>} />
-      <Route path="/exam-predictor" element={<ProtectedRoute><AIExamPredictor /></ProtectedRoute>} />
-      <Route path="/study-groups" element={<ProtectedRoute><StudyGroups /></ProtectedRoute>} />
-      <Route path="/doubt-forum" element={<ProtectedRoute><DoubtForum /></ProtectedRoute>} />
-      <Route path="/study-buddy" element={<ProtectedRoute><StudyBuddy /></ProtectedRoute>} />
-      <Route path="/share-progress" element={<ProtectedRoute><ShareProgress /></ProtectedRoute>} />
-      <Route path="/batch-feed" element={<ProtectedRoute><BatchFeed /></ProtectedRoute>} />
-      <Route path="/flashcards" element={<ProtectedRoute><FlashcardMaker /></ProtectedRoute>} />
-      <Route path="/formula-bank" element={<ProtectedRoute><FormulaBank /></ProtectedRoute>} />
-      <Route path="/attendance" element={<ProtectedRoute><AttendanceTracker /></ProtectedRoute>} />
-      <Route path="/marks" element={<ProtectedRoute><MarksTracker /></ProtectedRoute>} />
-      <Route path="/assignments" element={<ProtectedRoute><AssignmentTracker /></ProtectedRoute>} />
-      <Route path="/focus" element={<ProtectedRoute><FocusMode /></ProtectedRoute>} />
+      <Route path="/mock-test" element={<ProtectedRoute><GatedRoute feature="mock_test" featureName="AI Mock Test"><AIMockTest /></GatedRoute></ProtectedRoute>} />
+      <Route path="/answer-checker" element={<ProtectedRoute><GatedRoute feature="answer_checker" featureName="AI Answer Checker"><AIAnswerChecker /></GatedRoute></ProtectedRoute>} />
+      <Route path="/formula-sheet" element={<ProtectedRoute><GatedRoute feature="formula_sheet" featureName="AI Formula Sheet"><AIFormulaSheet /></GatedRoute></ProtectedRoute>} />
+      <Route path="/exam-predictor" element={<ProtectedRoute><GatedRoute feature="exam_predictor" featureName="AI Exam Predictor"><AIExamPredictor /></GatedRoute></ProtectedRoute>} />
+      <Route path="/study-groups" element={<ProtectedRoute><GatedRoute feature="study_groups" featureName="Study Groups"><StudyGroups /></GatedRoute></ProtectedRoute>} />
+      <Route path="/doubt-forum" element={<ProtectedRoute><GatedRoute feature="doubt_forum" featureName="Doubt Forum"><DoubtForum /></GatedRoute></ProtectedRoute>} />
+      <Route path="/study-buddy" element={<ProtectedRoute><GatedRoute feature="study_buddy" featureName="Study Buddy"><StudyBuddy /></GatedRoute></ProtectedRoute>} />
+      <Route path="/share-progress" element={<ProtectedRoute><GatedRoute feature="share_progress" featureName="Share Progress"><ShareProgress /></GatedRoute></ProtectedRoute>} />
+      <Route path="/batch-feed" element={<ProtectedRoute><GatedRoute feature="batch_feed" featureName="Batch Feed"><BatchFeed /></GatedRoute></ProtectedRoute>} />
+      <Route path="/flashcards" element={<ProtectedRoute><GatedRoute feature="flashcards" featureName="Flashcard Maker"><FlashcardMaker /></GatedRoute></ProtectedRoute>} />
+      <Route path="/formula-bank" element={<ProtectedRoute><GatedRoute feature="formula_bank" featureName="Formula Bank"><FormulaBank /></GatedRoute></ProtectedRoute>} />
+      <Route path="/attendance" element={<ProtectedRoute><GatedRoute feature="attendance" featureName="Attendance Tracker"><AttendanceTracker /></GatedRoute></ProtectedRoute>} />
+      <Route path="/marks" element={<ProtectedRoute><GatedRoute feature="marks" featureName="Marks & CGPA"><MarksTracker /></GatedRoute></ProtectedRoute>} />
+      <Route path="/assignments" element={<ProtectedRoute><GatedRoute feature="assignments" featureName="Assignments & Labs"><AssignmentTracker /></GatedRoute></ProtectedRoute>} />
+      <Route path="/focus" element={<ProtectedRoute><GatedRoute feature="focus_mode" featureName="Focus Mode"><FocusMode /></GatedRoute></ProtectedRoute>} />
       <Route path="/study-timer" element={<ProtectedRoute><StudyTimer /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
