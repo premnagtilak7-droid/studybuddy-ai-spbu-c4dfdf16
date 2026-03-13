@@ -145,4 +145,50 @@
     @apply bg-clip-text text-transparent;
     background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
   }
+
+  /* Ripple effect on buttons */
+  .ripple-btn {
+    position: relative;
+    overflow: hidden;
+  }
+  .ripple-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, hsl(var(--primary-foreground) / 0.3) 10%, transparent 10%);
+    transform: scale(10);
+    opacity: 0;
+    transition: transform 0.4s, opacity 0.6s;
+  }
+  .ripple-btn:active::after {
+    transform: scale(0);
+    opacity: 1;
+    transition: 0s;
+  }
+
+  /* Shake animation for errors */
+  .animate-shake {
+    animation: shake 0.4s ease-out;
+  }
+
+  /* Pulse for running timer */
+  .animate-timer-pulse {
+    animation: timer-pulse 2s ease-in-out infinite;
+  }
+
+  /* Progress bar fill animation */
+  .animate-progress-fill {
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 50%, 90% { transform: translateX(-6px); }
+  30%, 70% { transform: translateX(6px); }
+}
+
+@keyframes timer-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+  50% { box-shadow: 0 0 0 12px hsl(var(--primary) / 0); }
 }
