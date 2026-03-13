@@ -59,7 +59,7 @@ export default function ShareProgress() {
   }
 
   function shareWhatsApp() {
-    const text = `🎓 *SPPU Study Progress*\n🔥 ${streak} day streak\n📚 ${topicsCompleted} topics completed\n${level.emoji} ${level.name} (${xp} XP)\n⏱️ ${weeklyHours}h this week\n\n_Studying with SPPU Study App!_`;
+    const text = `🎓 *StudyBuddy Progress*\n🔥 ${streak} day streak\n📚 ${topicsCompleted} topics completed\n${level.emoji} ${level.name} (${xp} XP)\n⏱️ ${weeklyHours}h this week\n\n_Studying with StudyBuddy!_`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
