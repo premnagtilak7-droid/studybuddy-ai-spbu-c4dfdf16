@@ -96,6 +96,7 @@ const AppRoutes = () => {
       <Route path="/focus" element={<ProtectedRoute><FocusMode /></ProtectedRoute>} />
       <Route path="/study-timer" element={<ProtectedRoute><StudyTimer /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
