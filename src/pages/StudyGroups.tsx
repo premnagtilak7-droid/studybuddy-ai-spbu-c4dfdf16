@@ -46,26 +46,61 @@ export default function StudyGroups() {
   const [meetActive, setMeetActive] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { loadMyGroups(); }, []);
-  useEffect(() => { if (selectedGroup) { loadMembers(); loadMessages(); } }, [selectedGroup]);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-
-  // Realtime messages
   useEffect(() => {
-    if (!selectedGroup) return;
-    const channel = supabase.channel(`group-${selectedGroup.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "group_messages", filter: `group_id=eq.${selectedGroup.id}` },
-        (payload) => {
-          const msg = payload.new as any;
-          setMessages(prev => [...prev, { ...msg, email: "" }]);
-        }
-      ).subscribe();
-    return () => { supabase.removeChannel(channel); };
+    if (!user) return;
+    loadMyGroups();
+  }, [user]);
+
+  useEffect(() => {
+    if (!selectedGroup) {
+      setMembers([]);
+      setMessages([]);
+      return;
+    }
+    loadMembers(selectedGroup.id);
+    loadMessages(selectedGroup.id);
   }, [selectedGroup]);
 
-  // Realtime sync for member stats
-  const reloadMembers = useCallback(() => { if (selectedGroup) loadMembers(); }, [selectedGroup]);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Realtime messages for active group
+  useEffect(() => {
+    if (!selectedGroup) return;
+    const channel = supabase
+      .channel(`group-${selectedGroup.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "group_messages", filter: `group_id=eq.${selectedGroup.id}` },
+        () => {
+          loadMessages(selectedGroup.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedGroup]);
+
+  // Realtime sync for group data and member stats
+  const reloadMembers = useCallback(() => {
+    if (selectedGroup) loadMembers(selectedGroup.id);
+  }, [selectedGroup]);
+
+  const reloadGroupsAndData = useCallback(() => {
+    loadMyGroups();
+    if (selectedGroup) {
+      loadMembers(selectedGroup.id);
+      loadMessages(selectedGroup.id);
+    }
+  }, [selectedGroup]);
+
   useRealtimeSubscription("study_logs", reloadMembers);
+  useRealtimeSubscription("group_members", reloadGroupsAndData);
+  useRealtimeSubscription("group_messages", reloadGroupsAndData);
+  useRealtimeSubscription("study_groups", reloadGroupsAndData);
 
   async function loadMyGroups() {
     const { data: memberships } = await supabase.from("group_members").select("group_id").eq("user_id", user!.id);
