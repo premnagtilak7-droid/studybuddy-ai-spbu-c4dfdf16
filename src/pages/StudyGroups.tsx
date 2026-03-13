@@ -200,6 +200,7 @@ export default function StudyGroups() {
       setMessages([]);
       return;
     }
+    const userIds = [...new Set(data.map((m) => m.user_id))];
     const { data: profiles } = await supabase.from("profiles").select("user_id, email, display_name").in("user_id", userIds);
     setMessages(data.map(m => {
       const p = profiles?.find(p => p.user_id === m.user_id);
