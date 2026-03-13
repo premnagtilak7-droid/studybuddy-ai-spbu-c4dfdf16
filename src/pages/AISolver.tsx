@@ -281,7 +281,7 @@ function AISolverChat() {
             <Sparkles className="w-6 h-6 text-primary" />
             AI Doubt Solver
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Powered by Gemini · SPPU 2024 Pattern · Free for all</p>
+          <p className="text-sm text-muted-foreground mt-1">Powered by AI · Ask any doubt in any subject</p>
         </div>
         <div className="flex items-center gap-1">
           {LANGUAGES.map((lang) => (

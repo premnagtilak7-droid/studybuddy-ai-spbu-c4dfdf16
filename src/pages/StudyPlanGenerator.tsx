@@ -249,7 +249,7 @@ export default function StudyPlanGenerator() {
   </style>
 </head>
 <body>
-  <h1>📚 SPPU Study Plan</h1>
+  <h1>📚 Study Plan</h1>
   <div class="meta">Generated: ${format(new Date(), "dd MMM yyyy")} · Difficulty: ${difficulty} · Daily Hours: ${dailyHours}h</div>
   <table>
     <thead><tr><th>✓</th><th>Date</th><th>Day</th><th>Subject</th><th>Topic</th><th>Hours</th><th>Revision</th></tr></thead>
