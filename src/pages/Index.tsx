@@ -135,6 +135,34 @@ export default function Dashboard() {
     return progressPct < expectedPct;
   });
 
+  // Personalized welcome based on education type
+  const getWelcomeTitle = () => {
+    const name = displayName ? `, ${displayName.split(" ")[0]}` : "";
+    const typeMessages: Record<string, string> = {
+      school: `📖 School Dashboard${name}`,
+      undergraduate: `🎓 College Dashboard${name}`,
+      postgraduate: `🎓 PG Dashboard${name}`,
+      competitive_exam: `🎯 Exam Prep${name}`,
+      professional: `💼 Professional Studies${name}`,
+      self_learning: `🌟 Learning Hub${name}`,
+    };
+    return typeMessages[educationType] || `📊 Stats Center${name}`;
+  };
+
+  const getWelcomeSubtitle = () => {
+    const contextMessages: Record<string, string> = {
+      school: educationDetails.board ? `Class ${educationDetails.class_level || ""} · ${educationDetails.board}` : "",
+      undergraduate: educationDetails.course_name ? `${educationDetails.course_name}${educationDetails.semester ? ` · Sem ${educationDetails.semester}` : ""}` : "",
+      postgraduate: educationDetails.course_name || "",
+      competitive_exam: educationDetails.exam_name ? `Preparing for ${educationDetails.exam_name}` : "",
+      professional: educationDetails.course_name || "",
+      self_learning: educationDetails.learning_goal || "",
+    };
+    const context = contextMessages[educationType];
+    if (context) return context;
+    return getMotivation();
+  };
+
   // Motivational message
   const getMotivation = () => {
     if (streak >= 7) return "🔥 Incredible streak! You're unstoppable!";
