@@ -47,7 +47,7 @@ export default function Pricing() {
         >
           <h1 className="text-3xl font-bold text-foreground mb-3">Choose Your Plan</h1>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            Unlock powerful study tools designed for SPPU engineering students. Start free, upgrade anytime.
+            Unlock powerful study tools designed for every student. Start free, upgrade anytime.
           </p>
           {isTrialActive && (
             <Badge variant="outline" className="mt-3 text-primary border-primary/40">

@@ -76,8 +76,8 @@ export default function Subjects() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">SPPU Subjects</h1>
-            <p className="text-sm text-muted-foreground mt-1">2024 Pattern — Click a subject to manage units & topics</p>
+            <h1 className="text-2xl font-bold text-foreground">My Subjects</h1>
+            <p className="text-sm text-muted-foreground mt-1">Click a subject to manage units & topics</p>
           </div>
           <Button onClick={() => navigate("/subject-management")}>
             <Plus className="w-4 h-4 mr-1" /> Manage Subjects
@@ -88,7 +88,7 @@ export default function Subjects() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-12 text-center">
             <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <h3 className="text-lg font-bold text-foreground mb-2">No Subjects Yet</h3>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">Go to Subject Management to add your SPPU subjects.</p>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">Go to Subject Management to add your subjects.</p>
             <Button onClick={() => navigate("/subject-management")}><Plus className="w-4 h-4 mr-1" /> Create Your First Subject</Button>
           </motion.div>
         ) : (

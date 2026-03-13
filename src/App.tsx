@@ -32,6 +32,7 @@ import MarksTracker from "./pages/MarksTracker";
 import AssignmentTracker from "./pages/AssignmentTracker";
 import FocusMode from "./pages/FocusMode";
 import StudyTimer from "./pages/StudyTimer";
+import PreviousYearPapers from "./pages/PreviousYearPapers";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -101,6 +102,7 @@ const AppRoutes = () => {
       <Route path="/assignments" element={<ProtectedRoute><GatedRoute feature="assignments" featureName="Assignments & Labs"><AssignmentTracker /></GatedRoute></ProtectedRoute>} />
       <Route path="/focus" element={<ProtectedRoute><GatedRoute feature="focus_mode" featureName="Focus Mode"><FocusMode /></GatedRoute></ProtectedRoute>} />
       <Route path="/study-timer" element={<ProtectedRoute><StudyTimer /></ProtectedRoute>} />
+      <Route path="/previous-year-papers" element={<ProtectedRoute><PreviousYearPapers /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />

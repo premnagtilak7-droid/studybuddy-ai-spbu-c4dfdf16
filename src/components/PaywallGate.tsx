@@ -97,7 +97,7 @@ export default function CouponRedeemModal({
               <Input
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="Enter code e.g. SPPU_PRO"
+                placeholder="Enter coupon code"
                 className="font-mono text-center text-lg tracking-wider"
               />
               <Button onClick={handleRedeem} className="w-full" disabled={loading}>

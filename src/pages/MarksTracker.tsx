@@ -182,9 +182,9 @@ export default function MarksTracker() {
           ))}
         </div>
 
-        {/* SPPU Grade Table */}
+        {/* Grade Table */}
         <Card>
-          <CardHeader><CardTitle className="text-base">SPPU 2024 Grade Table</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Grade Reference Table</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-4 gap-2 text-xs">
               <p className="font-semibold text-muted-foreground">Grade</p><p className="font-semibold text-muted-foreground">Points</p><p className="font-semibold text-muted-foreground">Min %</p><p className="font-semibold text-muted-foreground">Range</p>

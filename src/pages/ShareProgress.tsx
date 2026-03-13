@@ -47,19 +47,19 @@ export default function ShareProgress() {
       const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(cardRef.current, { backgroundColor: null, scale: 2 });
       const link = document.createElement("a");
-      link.download = "sppu-study-progress.png";
+      link.download = "study-progress.png";
       link.href = canvas.toDataURL("image/png");
       link.click();
     } catch {
       // Fallback: copy text
-      const text = `🎓 SPPU Study Progress\n🔥 ${streak} day streak\n📚 ${topicsCompleted} topics completed\n${level.emoji} ${level.name} (${xp} XP)\n⏱️ ${weeklyHours}h this week`;
+      const text = `🎓 StudyBuddy Progress\n🔥 ${streak} day streak\n📚 ${topicsCompleted} topics completed\n${level.emoji} ${level.name} (${xp} XP)\n⏱️ ${weeklyHours}h this week`;
       navigator.clipboard.writeText(text);
       alert("Card text copied to clipboard!");
     }
   }
 
   function shareWhatsApp() {
-    const text = `🎓 *SPPU Study Progress*\n🔥 ${streak} day streak\n📚 ${topicsCompleted} topics completed\n${level.emoji} ${level.name} (${xp} XP)\n⏱️ ${weeklyHours}h this week\n\n_Studying with SPPU Study App!_`;
+    const text = `🎓 *StudyBuddy Progress*\n🔥 ${streak} day streak\n📚 ${topicsCompleted} topics completed\n${level.emoji} ${level.name} (${xp} XP)\n⏱️ ${weeklyHours}h this week\n\n_Studying with StudyBuddy!_`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
@@ -79,8 +79,8 @@ export default function ShareProgress() {
                 <Trophy className="w-5 h-5" />
               </div>
               <div>
-                <p className="font-bold text-lg">SPPU Study</p>
-                <p className="text-[10px] opacity-80">2024 Pattern</p>
+                <p className="font-bold text-lg">StudyBuddy</p>
+                <p className="text-[10px] opacity-80">Your Study Companion</p>
               </div>
             </div>
 
@@ -116,7 +116,7 @@ export default function ShareProgress() {
               </div>
             </div>
 
-            <p className="text-center text-[10px] opacity-50 mt-6">sppu-study.lovable.app</p>
+            <p className="text-center text-[10px] opacity-50 mt-6">studybuddy-ai-spbu.lovable.app</p>
           </div>
         </div>
 

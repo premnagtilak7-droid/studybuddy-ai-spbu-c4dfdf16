@@ -233,7 +233,7 @@ export default function StudyPlanGenerator() {
 <!DOCTYPE html>
 <html>
 <head>
-  <title>SPPU Study Plan</title>
+  <title>Study Plan</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; color: #222; }
     h1 { color: #6366f1; font-size: 22px; }

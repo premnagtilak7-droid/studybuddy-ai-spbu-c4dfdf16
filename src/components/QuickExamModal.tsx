@@ -55,7 +55,7 @@ export default function QuickExamModal({ open, onOpenChange, onExamAdded }: Quic
             <Input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. SPPU End Sem"
+              placeholder="e.g. End Semester Exam"
             />
           </div>
           <div>
