@@ -17,7 +17,8 @@ RULES:
 5. Include revision days before each exam (at least 1 day before each exam should be revision for that subject).
 6. Mark weekends as lighter study days (1-2 topics).
 7. Return the plan as a structured JSON using the tool provided.
-8. Each day entry should have: date (YYYY-MM-DD), day name, and an array of tasks with subject name, topic name, and estimated hours.`;
+8. Each day entry should have: date (YYYY-MM-DD), day name, and an array of tasks with subject name, topic name, and estimated hours.
+9. IMPORTANT: You MUST call the create_study_plan tool with a non-empty plan array.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -102,20 +103,46 @@ serve(async (req) => {
       }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "AI service error" }), {
+      return new Response(JSON.stringify({ error: "AI service error. Please try again." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json();
+    
+    // Extract from tool call
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
-      return new Response(JSON.stringify({ error: "No plan generated" }), {
+    let plan: any = null;
+    
+    if (toolCall) {
+      const args = toolCall.function?.arguments;
+      if (typeof args === "string") {
+        plan = JSON.parse(args);
+      } else if (typeof args === "object") {
+        plan = args;
+      }
+    }
+    
+    // Fallback: try content
+    if (!plan) {
+      const content = data.choices?.[0]?.message?.content;
+      if (content) {
+        const cleaned = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+        const jsonStart = cleaned.search(/[\{\[]/);
+        const jsonEnd = Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          plan = JSON.parse(cleaned.substring(jsonStart, jsonEnd + 1));
+        }
+      }
+    }
+
+    if (!plan || !plan.plan || !Array.isArray(plan.plan) || plan.plan.length === 0) {
+      console.error("Empty plan from AI:", JSON.stringify(data).slice(0, 500));
+      return new Response(JSON.stringify({ error: "AI returned an empty plan. Please try again." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const plan = JSON.parse(toolCall.function.arguments);
     return new Response(JSON.stringify(plan), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
