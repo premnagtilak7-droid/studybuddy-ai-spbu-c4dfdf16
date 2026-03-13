@@ -47,7 +47,7 @@ export default function ShareProgress() {
       const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(cardRef.current, { backgroundColor: null, scale: 2 });
       const link = document.createElement("a");
-      link.download = "sppu-study-progress.png";
+      link.download = "study-progress.png";
       link.href = canvas.toDataURL("image/png");
       link.click();
     } catch {
