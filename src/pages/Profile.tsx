@@ -34,7 +34,8 @@ type ProfileData = {
 };
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, userPlan } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
