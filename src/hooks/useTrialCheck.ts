@@ -37,11 +37,12 @@ export function useTrialCheck() {
       const alreadySent = localStorage.getItem(notifKey);
       if (!alreadySent && (daysLeft === 2 || daysLeft === 0)) {
         localStorage.setItem(notifKey, "true");
-        sendPushNotification(
+        sendLocalNotification(
           "⏰ Trial Ending Soon!",
           daysLeft === 0
             ? "Your free trial ends today! Subscribe now to keep premium features."
-            : "Your free trial ends in 2 days. Don't miss out on premium features!"
+            : "Your free trial ends in 2 days. Don't miss out on premium features!",
+          "trial"
         );
       }
 

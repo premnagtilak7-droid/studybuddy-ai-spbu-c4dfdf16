@@ -80,7 +80,7 @@ export default function Profile() {
     // Fetch stats
     Promise.all([
       supabase.from("study_logs").select("duration_minutes").eq("user_id", user.id),
-      getStudyStreakFromDB(user.id),
+      getStudyStreakFromDB(),
       supabase.from("user_achievements").select("id").eq("user_id", user.id),
       supabase.from("subjects").select("id").eq("user_id", user.id),
     ]).then(([logsRes, s, badgesRes, subsRes]) => {
