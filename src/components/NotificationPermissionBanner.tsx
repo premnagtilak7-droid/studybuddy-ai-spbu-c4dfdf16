@@ -17,7 +17,9 @@ export default function NotificationPermissionBanner() {
 
     const perm = "Notification" in window ? Notification.permission : "denied";
     const dismissed = localStorage.getItem("notif_perm_dismissed");
-    if (perm === "default" && !dismissed) {
+    const alreadyAsked = localStorage.getItem("notif_permission_asked");
+    // Only show if never asked AND never dismissed AND permission is still default
+    if (perm === "default" && !dismissed && !alreadyAsked) {
       const timer = setTimeout(() => setShow(true), 3000);
       return () => clearTimeout(timer);
     }
