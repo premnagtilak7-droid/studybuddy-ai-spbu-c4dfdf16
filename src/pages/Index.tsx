@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import TrialBanner from "@/components/TrialBanner";
 import { motion } from "framer-motion";
 import { Clock, Flame, BookOpen, Target, TrendingUp, Plus, AlertTriangle, CalendarClock, PlayCircle, Zap, Timer } from "lucide-react";
 import StudyHeatmap from "../components/StudyHeatmap";
