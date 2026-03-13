@@ -76,8 +76,8 @@ export default function Subjects() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">SPPU Subjects</h1>
-            <p className="text-sm text-muted-foreground mt-1">2024 Pattern — Click a subject to manage units & topics</p>
+            <h1 className="text-2xl font-bold text-foreground">My Subjects</h1>
+            <p className="text-sm text-muted-foreground mt-1">Click a subject to manage units & topics</p>
           </div>
           <Button onClick={() => navigate("/subject-management")}>
             <Plus className="w-4 h-4 mr-1" /> Manage Subjects
