@@ -103,6 +103,7 @@ const AppRoutes = () => {
 
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import NotificationPermissionBanner from "./components/NotificationPermissionBanner";
+import ReminderBanner from "./components/ReminderBanner";
 import { AnimatePresence } from "framer-motion";
 
 const App = () => (
