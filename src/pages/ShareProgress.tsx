@@ -52,7 +52,7 @@ export default function ShareProgress() {
       link.click();
     } catch {
       // Fallback: copy text
-      const text = `🎓 SPPU Study Progress\n🔥 ${streak} day streak\n📚 ${topicsCompleted} topics completed\n${level.emoji} ${level.name} (${xp} XP)\n⏱️ ${weeklyHours}h this week`;
+      const text = `🎓 StudyBuddy Progress\n🔥 ${streak} day streak\n📚 ${topicsCompleted} topics completed\n${level.emoji} ${level.name} (${xp} XP)\n⏱️ ${weeklyHours}h this week`;
       navigator.clipboard.writeText(text);
       alert("Card text copied to clipboard!");
     }
