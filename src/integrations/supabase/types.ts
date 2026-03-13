@@ -1126,40 +1126,67 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           ban_reason: string | null
+          branch: string | null
+          college: string | null
           created_at: string
           display_name: string | null
           email: string
+          exam_target: string | null
           id: string
           is_banned: boolean
           is_subscribed: boolean
+          is_trial_active: boolean | null
+          last_active_at: string | null
           premium_expires_at: string | null
+          trial_end: string | null
+          trial_start: string | null
           updated_at: string
           user_id: string
+          year_of_study: string | null
         }
         Insert: {
+          avatar_url?: string | null
           ban_reason?: string | null
+          branch?: string | null
+          college?: string | null
           created_at?: string
           display_name?: string | null
           email: string
+          exam_target?: string | null
           id?: string
           is_banned?: boolean
           is_subscribed?: boolean
+          is_trial_active?: boolean | null
+          last_active_at?: string | null
           premium_expires_at?: string | null
+          trial_end?: string | null
+          trial_start?: string | null
           updated_at?: string
           user_id: string
+          year_of_study?: string | null
         }
         Update: {
+          avatar_url?: string | null
           ban_reason?: string | null
+          branch?: string | null
+          college?: string | null
           created_at?: string
           display_name?: string | null
           email?: string
+          exam_target?: string | null
           id?: string
           is_banned?: boolean
           is_subscribed?: boolean
+          is_trial_active?: boolean | null
+          last_active_at?: string | null
           premium_expires_at?: string | null
+          trial_end?: string | null
+          trial_start?: string | null
           updated_at?: string
           user_id?: string
+          year_of_study?: string | null
         }
         Relationships: []
       }
