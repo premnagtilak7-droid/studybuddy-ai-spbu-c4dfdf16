@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { differenceInDays } from "date-fns";
-import { sendPushNotification } from "@/lib/notifications";
+import { sendLocalNotification } from "@/lib/notifications";
 
 export function useTrialCheck() {
   const { user, isSubscribed } = useAuth();
