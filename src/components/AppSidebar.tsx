@@ -50,6 +50,7 @@ const navItems = [
   { icon: FlaskConical, label: "Assignments & Labs", path: "/assignments" },
   { icon: Brain, label: "Focus Mode", path: "/focus" },
   { icon: BellRing, label: "Notifications", path: "/notifications" },
+  { icon: User, label: "My Profile", path: "/profile" },
 ];
 
 export default function AppSidebar() {

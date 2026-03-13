@@ -121,10 +121,11 @@ export function PaywallGate({
   children: React.ReactNode;
   featureName: string;
 }) {
-  const { isSubscribed, user, refreshProfile } = useAuth();
+  const { isSubscribed, isTrialActive, user, refreshProfile } = useAuth();
   const [showRedeem, setShowRedeem] = useState(false);
 
-  if (isSubscribed) return <>{children}</>;
+  // Allow access if subscribed OR on active trial
+  if (isSubscribed || isTrialActive) return <>{children}</>;
 
   return (
     <>

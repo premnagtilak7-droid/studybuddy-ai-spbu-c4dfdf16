@@ -37,6 +37,7 @@ import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
 import NotificationSettings from "./pages/NotificationSettings";
 import NotFound from "./pages/NotFound";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -61,8 +62,11 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   return children;
 }
 
+import { useTrialCheck } from "@/hooks/useTrialCheck";
+
 const AppRoutes = () => {
   useActivityTracker();
+  useTrialCheck();
   return (
     <Routes>
       <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
@@ -95,6 +99,7 @@ const AppRoutes = () => {
       <Route path="/focus" element={<ProtectedRoute><FocusMode /></ProtectedRoute>} />
       <Route path="/study-timer" element={<ProtectedRoute><StudyTimer /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

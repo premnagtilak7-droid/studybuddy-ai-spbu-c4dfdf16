@@ -7,6 +7,8 @@ type AuthContextType = {
   user: User | null;
   isAdmin: boolean;
   isSubscribed: boolean;
+  isTrialActive: boolean;
+  trialDaysLeft: number;
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -17,6 +19,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isAdmin: false,
   isSubscribed: false,
+  isTrialActive: false,
+  trialDaysLeft: 0,
   loading: true,
   signOut: async () => {},
   refreshProfile: async () => {},
@@ -29,6 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isTrialActive, setIsTrialActive] = useState(false);
+  const [trialDaysLeft, setTrialDaysLeft] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const checkRole = async (userId: string, email?: string) => {
@@ -49,10 +55,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkSubscription = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("is_subscribed")
+      .select("is_subscribed, trial_end, is_trial_active")
       .eq("user_id", userId)
       .single();
     setIsSubscribed(!!data?.is_subscribed);
+    const profile = data as any;
+    if (profile?.is_trial_active && profile?.trial_end) {
+      const daysLeft = Math.max(0, Math.ceil((new Date(profile.trial_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+      setIsTrialActive(daysLeft > 0);
+      setTrialDaysLeft(daysLeft);
+    } else {
+      setIsTrialActive(false);
+      setTrialDaysLeft(0);
+    }
   };
 
   const refreshProfile = async () => {
@@ -104,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, isAdmin, isSubscribed, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user, isAdmin, isSubscribed, isTrialActive, trialDaysLeft, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
