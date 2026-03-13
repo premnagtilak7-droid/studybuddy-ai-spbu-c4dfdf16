@@ -1,15 +1,17 @@
+import type { Transition } from "framer-motion";
+
 // Reusable animation variants for framer-motion
 export const pageTransition = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -12 },
-  transition: { duration: 0.25, ease: "easeOut" },
+  transition: { duration: 0.25, ease: "easeOut" as const },
 };
 
 export const cardSlideIn = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.3, ease: "easeOut" },
+  transition: { duration: 0.3, ease: "easeOut" as const },
 };
 
 export const fadeIn = {
