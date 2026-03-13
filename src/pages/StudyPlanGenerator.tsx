@@ -312,7 +312,7 @@ export default function StudyPlanGenerator() {
               <Sparkles className="w-6 h-6 text-primary" />
               AI Study Plan Generator
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Powered by Gemini · SPPU 2024 Pattern</p>
+            <p className="text-sm text-muted-foreground mt-1">Powered by AI · Personalized for your goals</p>
           </div>
           <div className="flex gap-2">
             {plan && (
