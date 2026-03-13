@@ -58,8 +58,6 @@ export function FeatureGate({ feature, children, featureName }: FeatureGateProps
       if (isTrialActive) {
         setHasAccess(true);
       } else {
-        setHasAccess(canAccessFeature(userPlan, effectivePlan as FeatureKey extends string ? PlanType : never));
-        // Re-check with the dynamic plan
         const PLAN_HIERARCHY: Record<string, number> = { free: 0, pro: 1, elite: 2 };
         setHasAccess((PLAN_HIERARCHY[userPlan] || 0) >= (PLAN_HIERARCHY[effectivePlan] || 0));
       }
