@@ -77,7 +77,13 @@ export default function Profile() {
 
   useEffect(() => {
     fetchProfile();
-  }, [fetchProfile]);
+    // Fetch payment history
+    if (user) {
+      supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => {
+        setPayments(data || []);
+      });
+    }
+  }, [fetchProfile, user]);
 
   useEffect(() => {
     if (!user) return;
