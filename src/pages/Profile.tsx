@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { User, Camera, Save, Mail, GraduationCap, Calendar, Target, Clock, Flame, Award, BookOpen, Crown, Loader2 } from "lucide-react";
+import { User, Camera, Save, Mail, GraduationCap, Calendar, Target, Clock, Flame, Award, BookOpen, Crown, Loader2, CreditCard, XCircle, ArrowRight } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { getStudyStreakFromDB } from "@/lib/study-tracker";
 import { getUserXP } from "@/lib/xp-store";
 import { format, differenceInDays } from "date-fns";
+import { PLANS } from "@/lib/plans";
+import { useNavigate } from "react-router-dom";
 
 type ProfileData = {
   display_name: string | null;
@@ -32,7 +34,8 @@ type ProfileData = {
 };
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, userPlan } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,6 +49,7 @@ export default function Profile() {
   const [yearOfStudy, setYearOfStudy] = useState("");
   const [examTarget, setExamTarget] = useState("");
 
+  const [payments, setPayments] = useState<any[]>([]);
   // Stats
   const [totalStudyHours, setTotalStudyHours] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -73,7 +77,13 @@ export default function Profile() {
 
   useEffect(() => {
     fetchProfile();
-  }, [fetchProfile]);
+    // Fetch payment history
+    if (user) {
+      supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => {
+        setPayments(data || []);
+      });
+    }
+  }, [fetchProfile, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -286,31 +296,17 @@ export default function Profile() {
         {/* Subscription Info */}
         <div className="glass-card p-6 space-y-3">
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Crown className="w-5 h-5 text-yellow-500" /> Subscription
+            <Crown className="w-5 h-5 text-primary" /> Subscription
           </h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-muted-foreground">Status</p>
-              <p className="font-semibold text-foreground">{getSubscriptionStatus()}</p>
+              <p className="text-muted-foreground">Current Plan</p>
+              <p className="font-semibold text-foreground capitalize">{PLANS[userPlan]?.name || "Free"}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Plan</p>
-              <p className="font-semibold text-foreground">
-                {profile?.is_subscribed ? "Premium" : profile?.is_trial_active ? "Trial" : "Free"}
-              </p>
+              <p className="text-muted-foreground">Price</p>
+              <p className="font-semibold text-foreground">{PLANS[userPlan]?.priceLabel || "₹0/mo"}</p>
             </div>
-            {(profile?.is_subscribed && profile?.premium_expires_at) && (
-              <>
-                <div>
-                  <p className="text-muted-foreground">Expires</p>
-                  <p className="font-semibold text-foreground">{format(new Date(profile.premium_expires_at), "dd MMM yyyy")}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Days Remaining</p>
-                  <p className="font-semibold text-foreground">{Math.max(0, differenceInDays(new Date(profile.premium_expires_at), new Date()))}</p>
-                </div>
-              </>
-            )}
             {profile?.is_trial_active && !profile?.is_subscribed && profile?.trial_end && (
               <>
                 <div>
@@ -324,6 +320,50 @@ export default function Profile() {
               </>
             )}
           </div>
+          <div className="flex gap-3 pt-2">
+            <Button size="sm" onClick={() => navigate("/pricing")} className="gap-1">
+              <ArrowRight className="w-3 h-3" /> View Plans
+            </Button>
+            {userPlan !== "free" && (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="gap-1"
+                onClick={async () => {
+                  await supabase.from("profiles").update({ current_plan: "free", is_subscribed: false } as any).eq("user_id", user!.id);
+                  toast.success("Subscription cancelled. You're now on the Free plan.");
+                  fetchProfile();
+                }}
+              >
+                <XCircle className="w-3 h-3" /> Cancel Subscription
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Payment History */}
+        <div className="glass-card p-6 space-y-3">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <CreditCard className="w-5 h-5" /> Payment History
+          </h3>
+          {payments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No payments yet</p>
+          ) : (
+            <div className="space-y-2">
+              {payments.map((p) => (
+                <div key={p.id} className="flex items-center justify-between text-sm p-3 rounded-lg bg-muted/30">
+                  <div>
+                    <p className="font-medium text-foreground capitalize">{p.plan} Plan</p>
+                    <p className="text-xs text-muted-foreground">{format(new Date(p.created_at), "dd MMM yyyy HH:mm")}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-foreground">₹{p.amount / 100}</p>
+                    <Badge variant={p.status === "success" ? "default" : "secondary"} className="text-xs">{p.status}</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Account Info */}
