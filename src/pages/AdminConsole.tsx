@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Users, Shield, CreditCard, Activity, BarChart3, Bell, MessageSquare,
-  Brain, FileText, TrendingUp, IndianRupee,
+  Brain, FileText, TrendingUp, IndianRupee, Settings,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,15 +15,17 @@ import AdminAIStats from "@/components/admin/AdminAIStats";
 import AdminReports from "@/components/admin/AdminReports";
 import AdminRevenue from "@/components/admin/AdminRevenue";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
+import AdminFeatureControl from "@/components/admin/AdminFeatureControl";
 
 const TABS = [
   { key: "users", label: "Users", icon: Users },
+  { key: "revenue", label: "Revenue", icon: IndianRupee },
+  { key: "analytics", label: "Analytics", icon: BarChart3 },
   { key: "coupons", label: "Coupons", icon: CreditCard },
   { key: "notifications", label: "Notifications", icon: Bell },
+  { key: "features", label: "Features", icon: Settings },
   { key: "feedback", label: "Feedback", icon: MessageSquare },
-  { key: "revenue", label: "Revenue", icon: IndianRupee },
   { key: "ai", label: "AI Stats", icon: Brain },
-  { key: "analytics", label: "Analytics", icon: BarChart3 },
   { key: "reports", label: "Reports", icon: FileText },
 ] as const;
 
@@ -44,6 +46,7 @@ export default function AdminConsole() {
   const [studyPlansCount, setStudyPlansCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -59,6 +62,7 @@ export default function AdminConsole() {
       { count: planCount },
       { data: notifData },
       { data: ticketData },
+      { data: paymentData },
     ] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("coupons").select("*").order("created_at", { ascending: false }),
@@ -71,6 +75,7 @@ export default function AdminConsole() {
       supabase.from("study_plans").select("*", { count: "exact", head: true }),
       supabase.from("admin_notifications").select("*").order("created_at", { ascending: false }),
       supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
+      supabase.from("payments").select("*").order("created_at", { ascending: false }),
     ]);
     if (profileData) setProfiles(profileData);
     if (couponData) setCoupons(couponData);
@@ -83,6 +88,7 @@ export default function AdminConsole() {
     setStudyPlansCount(planCount ?? 0);
     if (notifData) setNotifications(notifData);
     if (ticketData) setTickets(ticketData);
+    if (paymentData) setPayments(paymentData);
     setLoading(false);
   }, []);
 
@@ -104,12 +110,6 @@ export default function AdminConsole() {
         streak++;
       } else break;
     }
-    // Count topics completed for this user's subjects
-    const userSubjectIds = userSubjects.map((s: any) => s.id);
-    const userTopics = topics.filter((t: any) => {
-      // We'd need units to map, simplified: count all completed topics
-      return t.is_completed;
-    });
     return {
       ...p,
       subjectCount: userSubjects.length,
@@ -117,11 +117,13 @@ export default function AdminConsole() {
       doubtCount: userDoubts.length,
       streak,
       lastStudy: lastLog ? new Date(lastLog.logged_at).toLocaleDateString() : "Never",
-      topicsCompleted: 0, // Simplified
+      topicsCompleted: 0,
     };
   });
 
   const subscribers = profiles.filter((p: any) => p.is_subscribed);
+  const proCount = profiles.filter((p: any) => p.current_plan === "pro").length;
+  const eliteCount = profiles.filter((p: any) => p.current_plan === "elite").length;
 
   if (loading) {
     return (
@@ -145,7 +147,7 @@ export default function AdminConsole() {
             <div>
               <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
               <p className="text-sm text-muted-foreground">
-                {profiles.length} users · {subscribers.length} premium · {tickets.filter((t: any) => t.status === "open").length} open tickets
+                {profiles.length} users · {proCount} pro · {eliteCount} elite · {tickets.filter((t: any) => t.status === "open").length} open tickets
               </p>
             </div>
           </div>
@@ -194,16 +196,19 @@ export default function AdminConsole() {
           <AdminFeedback tickets={tickets} onRefresh={loadData} />
         )}
         {tab === "revenue" && (
-          <AdminRevenue profiles={profiles} />
+          <AdminRevenue profiles={profiles} payments={payments} />
         )}
         {tab === "ai" && (
           <AdminAIStats doubts={doubts} subjects={subjects} studyPlansCount={studyPlansCount} />
         )}
         {tab === "analytics" && (
-          <AdminAnalytics activityLogs={activityLogs} />
+          <AdminAnalytics activityLogs={activityLogs} profiles={profiles} />
         )}
         {tab === "reports" && (
           <AdminReports profiles={profiles} studyLogs={studyLogs} doubts={doubts} activityLogs={activityLogs} />
+        )}
+        {tab === "features" && (
+          <AdminFeatureControl />
         )}
       </div>
     </AppLayout>
