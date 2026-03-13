@@ -33,6 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isTrialActive, setIsTrialActive] = useState(false);
+  const [trialDaysLeft, setTrialDaysLeft] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const checkRole = async (userId: string, email?: string) => {
