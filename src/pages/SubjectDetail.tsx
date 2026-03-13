@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { celebrateComplete, celebrateUnit, celebrateSubject } from "@/lib/confetti";
+import { playCompleteSound, playRewardSound } from "@/lib/sounds";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Plus, ChevronDown, ChevronRight, Trash2, Check, Target, Play, StickyNote } from "lucide-react";
@@ -106,6 +108,30 @@ export default function SubjectDetail() {
         setLastStudied({ subjectId: subject.id, subjectName: subject.name, topicName, unitName, timestamp: Date.now() });
         const amount = await awardXP("topic_complete");
         if (amount > 0) toast.success(`+${amount} XP for completing topic!`);
+        
+        // Play sound & confetti for topic completion
+        playCompleteSound();
+        celebrateComplete();
+
+        // Check if the unit is now fully completed
+        const freshUnits = await getUnitsWithTopics(subject.id);
+        const unit = freshUnits.find(u => (u.topics || []).some(t => t.id === topicId));
+        if (unit) {
+          const allTopicsDone = (unit.topics || []).every(t => t.id === topicId ? true : t.is_completed);
+          if (allTopicsDone && (unit.topics || []).length > 0) {
+            setTimeout(() => { celebrateUnit(); playRewardSound(); toast.success(`🎉 Unit "${unit.name}" completed!`); }, 500);
+            
+            // Check if ALL units of the subject are completed
+            const allUnitsDone = freshUnits.every(u => {
+              const topics = u.topics || [];
+              if (topics.length === 0) return false;
+              return topics.every(t => t.id === topicId ? true : t.is_completed);
+            });
+            if (allUnitsDone) {
+              setTimeout(() => { celebrateSubject(); toast.success(`🏆 All units of "${subject.name}" completed! Amazing!`); }, 1200);
+            }
+          }
+        }
       }
       loadData();
     } catch (err: any) { toast.error(err.message); }
@@ -130,7 +156,14 @@ export default function SubjectDetail() {
   };
 
   const handleToggleSubtopic = async (id: string, current: boolean) => {
-    try { await toggleSubtopic(id, !current); loadData(); } catch (err: any) { toast.error(err.message); }
+    try {
+      await toggleSubtopic(id, !current);
+      if (!current) {
+        playCompleteSound();
+        celebrateComplete();
+      }
+      loadData();
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const handleDeleteSubtopic = async (id: string) => {

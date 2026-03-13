@@ -104,18 +104,7 @@ const AppRoutes = () => {
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import NotificationPermissionBanner from "./components/NotificationPermissionBanner";
 import ReminderBanner from "./components/ReminderBanner";
-import { AnimatePresence, motion } from "framer-motion";
-
-const PageWrapper = ({ children }: { children: React.ReactNode }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -10 }}
-    transition={{ duration: 0.2, ease: "easeOut" }}
-  >
-    {children}
-  </motion.div>
-);
+import { AnimatePresence } from "framer-motion";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
