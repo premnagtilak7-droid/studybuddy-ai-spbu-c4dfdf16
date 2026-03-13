@@ -100,19 +100,44 @@ export default function StudyGroups() {
   useRealtimeSubscription("study_logs", reloadMembers);
   useRealtimeSubscription("group_members", reloadGroupsAndData);
   useRealtimeSubscription("group_messages", reloadGroupsAndData);
-  useRealtimeSubscription("study_groups", reloadGroupsAndData);
 
   async function loadMyGroups() {
-    const { data: memberships } = await supabase.from("group_members").select("group_id").eq("user_id", user!.id);
-    if (!memberships?.length) { setMyGroups([]); return; }
-    const groupIds = memberships.map(m => m.group_id);
+    if (!user) return;
+
+    const { data: memberships } = await supabase
+      .from("group_members")
+      .select("group_id")
+      .eq("user_id", user.id);
+
+    if (!memberships?.length) {
+      setMyGroups([]);
+      setSelectedGroup(null);
+      return;
+    }
+
+    const groupIds = memberships.map((m) => m.group_id);
     const { data } = await supabase.from("study_groups").select("*").in("id", groupIds);
-    setMyGroups((data || []) as Group[]);
+    const groups = (data || []) as Group[];
+
+    setMyGroups(groups);
+    setSelectedGroup((prev) => {
+      if (!groups.length) return null;
+      if (!prev) return groups[0];
+      return groups.find((g) => g.id === prev.id) ?? groups[0];
+    });
   }
 
-  async function loadMembers() {
-    const { data } = await supabase.from("group_members").select("user_id, joined_at").eq("group_id", selectedGroup!.id);
-    if (!data) return;
+  async function loadMembers(groupId = selectedGroup?.id) {
+    if (!groupId) {
+      setMembers([]);
+      return;
+    }
+
+    const { data } = await supabase.from("group_members").select("user_id, joined_at").eq("group_id", groupId);
+    if (!data) {
+      setMembers([]);
+      return;
+    }
     const userIds = data.map(m => m.user_id);
 
     // Fetch profiles, XP, study logs, subjects in parallel
