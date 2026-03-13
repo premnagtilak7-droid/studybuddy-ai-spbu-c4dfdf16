@@ -118,8 +118,8 @@ export async function sendLocalNotification(title: string, body: string, type: s
       if (reg) {
         reg.showNotification(title, {
           body, icon: "/pwa-192x192.png", badge: "/pwa-192x192.png",
-          tag: type, requireInteraction: true, vibrate: [200, 100, 200, 100, 200],
-        });
+          tag: type, requireInteraction: true,
+        } as any);
       } else {
         new Notification(title, { body, icon: "/pwa-192x192.png" });
       }
