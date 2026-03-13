@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { User, Camera, Save, Mail, GraduationCap, Calendar, Target, Clock, Flame, Award, BookOpen, Crown, Loader2 } from "lucide-react";
+import { User, Camera, Save, Mail, GraduationCap, Calendar, Target, Clock, Flame, Award, BookOpen, Crown, Loader2, CreditCard, XCircle, ArrowRight } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { getStudyStreakFromDB } from "@/lib/study-tracker";
 import { getUserXP } from "@/lib/xp-store";
 import { format, differenceInDays } from "date-fns";
+import { PLANS } from "@/lib/plans";
+import { useNavigate } from "react-router-dom";
 
 type ProfileData = {
   display_name: string | null;
