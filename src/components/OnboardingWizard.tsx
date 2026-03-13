@@ -1,18 +1,26 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, CalendarClock, Clock, CheckCircle2, ArrowRight, ArrowLeft } from "lucide-react";
+import { BookOpen, CalendarClock, Clock, CheckCircle2, ArrowRight, ArrowLeft, User, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 
 const steps = [
   {
+    id: 0,
+    title: "Set Up Your Profile",
+    description: "Tell us what you're studying — school, college, competitive exam, or self-learning. We'll personalize everything for you.",
+    icon: User,
+    action: "/profile",
+    actionLabel: "Set Up Profile",
+  },
+  {
     id: 1,
-    title: "Add Your First Subject",
-    description: "Start by adding your SPPU subjects. We'll auto-create 6 units for each one so you can track topics right away.",
+    title: "Add Your Subjects",
+    description: "Add subjects manually or use our syllabus templates to get started instantly with pre-built topics and units.",
     icon: BookOpen,
     action: "/subject-management",
-    actionLabel: "Add Subject",
+    actionLabel: "Add Subjects",
   },
   {
     id: 2,

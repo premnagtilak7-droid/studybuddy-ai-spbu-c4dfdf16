@@ -7,6 +7,8 @@ export async function streamChat({
   language,
   questionType,
   subject,
+  educationType,
+  examName,
   onDelta,
   onDone,
   onError,
@@ -15,6 +17,8 @@ export async function streamChat({
   language: string;
   questionType?: string;
   subject?: string;
+  educationType?: string;
+  examName?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
@@ -26,7 +30,7 @@ export async function streamChat({
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ type: "doubt", messages, language, questionType, subject }),
+      body: JSON.stringify({ type: "doubt", messages, language, questionType, subject, educationType, examName }),
     });
 
     if (!resp.ok) {
@@ -68,14 +72,13 @@ export async function streamChat({
             onDelta(content);
           }
         } catch {
-          // Incomplete JSON split across chunks: put it back and wait for more data
           textBuffer = line + "\n" + textBuffer;
           break;
         }
       }
     }
 
-    // Final flush: process any remaining buffered lines
+    // Final flush
     if (textBuffer.trim()) {
       for (let raw of textBuffer.split("\n")) {
         if (!raw) continue;

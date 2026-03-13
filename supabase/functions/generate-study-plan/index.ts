@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are an expert study planner for SPPU Engineering students (2024 Pattern).
+const SYSTEM_PROMPT = `You are an expert study planner for all types of students — school, college, competitive exams, and self-learners.
 
 Given a list of subjects with their remaining topics and exam dates, create a day-by-day study schedule from today until the last exam date.
 
@@ -97,7 +97,7 @@ serve(async (req) => {
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits in your Lovable workspace." }), {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits in your workspace." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -110,7 +110,6 @@ serve(async (req) => {
 
     const data = await response.json();
     
-    // Extract from tool call
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     let plan: any = null;
     
@@ -123,7 +122,6 @@ serve(async (req) => {
       }
     }
     
-    // Fallback: try content
     if (!plan) {
       const content = data.choices?.[0]?.message?.content;
       if (content) {
