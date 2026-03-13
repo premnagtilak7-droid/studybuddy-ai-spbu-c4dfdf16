@@ -50,6 +50,7 @@ const navItems = [
   { icon: Award, label: "Marks & CGPA", path: "/marks" },
   { icon: FlaskConical, label: "Assignments & Labs", path: "/assignments" },
   { icon: Brain, label: "Focus Mode", path: "/focus" },
+  { icon: FileText, label: "Previous Year Papers", path: "/previous-year-papers" },
   { icon: BellRing, label: "Notifications", path: "/notifications" },
   { icon: User, label: "My Profile", path: "/profile" },
   { icon: GraduationCap, label: "Plans & Pricing", path: "/pricing" },

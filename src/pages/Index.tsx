@@ -262,6 +262,9 @@ export default function Dashboard() {
           <>
             <GettingStartedChecklist subjects={subjects} examDates={examDates} totalTopics={totalTopics} completedTopics={completedTopics} hasTimetable={!!localStorage.getItem("sppu_timetable_visited")} />
             <ExamCountdown exam={nextExam?.exam} daysLeft={nextExam?.daysLeft} />
+            {educationType === "competitive_exam" && nextExam && (
+              <ExamStudyInsights examDaysLeft={nextExam.daysLeft} syllabusPercent={syllabusPercent} subjects={subjects} subjectProgress={subjectProgress} educationDetails={educationDetails} />
+            )}
             <WeeklyChallenges />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <DailyStudyGoal />

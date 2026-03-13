@@ -306,7 +306,7 @@ export default function PreviousYearPapers() {
                     <div className="flex flex-wrap gap-2">
                       {catalog.sections.map(section => (
                         <Button key={section} variant="outline" size="sm" className="text-xs"
-                          onClick={() => { setSelectedYear(String(year)); setSelectedSection(section); generatePYQ(); }}>
+                          onClick={() => { setSelectedYear(String(year)); setSelectedSection(section); }}>
                           <BookOpen className="w-3 h-3 mr-1" /> {section}
                         </Button>
                       ))}

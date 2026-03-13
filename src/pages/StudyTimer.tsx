@@ -316,11 +316,11 @@ export default function StudyTimer() {
 
   // ── Tab title ──
   useEffect(() => {
-    if (!running) { document.title = "SPPU Study"; return; }
+    if (!running) { document.title = "StudyBuddy"; return; }
     const subName = subjects.find(s => s.id === selectedSubject)?.code;
     const label = mode === "stopwatch" ? fmt(elapsed) : mode === "countdown" ? fmt(countdownLeft) : fmt(pomLeft);
     document.title = `⏱ ${label}${subName ? ` - ${subName}` : ""} — Study Timer`;
-    return () => { document.title = "SPPU Study"; };
+    return () => { document.title = "StudyBuddy"; };
   }, [running, elapsed, countdownLeft, pomLeft, mode, selectedSubject, subjects]);
 
   // ── Persist timer state to DB every 10s ──
