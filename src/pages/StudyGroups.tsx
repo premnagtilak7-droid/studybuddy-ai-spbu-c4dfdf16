@@ -13,23 +13,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { toast } from "sonner";
-import { Users, Plus, LogIn, Send, Trophy, Crown, Flame, Clock, BookOpen, Share2, Video } from "lucide-react";
-
-type Group = { id: string; name: string; subject_focus: string; max_members: number; join_code: string; created_by: string; created_at: string };
-
-type MemberWithStats = {
-  user_id: string;
-  joined_at: string;
-  email?: string;
-  display_name?: string;
-  xp?: number;
-  streak?: number;
-  weekly_hours?: number;
-  total_hours?: number;
-  subjects_progress?: { name: string; code: string; progress: number }[];
-};
-
-type Message = { id: string; user_id: string; message: string; created_at: string; email?: string };
+import { Users, Plus, LogIn, Send, Trophy, Crown, Flame, Clock, BookOpen, Share2, Video, LogOut, Bell, CalendarDays, ClipboardList } from "lucide-react";
+import type { Group, MemberWithStats, Message } from "@/components/study-groups/types";
+import { sendGroupNotification, loadMemberStats } from "@/components/study-groups/GroupHelpers";
+import GroupSettingsDialog from "@/components/study-groups/GroupSettingsDialog";
+import GroupNotifications from "@/components/study-groups/GroupNotifications";
+import GroupAssignments from "@/components/study-groups/GroupAssignments";
+import GroupCalendar from "@/components/study-groups/GroupCalendar";
+import GroupAchievements from "@/components/study-groups/GroupAchievements";
 
 export default function StudyGroups() {
   const { user } = useAuth();
@@ -46,161 +37,55 @@ export default function StudyGroups() {
   const [meetActive, setMeetActive] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => { if (user) loadMyGroups(); }, [user]);
   useEffect(() => {
-    if (!user) return;
-    loadMyGroups();
-  }, [user]);
-
-  useEffect(() => {
-    if (!selectedGroup) {
-      setMembers([]);
-      setMessages([]);
-      return;
-    }
+    if (!selectedGroup) { setMembers([]); setMessages([]); return; }
     loadMembers(selectedGroup.id);
     loadMessages(selectedGroup.id);
   }, [selectedGroup]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Realtime messages for active group
+  // Realtime messages
   useEffect(() => {
     if (!selectedGroup) return;
-    const channel = supabase
-      .channel(`group-${selectedGroup.id}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "group_messages", filter: `group_id=eq.${selectedGroup.id}` },
-        () => {
-          loadMessages(selectedGroup.id);
-        }
-      )
+    const channel = supabase.channel(`group-${selectedGroup.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "group_messages", filter: `group_id=eq.${selectedGroup.id}` }, () => loadMessages(selectedGroup.id))
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [selectedGroup]);
 
-  // Realtime sync for group data and member stats
-  const reloadMembers = useCallback(() => {
-    if (selectedGroup) loadMembers(selectedGroup.id);
-  }, [selectedGroup]);
-
-  const reloadGroupsAndData = useCallback(() => {
-    loadMyGroups();
-    if (selectedGroup) {
-      loadMembers(selectedGroup.id);
-      loadMessages(selectedGroup.id);
-    }
-  }, [selectedGroup]);
-
+  const reloadMembers = useCallback(() => { if (selectedGroup) loadMembers(selectedGroup.id); }, [selectedGroup]);
+  const reloadAll = useCallback(() => { loadMyGroups(); if (selectedGroup) { loadMembers(selectedGroup.id); loadMessages(selectedGroup.id); } }, [selectedGroup]);
   useRealtimeSubscription("study_logs", reloadMembers);
-  useRealtimeSubscription("group_members", reloadGroupsAndData);
-  useRealtimeSubscription("group_messages", reloadGroupsAndData);
+  useRealtimeSubscription("group_members", reloadAll);
+  useRealtimeSubscription("group_messages", reloadAll);
 
   async function loadMyGroups() {
     if (!user) return;
-
-    const { data: memberships } = await supabase
-      .from("group_members")
-      .select("group_id")
-      .eq("user_id", user.id);
-
-    if (!memberships?.length) {
-      setMyGroups([]);
-      setSelectedGroup(null);
-      return;
-    }
-
-    const groupIds = memberships.map((m) => m.group_id);
-    const { data } = await supabase.from("study_groups").select("*").in("id", groupIds);
+    const { data: memberships } = await supabase.from("group_members").select("group_id").eq("user_id", user.id);
+    if (!memberships?.length) { setMyGroups([]); setSelectedGroup(null); return; }
+    const ids = memberships.map(m => m.group_id);
+    const { data } = await supabase.from("study_groups").select("*").in("id", ids);
     const groups = (data || []) as Group[];
-
     setMyGroups(groups);
-    setSelectedGroup((prev) => {
+    setSelectedGroup(prev => {
       if (!groups.length) return null;
       if (!prev) return groups[0];
-      return groups.find((g) => g.id === prev.id) ?? groups[0];
+      return groups.find(g => g.id === prev.id) ?? groups[0];
     });
   }
 
-  async function loadMembers(groupId = selectedGroup?.id) {
-    if (!groupId) {
-      setMembers([]);
-      return;
-    }
-
+  async function loadMembers(groupId: string) {
     const { data } = await supabase.from("group_members").select("user_id, joined_at").eq("group_id", groupId);
-    if (!data) {
-      setMembers([]);
-      return;
-    }
-    const userIds = data.map(m => m.user_id);
-
-    // Fetch profiles, XP, study logs, subjects in parallel
-    const [profilesRes, xpRes, logsRes, subjectsRes, streakRes] = await Promise.all([
-      supabase.from("profiles").select("user_id, email, display_name").in("user_id", userIds),
-      supabase.from("user_xp").select("user_id, total_xp").in("user_id", userIds),
-      supabase.from("study_logs").select("user_id, duration_minutes, logged_at").in("user_id", userIds),
-      supabase.from("subjects").select("user_id, name, code, completed_units, target_units").in("user_id", userIds),
-      supabase.from("study_dates").select("user_id, study_date").in("user_id", userIds),
-    ]);
-
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-
-    setMembers(data.map(m => {
-      const p = profilesRes.data?.find(p => p.user_id === m.user_id);
-      const x = xpRes.data?.find(x => x.user_id === m.user_id);
-      const userLogs = (logsRes.data || []).filter(l => l.user_id === m.user_id);
-      const weeklyMins = userLogs.filter(l => new Date(l.logged_at) >= weekAgo).reduce((s, l) => s + l.duration_minutes, 0);
-      const totalMins = userLogs.reduce((s, l) => s + l.duration_minutes, 0);
-      const userSubjects = (subjectsRes.data || []).filter(s => s.user_id === m.user_id);
-
-      // Calculate streak
-      const dates = (streakRes.data || []).filter(d => d.user_id === m.user_id).map(d => d.study_date).sort().reverse();
-      let streak = 0;
-      const today = new Date().toISOString().split("T")[0];
-      const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-      let checkDate = dates.includes(today) ? today : dates.includes(yesterday) ? yesterday : null;
-      if (checkDate) {
-        for (const d of dates) {
-          if (d === checkDate) { streak++; const prev = new Date(checkDate); prev.setDate(prev.getDate() - 1); checkDate = prev.toISOString().split("T")[0]; }
-        }
-      }
-
-      return {
-        ...m,
-        email: p?.email,
-        display_name: p?.display_name,
-        xp: x?.total_xp || 0,
-        streak,
-        weekly_hours: Math.round(weeklyMins / 60 * 10) / 10,
-        total_hours: Math.round(totalMins / 60 * 10) / 10,
-        subjects_progress: userSubjects.map(s => ({
-          name: s.name,
-          code: s.code,
-          progress: s.target_units > 0 ? Math.round((s.completed_units / s.target_units) * 100) : 0,
-        })),
-      };
-    }));
+    if (!data) { setMembers([]); return; }
+    const enriched = await loadMemberStats(data, data.map(m => m.user_id));
+    setMembers(enriched);
   }
 
-  async function loadMessages(groupId = selectedGroup?.id) {
-    if (!groupId) {
-      setMessages([]);
-      return;
-    }
-
+  async function loadMessages(groupId: string) {
     const { data } = await supabase.from("group_messages").select("*").eq("group_id", groupId).order("created_at", { ascending: true }).limit(100);
-    if (!data) {
-      setMessages([]);
-      return;
-    }
-    const userIds = [...new Set(data.map((m) => m.user_id))];
+    if (!data) { setMessages([]); return; }
+    const userIds = [...new Set(data.map(m => m.user_id))];
     const { data: profiles } = await supabase.from("profiles").select("user_id, email, display_name").in("user_id", userIds);
     setMessages(data.map(m => {
       const p = profiles?.find(p => p.user_id === m.user_id);
@@ -217,6 +102,7 @@ export default function StudyGroups() {
     }).select().single();
     if (error) { toast.error("Failed to create group"); setLoading(false); return; }
     await supabase.from("group_members").insert({ group_id: (data as any).id, user_id: user!.id });
+    await sendGroupNotification((data as any).id, user!.id, "info", `${user?.email?.split("@")[0]} created this group`);
     toast.success(`Group created! Join code: ${code}`);
     setCreateOpen(false);
     setNewGroup({ name: "", subject_focus: "", max_members: 10 });
@@ -229,10 +115,27 @@ export default function StudyGroups() {
     setLoading(true);
     const { data: group } = await supabase.from("study_groups").select("*").eq("join_code", joinCode.toUpperCase()).single();
     if (!group) { toast.error("Invalid join code"); setLoading(false); return; }
-    const { error } = await supabase.from("group_members").insert({ group_id: (group as any).id, user_id: user!.id });
-    if (error?.code === "23505") { toast.error("Already a member"); } else if (error) { toast.error("Failed to join"); } else { toast.success(`Joined ${(group as any).name}!`); loadMyGroups(); }
+    const g = group as any;
+    const { error } = await supabase.from("group_members").insert({ group_id: g.id, user_id: user!.id });
+    if (error?.code === "23505") { toast.error("Already a member"); }
+    else if (error) { toast.error("Failed to join"); }
+    else {
+      await sendGroupNotification(g.id, user!.id, "join", `${user?.email?.split("@")[0]} joined the group`);
+      toast.success(`Joined ${g.name}!`);
+      loadMyGroups();
+    }
     setJoinCode("");
     setLoading(false);
+  }
+
+  async function leaveGroup() {
+    if (!selectedGroup || !user) return;
+    if (selectedGroup.created_by === user.id) { toast.error("As admin, delete the group or transfer ownership first"); return; }
+    await supabase.from("group_members").delete().eq("group_id", selectedGroup.id).eq("user_id", user.id);
+    await sendGroupNotification(selectedGroup.id, user.id, "leave", `${user.email?.split("@")[0]} left the group`);
+    toast.success("Left the group");
+    setSelectedGroup(null);
+    loadMyGroups();
   }
 
   async function sendMessage() {
@@ -246,14 +149,14 @@ export default function StudyGroups() {
     const { data: mySubjects } = await supabase.from("subjects").select("name, code, completed_units, target_units").eq("user_id", user!.id);
     if (!mySubjects?.length) { toast.error("No subjects to share"); return; }
     const summary = mySubjects.map(s => `${s.code}: ${Math.round((s.completed_units / s.target_units) * 100)}%`).join(", ");
-    await supabase.from("group_messages").insert({
-      group_id: selectedGroup.id, user_id: user!.id,
-      message: `📊 My Progress: ${summary}`
-    });
+    await supabase.from("group_messages").insert({ group_id: selectedGroup.id, user_id: user!.id, message: `📊 My Progress: ${summary}` });
     toast.success("Progress shared!");
   }
 
+  const isAdmin = selectedGroup ? selectedGroup.created_by === user?.id : false;
   const sortedByHours = [...members].sort((a, b) => (b.weekly_hours || 0) - (a.weekly_hours || 0));
+  const memberCount = members.length;
+  const userName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Student";
 
   return (
     <AppLayout>
@@ -284,6 +187,7 @@ export default function StudyGroups() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Group list sidebar */}
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-sm">My Groups</CardTitle></CardHeader>
             <CardContent className="space-y-2">
@@ -293,71 +197,98 @@ export default function StudyGroups() {
                   className={`w-full text-left p-3 rounded-lg border transition-colors ${selectedGroup?.id === g.id ? "bg-primary/10 border-primary" : "border-border hover:bg-muted"}`}>
                   <p className="font-medium text-sm text-foreground">{g.name}</p>
                   <p className="text-xs text-muted-foreground">{g.subject_focus}</p>
-                  <Badge variant="outline" className="mt-1 text-[10px]">Code: {g.join_code}</Badge>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <Badge variant="outline" className="text-[10px]">Code: {g.join_code}</Badge>
+                    {g.privacy === "private" && <Badge variant="secondary" className="text-[10px]">Private</Badge>}
+                  </div>
                 </button>
               ))}
             </CardContent>
           </Card>
 
+          {/* Main content */}
           <div className="lg:col-span-2">
             {!selectedGroup ? (
-              <Card className="h-96 flex items-center justify-center">
-                <p className="text-muted-foreground">Select a group to view</p>
-              </Card>
+              <Card className="h-96 flex items-center justify-center"><p className="text-muted-foreground">Select a group to view</p></Card>
             ) : (
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="w-full grid grid-cols-5 h-auto">
-                  <TabsTrigger value="chat" className="text-xs sm:text-sm gap-1 py-2"><Send className="w-3 h-3 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Chat</span></TabsTrigger>
-                  <TabsTrigger value="meet" className="text-xs sm:text-sm gap-1 py-2"><Video className="w-3 h-3 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Meet</span></TabsTrigger>
-                  <TabsTrigger value="progress" className="text-xs sm:text-sm gap-1 py-2"><BookOpen className="w-3 h-3 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Progress</span></TabsTrigger>
-                  <TabsTrigger value="leaderboard" className="text-xs sm:text-sm gap-1 py-2"><Trophy className="w-3 h-3 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Board</span></TabsTrigger>
-                  <TabsTrigger value="members" className="text-xs sm:text-sm gap-1 py-2"><Users className="w-3 h-3 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Members</span></TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="chat">
-                  <Card>
-                    <ScrollArea className="h-72 p-4">
-                      {messages.map(m => (
-                        <div key={m.id} className={`mb-3 ${m.user_id === user!.id ? "text-right" : ""}`}>
-                          <p className="text-[10px] text-muted-foreground">{m.email}</p>
-                          <div className={`inline-block px-3 py-2 rounded-lg text-sm max-w-[80%] ${m.user_id === user!.id ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
-                            {m.message}
-                          </div>
+              <div className="space-y-3">
+                {/* Group header with info and actions */}
+                <Card>
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-start justify-between flex-wrap gap-2">
+                      <div>
+                        <h2 className="text-lg font-bold text-foreground">{selectedGroup.name}</h2>
+                        {selectedGroup.description && <p className="text-xs text-muted-foreground">{selectedGroup.description}</p>}
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <Badge variant="outline" className="text-[10px] gap-1"><Users className="w-2.5 h-2.5" />{memberCount} members</Badge>
+                          <Badge variant="outline" className="text-[10px] gap-1"><CalendarDays className="w-2.5 h-2.5" />Created {new Date(selectedGroup.created_at).toLocaleDateString()}</Badge>
+                          <Badge variant="outline" className="text-[10px]">{selectedGroup.subject_focus}</Badge>
+                          <Badge variant="outline" className="text-[10px]">Code: {selectedGroup.join_code}</Badge>
                         </div>
-                      ))}
-                      <div ref={messagesEndRef} />
-                    </ScrollArea>
-                    <div className="p-3 border-t border-border flex gap-2">
-                      <Button variant="outline" size="icon" onClick={shareMyProgress} title="Share my progress"><Share2 className="w-4 h-4" /></Button>
-                      <Input value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." onKeyDown={e => e.key === "Enter" && sendMessage()} className="flex-1" />
-                      <Button size="icon" onClick={sendMessage}><Send className="w-4 h-4" /></Button>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <GroupSettingsDialog group={selectedGroup} isAdmin={isAdmin} onUpdate={loadMyGroups} onDelete={() => { setSelectedGroup(null); loadMyGroups(); }} />
+                        <Button variant="ghost" size="icon" onClick={leaveGroup} title="Leave Group"><LogOut className="w-4 h-4 text-destructive" /></Button>
+                      </div>
                     </div>
-                  </Card>
-                </TabsContent>
+                  </CardContent>
+                </Card>
 
-                <TabsContent value="meet">
-                  <Card>
-                    <CardContent className="pt-4">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="w-full grid grid-cols-8 h-auto">
+                    <TabsTrigger value="chat" className="text-[10px] sm:text-xs gap-0.5 py-2"><Send className="w-3 h-3" /><span className="hidden sm:inline">Chat</span></TabsTrigger>
+                    <TabsTrigger value="meet" className="text-[10px] sm:text-xs gap-0.5 py-2"><Video className="w-3 h-3" /><span className="hidden sm:inline">Meet</span></TabsTrigger>
+                    <TabsTrigger value="members" className="text-[10px] sm:text-xs gap-0.5 py-2"><Users className="w-3 h-3" /><span className="hidden sm:inline">Members</span></TabsTrigger>
+                    <TabsTrigger value="progress" className="text-[10px] sm:text-xs gap-0.5 py-2"><BookOpen className="w-3 h-3" /><span className="hidden sm:inline">Progress</span></TabsTrigger>
+                    <TabsTrigger value="leaderboard" className="text-[10px] sm:text-xs gap-0.5 py-2"><Trophy className="w-3 h-3" /><span className="hidden sm:inline">Board</span></TabsTrigger>
+                    <TabsTrigger value="assignments" className="text-[10px] sm:text-xs gap-0.5 py-2"><ClipboardList className="w-3 h-3" /><span className="hidden sm:inline">Tasks</span></TabsTrigger>
+                    <TabsTrigger value="calendar" className="text-[10px] sm:text-xs gap-0.5 py-2"><CalendarDays className="w-3 h-3" /><span className="hidden sm:inline">Calendar</span></TabsTrigger>
+                    <TabsTrigger value="notifications" className="text-[10px] sm:text-xs gap-0.5 py-2"><Bell className="w-3 h-3" /><span className="hidden sm:inline">Alerts</span></TabsTrigger>
+                  </TabsList>
+
+                  {/* Chat */}
+                  <TabsContent value="chat">
+                    <Card>
+                      <ScrollArea className="h-72 p-4">
+                        {messages.map(m => (
+                          <div key={m.id} className={`mb-3 ${m.user_id === user!.id ? "text-right" : ""}`}>
+                            <p className="text-[10px] text-muted-foreground">{m.email}</p>
+                            <div className={`inline-block px-3 py-2 rounded-lg text-sm max-w-[80%] ${m.user_id === user!.id ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+                              {m.message}
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={messagesEndRef} />
+                      </ScrollArea>
+                      <div className="p-3 border-t border-border flex gap-2">
+                        <Button variant="outline" size="icon" onClick={shareMyProgress} title="Share my progress"><Share2 className="w-4 h-4" /></Button>
+                        <Input value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." onKeyDown={e => e.key === "Enter" && sendMessage()} className="flex-1" />
+                        <Button size="icon" onClick={sendMessage}><Send className="w-4 h-4" /></Button>
+                      </div>
+                    </Card>
+                  </TabsContent>
+
+                  {/* Meet */}
+                  <TabsContent value="meet">
+                    <Card><CardContent className="pt-4">
                       {!meetActive ? (
                         <div className="flex flex-col items-center justify-center h-72 gap-4">
                           <Video className="w-12 h-12 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground text-center">Start or join a live video call with your group.<br/>All members using code <span className="font-mono font-bold text-foreground">{selectedGroup.join_code}</span> will join the same room.</p>
-                          <Button onClick={() => setMeetActive(true)} size="lg" className="gap-2">
-                            <Video className="w-4 h-4" />Start Meet
-                          </Button>
+                          <p className="text-sm text-muted-foreground text-center">Start a live video call with your group.<br />Room: <span className="font-mono font-bold text-foreground">StudyBuddy-{selectedGroup.join_code}</span></p>
+                          <Button onClick={() => setMeetActive(true)} size="lg" className="gap-2"><Video className="w-4 h-4" />Start Meet</Button>
                         </div>
                       ) : (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between flex-wrap gap-2">
                             <div>
                               <p className="text-sm font-medium text-foreground">Live Call — {selectedGroup.name}</p>
-                              <p className="text-xs text-muted-foreground">Room: StudyBuddy-{selectedGroup.join_code} · Share the group code so others can join</p>
+                              <p className="text-xs text-muted-foreground">Room: StudyBuddy-{selectedGroup.join_code}</p>
                             </div>
                             <Button variant="destructive" size="sm" onClick={() => setMeetActive(false)}>Leave Call</Button>
                           </div>
                           <div className="rounded-lg overflow-hidden border border-border bg-black" style={{ height: "min(520px, 65vh)" }}>
                             <iframe
-                              src={`https://meet.jit.si/StudyBuddy-${selectedGroup.join_code}#config.prejoinConfig.enabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.toolbarButtons=["microphone","camera","desktop","fullscreen","hangup","chat","tileview","participants-pane","settings"]&config.disableDeepLinking=true&userInfo.displayName=${encodeURIComponent(user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Student")}`}
+                              src={`https://meet.jit.si/StudyBuddy-${selectedGroup.join_code}#config.prejoinConfig.enabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.toolbarButtons=["microphone","camera","desktop","fullscreen","hangup","chat","tileview","participants-pane","settings"]&config.disableDeepLinking=true&userInfo.displayName=${encodeURIComponent(userName)}`}
                               allow="camera; microphone; fullscreen; display-capture; autoplay; compute-pressure"
                               className="w-full h-full border-0"
                               title="Group Video Call"
@@ -366,87 +297,109 @@ export default function StudyGroups() {
                           </div>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                    </CardContent></Card>
+                  </TabsContent>
 
-                <TabsContent value="progress">
-                  <Card><CardContent className="pt-4 space-y-4">
-                    {members.map(m => (
-                      <div key={m.user_id} className="space-y-2 p-3 rounded-lg bg-secondary/30">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-foreground">{m.display_name || m.email}</p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-[10px] gap-1"><Flame className="w-3 h-3" />{m.streak || 0}d</Badge>
-                            <Badge variant="outline" className="text-[10px] gap-1"><Clock className="w-3 h-3" />{m.total_hours || 0}h</Badge>
-                          </div>
-                        </div>
-                        {m.subjects_progress && m.subjects_progress.length > 0 ? (
-                          <div className="space-y-1.5">
-                            {m.subjects_progress.map((s, i) => (
-                              <div key={i}>
-                                <div className="flex justify-between text-xs">
-                                  <span className="text-muted-foreground">{s.code}</span>
-                                  <span className="text-foreground font-mono">{s.progress}%</span>
-                                </div>
-                                <Progress value={s.progress} className="h-1.5" />
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">No subjects yet</p>
-                        )}
-                      </div>
-                    ))}
-                  </CardContent></Card>
-                </TabsContent>
-
-                <TabsContent value="leaderboard">
-                  <Card><CardContent className="pt-4 space-y-2">
-                    <p className="text-xs text-muted-foreground mb-2">Ranked by study hours this week</p>
-                    {sortedByHours.map((m, i) => (
-                      <div key={m.user_id} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/30">
-                        <div className="flex items-center gap-2.5">
-                          <span className={`text-sm font-bold w-6 ${i === 0 ? "text-yellow-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-amber-600" : "text-muted-foreground"}`}>
-                            {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
-                          </span>
+                  {/* Members */}
+                  <TabsContent value="members">
+                    <Card><CardContent className="pt-4 space-y-2">
+                      {members.map(m => (
+                        <div key={m.user_id} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/30">
                           <div>
                             <p className="text-sm font-medium text-foreground">{m.display_name || m.email}</p>
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                              <span className="flex items-center gap-0.5"><Flame className="w-2.5 h-2.5" />{m.streak || 0}d streak</span>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>Joined {new Date(m.joined_at).toLocaleDateString()}</span>
+                              <span>·</span>
+                              <span>{m.total_hours || 0}h total</span>
+                              <span>·</span>
                               <span>{m.xp || 0} XP</span>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-foreground">{m.weekly_hours || 0}h</p>
-                          <p className="text-[10px] text-muted-foreground">this week</p>
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent></Card>
-                </TabsContent>
-
-                <TabsContent value="members">
-                  <Card><CardContent className="pt-4 space-y-2">
-                    {members.map(m => (
-                      <div key={m.user_id} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/30">
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{m.display_name || m.email}</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{m.total_hours || 0}h total</span>
-                            <span>·</span>
-                            <span>{m.xp || 0} XP</span>
+                          <div className="flex items-center gap-1.5">
+                            {m.user_id === selectedGroup.created_by && <Badge variant="secondary" className="text-[10px]"><Crown className="w-3 h-3 mr-0.5" />Admin</Badge>}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          {m.user_id === selectedGroup.created_by && <Badge variant="secondary" className="text-[10px]"><Crown className="w-3 h-3 mr-0.5" />Owner</Badge>}
+                      ))}
+                    </CardContent></Card>
+                  </TabsContent>
+
+                  {/* Progress */}
+                  <TabsContent value="progress">
+                    <Card><CardContent className="pt-4 space-y-4">
+                      {members.map(m => (
+                        <div key={m.user_id} className="space-y-2 p-3 rounded-lg bg-secondary/30">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-foreground">{m.display_name || m.email}</p>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-[10px] gap-1"><Flame className="w-3 h-3" />{m.streak || 0}d</Badge>
+                              <Badge variant="outline" className="text-[10px] gap-1"><Clock className="w-3 h-3" />{m.total_hours || 0}h</Badge>
+                            </div>
+                          </div>
+                          {m.subjects_progress && m.subjects_progress.length > 0 ? (
+                            <div className="space-y-1.5">
+                              {m.subjects_progress.map((s, i) => (
+                                <div key={i}>
+                                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">{s.code}</span><span className="text-foreground font-mono">{s.progress}%</span></div>
+                                  <Progress value={s.progress} className="h-1.5" />
+                                </div>
+                              ))}
+                            </div>
+                          ) : <p className="text-xs text-muted-foreground">No subjects yet</p>}
                         </div>
-                      </div>
-                    ))}
-                  </CardContent></Card>
-                </TabsContent>
-              </Tabs>
+                      ))}
+                      <GroupAchievements groupId={selectedGroup.id} members={members} />
+                    </CardContent></Card>
+                  </TabsContent>
+
+                  {/* Leaderboard */}
+                  <TabsContent value="leaderboard">
+                    <Card><CardContent className="pt-4 space-y-2">
+                      <p className="text-xs text-muted-foreground mb-2">Ranked by study hours this week</p>
+                      {sortedByHours.map((m, i) => (
+                        <div key={m.user_id} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/30">
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-sm font-bold w-6 text-muted-foreground">
+                              {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
+                            </span>
+                            <div>
+                              <p className="text-sm font-medium text-foreground">{m.display_name || m.email}</p>
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                <span className="flex items-center gap-0.5"><Flame className="w-2.5 h-2.5" />{m.streak || 0}d streak</span>
+                                <span>{m.xp || 0} XP</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-foreground">{m.weekly_hours || 0}h</p>
+                            <p className="text-[10px] text-muted-foreground">this week</p>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent></Card>
+                  </TabsContent>
+
+                  {/* Assignments */}
+                  <TabsContent value="assignments">
+                    <Card><CardContent className="pt-4">
+                      <GroupAssignments groupId={selectedGroup.id} isAdmin={isAdmin} members={members} />
+                    </CardContent></Card>
+                  </TabsContent>
+
+                  {/* Calendar */}
+                  <TabsContent value="calendar">
+                    <Card><CardContent className="pt-4">
+                      <GroupCalendar groupId={selectedGroup.id} members={members} />
+                    </CardContent></Card>
+                  </TabsContent>
+
+                  {/* Notifications */}
+                  <TabsContent value="notifications">
+                    <Card><CardContent className="pt-4">
+                      <GroupNotifications groupId={selectedGroup.id} />
+                    </CardContent></Card>
+                  </TabsContent>
+                </Tabs>
+              </div>
             )}
           </div>
         </div>
