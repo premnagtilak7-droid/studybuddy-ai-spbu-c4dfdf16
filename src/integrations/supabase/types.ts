@@ -797,6 +797,105 @@ export type Database = {
           },
         ]
       }
+      group_achievements: {
+        Row: {
+          badge_key: string
+          group_id: string
+          id: string
+          unlocked_at: string
+        }
+        Insert: {
+          badge_key: string
+          group_id: string
+          id?: string
+          unlocked_at?: string
+        }
+        Update: {
+          badge_key?: string
+          group_id?: string
+          id?: string
+          unlocked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_achievements_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_assignment_completions: {
+        Row: {
+          assignment_id: string
+          completed_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          assignment_id: string
+          completed_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          assignment_id?: string
+          completed_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_assignment_completions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "group_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_assignments: {
+        Row: {
+          assigned_to: string[] | null
+          created_at: string
+          created_by: string
+          deadline: string | null
+          description: string | null
+          group_id: string
+          id: string
+          title: string
+        }
+        Insert: {
+          assigned_to?: string[] | null
+          created_at?: string
+          created_by: string
+          deadline?: string | null
+          description?: string | null
+          group_id: string
+          id?: string
+          title: string
+        }
+        Update: {
+          assigned_to?: string[] | null
+          created_at?: string
+          created_by?: string
+          deadline?: string | null
+          description?: string | null
+          group_id?: string
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_assignments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           group_id: string
@@ -851,6 +950,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "group_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_notifications: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          message: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          message: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          message?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_notifications_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "study_groups"
@@ -1054,28 +1188,34 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          description: string | null
           id: string
           join_code: string
           max_members: number
           name: string
+          privacy: string
           subject_focus: string
         }
         Insert: {
           created_at?: string
           created_by: string
+          description?: string | null
           id?: string
           join_code: string
           max_members?: number
           name: string
+          privacy?: string
           subject_focus: string
         }
         Update: {
           created_at?: string
           created_by?: string
+          description?: string | null
           id?: string
           join_code?: string
           max_members?: number
           name?: string
+          privacy?: string
           subject_focus?: string
         }
         Relationships: []
