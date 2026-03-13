@@ -52,7 +52,11 @@ export async function requestNotificationPermission(): Promise<boolean> {
   if (!("Notification" in window)) return false;
   if (Notification.permission === "granted") return true;
   if (Notification.permission === "denied") return false;
+  // Only prompt if we haven't already asked
+  const alreadyAsked = localStorage.getItem("notif_permission_asked");
+  if (alreadyAsked) return false;
   const result = await Notification.requestPermission();
+  localStorage.setItem("notif_permission_asked", "1");
   return result === "granted";
 }
 

@@ -63,7 +63,12 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   if (!("Notification" in window)) return "denied";
   if (Notification.permission === "granted") return "granted";
   if (Notification.permission === "denied") return "denied";
-  return await Notification.requestPermission();
+  // Only prompt browser permission dialog if never asked before
+  const alreadyAsked = localStorage.getItem("notif_permission_asked");
+  if (alreadyAsked) return Notification.permission;
+  const result = await Notification.requestPermission();
+  localStorage.setItem("notif_permission_asked", "1");
+  return result;
 }
 
 export function getPermissionStatus(): NotificationPermission | "unsupported" {

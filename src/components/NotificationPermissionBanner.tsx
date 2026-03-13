@@ -17,7 +17,9 @@ export default function NotificationPermissionBanner() {
 
     const perm = "Notification" in window ? Notification.permission : "denied";
     const dismissed = localStorage.getItem("notif_perm_dismissed");
-    if (perm === "default" && !dismissed) {
+    const alreadyAsked = localStorage.getItem("notif_permission_asked");
+    // Only show if never asked AND never dismissed AND permission is still default
+    if (perm === "default" && !dismissed && !alreadyAsked) {
       const timer = setTimeout(() => setShow(true), 3000);
       return () => clearTimeout(timer);
     }
@@ -27,6 +29,9 @@ export default function NotificationPermissionBanner() {
 
   const handleAllow = async () => {
     const result = await requestNotificationPermissionWithPrompt();
+    // Mark as asked regardless of outcome so we never ask again
+    localStorage.setItem("notif_perm_dismissed", "1");
+    localStorage.setItem("notif_permission_asked", "1");
     if (result === "granted") {
       toast.success("Notifications enabled! You'll get study reminders.");
     } else {
@@ -38,6 +43,7 @@ export default function NotificationPermissionBanner() {
   const handleDismiss = () => {
     setShow(false);
     localStorage.setItem("notif_perm_dismissed", "1");
+    localStorage.setItem("notif_permission_asked", "1");
   };
 
   return (
