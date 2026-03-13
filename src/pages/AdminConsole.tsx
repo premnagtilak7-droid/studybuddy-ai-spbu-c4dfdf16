@@ -181,6 +181,7 @@ export default function AdminConsole() {
             subjects={subjects}
             studyLogs={studyLogs}
             doubts={doubts}
+            activityLogs={activityLogs}
           />
         )}
         {tab === "coupons" && (
