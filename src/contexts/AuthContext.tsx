@@ -55,10 +55,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkSubscription = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("is_subscribed")
+      .select("is_subscribed, trial_end, is_trial_active")
       .eq("user_id", userId)
       .single();
     setIsSubscribed(!!data?.is_subscribed);
+    const profile = data as any;
+    if (profile?.is_trial_active && profile?.trial_end) {
+      const daysLeft = Math.max(0, Math.ceil((new Date(profile.trial_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+      setIsTrialActive(daysLeft > 0);
+      setTrialDaysLeft(daysLeft);
+    } else {
+      setIsTrialActive(false);
+      setTrialDaysLeft(0);
+    }
   };
 
   const refreshProfile = async () => {
