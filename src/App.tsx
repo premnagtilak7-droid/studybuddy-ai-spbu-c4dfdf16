@@ -38,7 +38,8 @@ import ChangePassword from "./pages/ChangePassword";
 import NotificationSettings from "./pages/NotificationSettings";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
-
+import Pricing from "./pages/Pricing";
+import { GatedRoute } from "./components/GatedRoute";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
