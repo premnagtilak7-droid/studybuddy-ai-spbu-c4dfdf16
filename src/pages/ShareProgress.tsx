@@ -79,8 +79,8 @@ export default function ShareProgress() {
                 <Trophy className="w-5 h-5" />
               </div>
               <div>
-                <p className="font-bold text-lg">SPPU Study</p>
-                <p className="text-[10px] opacity-80">2024 Pattern</p>
+                <p className="font-bold text-lg">StudyBuddy</p>
+                <p className="text-[10px] opacity-80">Your Study Companion</p>
               </div>
             </div>
 
