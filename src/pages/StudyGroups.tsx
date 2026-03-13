@@ -46,38 +46,98 @@ export default function StudyGroups() {
   const [meetActive, setMeetActive] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { loadMyGroups(); }, []);
-  useEffect(() => { if (selectedGroup) { loadMembers(); loadMessages(); } }, [selectedGroup]);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-
-  // Realtime messages
   useEffect(() => {
-    if (!selectedGroup) return;
-    const channel = supabase.channel(`group-${selectedGroup.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "group_messages", filter: `group_id=eq.${selectedGroup.id}` },
-        (payload) => {
-          const msg = payload.new as any;
-          setMessages(prev => [...prev, { ...msg, email: "" }]);
-        }
-      ).subscribe();
-    return () => { supabase.removeChannel(channel); };
+    if (!user) return;
+    loadMyGroups();
+  }, [user]);
+
+  useEffect(() => {
+    if (!selectedGroup) {
+      setMembers([]);
+      setMessages([]);
+      return;
+    }
+    loadMembers(selectedGroup.id);
+    loadMessages(selectedGroup.id);
   }, [selectedGroup]);
 
-  // Realtime sync for member stats
-  const reloadMembers = useCallback(() => { if (selectedGroup) loadMembers(); }, [selectedGroup]);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Realtime messages for active group
+  useEffect(() => {
+    if (!selectedGroup) return;
+    const channel = supabase
+      .channel(`group-${selectedGroup.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "group_messages", filter: `group_id=eq.${selectedGroup.id}` },
+        () => {
+          loadMessages(selectedGroup.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedGroup]);
+
+  // Realtime sync for group data and member stats
+  const reloadMembers = useCallback(() => {
+    if (selectedGroup) loadMembers(selectedGroup.id);
+  }, [selectedGroup]);
+
+  const reloadGroupsAndData = useCallback(() => {
+    loadMyGroups();
+    if (selectedGroup) {
+      loadMembers(selectedGroup.id);
+      loadMessages(selectedGroup.id);
+    }
+  }, [selectedGroup]);
+
   useRealtimeSubscription("study_logs", reloadMembers);
+  useRealtimeSubscription("group_members", reloadGroupsAndData);
+  useRealtimeSubscription("group_messages", reloadGroupsAndData);
 
   async function loadMyGroups() {
-    const { data: memberships } = await supabase.from("group_members").select("group_id").eq("user_id", user!.id);
-    if (!memberships?.length) { setMyGroups([]); return; }
-    const groupIds = memberships.map(m => m.group_id);
+    if (!user) return;
+
+    const { data: memberships } = await supabase
+      .from("group_members")
+      .select("group_id")
+      .eq("user_id", user.id);
+
+    if (!memberships?.length) {
+      setMyGroups([]);
+      setSelectedGroup(null);
+      return;
+    }
+
+    const groupIds = memberships.map((m) => m.group_id);
     const { data } = await supabase.from("study_groups").select("*").in("id", groupIds);
-    setMyGroups((data || []) as Group[]);
+    const groups = (data || []) as Group[];
+
+    setMyGroups(groups);
+    setSelectedGroup((prev) => {
+      if (!groups.length) return null;
+      if (!prev) return groups[0];
+      return groups.find((g) => g.id === prev.id) ?? groups[0];
+    });
   }
 
-  async function loadMembers() {
-    const { data } = await supabase.from("group_members").select("user_id, joined_at").eq("group_id", selectedGroup!.id);
-    if (!data) return;
+  async function loadMembers(groupId = selectedGroup?.id) {
+    if (!groupId) {
+      setMembers([]);
+      return;
+    }
+
+    const { data } = await supabase.from("group_members").select("user_id, joined_at").eq("group_id", groupId);
+    if (!data) {
+      setMembers([]);
+      return;
+    }
     const userIds = data.map(m => m.user_id);
 
     // Fetch profiles, XP, study logs, subjects in parallel
@@ -129,10 +189,18 @@ export default function StudyGroups() {
     }));
   }
 
-  async function loadMessages() {
-    const { data } = await supabase.from("group_messages").select("*").eq("group_id", selectedGroup!.id).order("created_at", { ascending: true }).limit(100);
-    if (!data) return;
-    const userIds = [...new Set(data.map(m => m.user_id))];
+  async function loadMessages(groupId = selectedGroup?.id) {
+    if (!groupId) {
+      setMessages([]);
+      return;
+    }
+
+    const { data } = await supabase.from("group_messages").select("*").eq("group_id", groupId).order("created_at", { ascending: true }).limit(100);
+    if (!data) {
+      setMessages([]);
+      return;
+    }
+    const userIds = [...new Set(data.map((m) => m.user_id))];
     const { data: profiles } = await supabase.from("profiles").select("user_id, email, display_name").in("user_id", userIds);
     setMessages(data.map(m => {
       const p = profiles?.find(p => p.user_id === m.user_id);
