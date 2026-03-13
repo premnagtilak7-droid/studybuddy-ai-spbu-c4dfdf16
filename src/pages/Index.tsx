@@ -64,7 +64,17 @@ export default function Dashboard() {
     });
     getUserXP().then(setXP);
     getTodayStudyMinutes().then(setTodayMinutes);
-  }, []);
+    // Fetch profile for personalized welcome
+    if (user) {
+      supabase.from("profiles").select("display_name, education_type, education_details").eq("user_id", user.id).single().then(({ data }) => {
+        if (data) {
+          setDisplayName((data as any).display_name || "");
+          setEducationType((data as any).education_type || "");
+          setEducationDetails((data as any).education_details || {});
+        }
+      });
+    }
+  }, [user]);
 
   const loadData = useCallback(async () => {
     try {
