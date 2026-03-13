@@ -70,30 +70,43 @@ function extractJsonFromToolCall(data: any): any {
   const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
   if (toolCall) {
     const args = toolCall.function?.arguments;
-    if (typeof args === "string") {
-      return JSON.parse(args);
-    }
-    if (typeof args === "object") {
-      return args;
-    }
+    if (typeof args === "string") return JSON.parse(args);
+    if (typeof args === "object") return args;
   }
-  // Fallback: try to extract from content
   const content = data?.choices?.[0]?.message?.content;
   if (content) {
     const cleaned = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     const jsonStart = cleaned.search(/[\{\[]/);
     const jsonEnd = Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
-    if (jsonStart !== -1 && jsonEnd !== -1) {
-      return JSON.parse(cleaned.substring(jsonStart, jsonEnd + 1));
-    }
+    if (jsonStart !== -1 && jsonEnd !== -1) return JSON.parse(cleaned.substring(jsonStart, jsonEnd + 1));
   }
   return null;
 }
 
 // ─── DOUBT ───
 async function handleDoubt(body: any, apiKey: string) {
-  const { messages, language, questionType, subject } = body;
-  let sys = `You are an expert SPPU 2024 pattern engineering tutor. Answer with: clear explanation, step-by-step if numerical, key formula, and one memory tip. Be concise and student friendly.\n\nFormat your responses using markdown with headers, bullet points, and code blocks for formulas.\nWhen solving numerical problems, show each step clearly with proper formulas and mention marks allocation when relevant.\n\nIMPORTANT: Always provide a complete, non-empty response. Never return blank.`;
+  const { messages, language, questionType, subject, educationType, examName } = body;
+  
+  // Build context-aware system prompt
+  let context = "";
+  if (educationType === "competitive_exam" && examName) {
+    const examContexts: Record<string, string> = {
+      JEE: "JEE Main & Advanced level. Focus on concepts, problem-solving approach, and tricks. Cover both JEE Main and Advanced level depth.",
+      NEET: "NEET UG exam level. Focus on NCERT-based concepts with clinical applications where relevant.",
+      UPSC: "UPSC Civil Services level. Provide comprehensive answers with multiple perspectives, current affairs relevance, and answer writing framework.",
+      CAT: "CAT/MBA entrance level. Focus on shortcuts, time-saving techniques, and logical reasoning approaches.",
+      GATE: "GATE exam level. Focus on in-depth technical concepts with numerical problem-solving.",
+      SSC: "SSC/Government exam level. Focus on quick solving techniques and commonly asked patterns.",
+      Banking: "Banking exam level. Focus on quick solving techniques, shortcuts, and common patterns.",
+    };
+    context = examContexts[examName] || `${examName} exam preparation`;
+  } else if (educationType === "school") {
+    context = "School level. Explain concepts simply with relatable examples. Follow NCERT/board exam patterns.";
+  } else if (educationType === "undergraduate" || educationType === "postgraduate") {
+    context = "University level. Provide detailed academic explanations suitable for semester exams.";
+  }
+
+  let sys = `You are an expert tutor. ${context ? context + "\n\n" : ""}Answer with: clear explanation, step-by-step if numerical, key formula, and one memory tip. Be concise and student friendly.\n\nFormat your responses using markdown with headers, bullet points, and code blocks for formulas.\nWhen solving numerical problems, show each step clearly with proper formulas.\n\nIMPORTANT: Always provide a complete, non-empty response.`;
   if (questionType) sys += `\n\nThe student is asking a "${questionType}" type question.`;
   if (subject) sys += `\n\nThe question is about: ${subject}.`;
   if (language === "marathi") sys += "\n\nRespond in Marathi. Keep technical terms in English.";
@@ -106,8 +119,16 @@ async function handleDoubt(body: any, apiKey: string) {
 
 // ─── STUDY PLAN ───
 async function handleStudyPlan(body: any, apiKey: string) {
-  const { subjects, dailyHours = 4, difficulty = "balanced" } = body;
-  const sys = `You are SPPU 2024 pattern exam planner. Create day-by-day study table. Return the plan using the tool provided. IMPORTANT: You MUST call the create_study_plan tool with a non-empty plan array.`;
+  const { subjects, dailyHours = 4, difficulty = "balanced", educationType, examName } = body;
+  
+  let context = "";
+  if (educationType === "competitive_exam" && examName) {
+    context = `This is for ${examName} exam preparation. Prioritize high-weightage topics and include revision cycles.`;
+  } else if (educationType === "school") {
+    context = "This is for school board exam preparation. Follow the textbook chapter sequence.";
+  }
+  
+  const sys = `You are an expert study planner. ${context} Create a day-by-day study table. Return the plan using the tool provided. IMPORTANT: You MUST call the create_study_plan tool with a non-empty plan array.`;
   const user = `Create a study plan for: ${JSON.stringify(subjects)}\nToday: ${new Date().toISOString().slice(0, 10)}\nDaily hours: ${dailyHours}\nDifficulty: ${difficulty}`;
 
   const tools = [{
@@ -138,60 +159,103 @@ async function handleStudyPlan(body: any, apiKey: string) {
 
   const response = await callAI(apiKey, [{ role: "system", content: sys }, { role: "user", content: user }], tools, { type: "function", function: { name: "create_study_plan" } });
   
-  // Check if it's an error response
   if (response.headers.get("Content-Type")?.includes("application/json")) {
     const text = await response.text();
-    try {
-      const parsed = JSON.parse(text);
-      if (parsed.error) {
-        return new Response(text, { status: response.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-    } catch {}
+    try { const parsed = JSON.parse(text); if (parsed.error) return new Response(text, { status: response.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }); } catch {}
   }
 
   try {
     const data = await response.json();
     const result = extractJsonFromToolCall(data);
     if (!result || !result.plan || !Array.isArray(result.plan) || result.plan.length === 0) {
-      console.error("Empty or invalid plan from AI:", JSON.stringify(data).slice(0, 500));
       return new Response(JSON.stringify({ error: "AI returned an empty plan. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
-    console.error("Failed to parse study plan response:", e);
     return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 }
 
-// ─── MOCK TEST ───
+// ─── MOCK TEST (Exam-type aware) ───
 async function handleMockTest(body: any, apiKey: string) {
-  const { subject, topic, numQuestions = 10, questionType = "mixed" } = body;
-  const sys = `You are an SPPU 2024 pattern examiner. Generate ${questionType} questions for ${subject}${topic ? " - " + topic : ""}. For MCQ include 4 options with one correct answer and explanation. For theory include model answer. Return using the tool provided. IMPORTANT: You MUST return questions.`;
+  const { subject, topic, numQuestions = 10, questionType = "mixed", educationType, examName, classLevel, board } = body;
+
+  // Build exam-specific prompts
+  let sys = "";
+  let negativeMarking = false;
+  
+  if (educationType === "competitive_exam") {
+    switch (examName) {
+      case "JEE":
+        sys = `You are a JEE Main & Advanced question paper setter. Generate ${questionType === "theory" ? "numerical/subjective" : "MCQ"} questions for ${subject}${topic ? " - " + topic : ""}. Each MCQ must have exactly 4 options with one correct answer. Questions should be at JEE level difficulty with conceptual depth and numerical problem-solving. Include negative marking info (-1 for wrong MCQ). Provide detailed step-by-step explanation for each answer.`;
+        negativeMarking = true;
+        break;
+      case "NEET":
+        sys = `You are a NEET question paper setter. Generate MCQ questions for ${subject}${topic ? " - " + topic : ""}. Each question must have exactly 4 options with one correct answer. Focus on NCERT-based concepts and application-based questions. Include negative marking (-1 for wrong). Provide explanation referencing NCERT concepts.`;
+        negativeMarking = true;
+        break;
+      case "UPSC":
+        sys = `You are a UPSC Civil Services examiner. Generate ${questionType === "mcq" ? "Prelims-style MCQ" : "Mains-style descriptive"} questions for ${subject}${topic ? " - " + topic : ""}. For MCQs: 4 options, one correct, with explanation. For descriptive: provide answer framework with introduction, body points, conclusion structure, and word limit suggestion (150/250 words). Include relevant current affairs connections.`;
+        break;
+      case "CAT":
+        sys = `You are a CAT exam question setter. Generate ${subject === "VARC" || subject.includes("Verbal") ? "Reading Comprehension and Verbal Ability" : subject === "DILR" || subject.includes("Logical") ? "Data Interpretation and Logical Reasoning" : "Quantitative Aptitude"} questions${topic ? " on " + topic : ""}. Questions should be at CAT difficulty level. For quant: include shortcut methods. For VARC: include passage-based questions. For DILR: include set-based questions. Time estimate per question should be mentioned.`;
+        break;
+      case "SSC":
+      case "Banking":
+        sys = `You are an ${examName} exam question setter. Generate section-wise practice questions for ${subject}${topic ? " - " + topic : ""}. Include questions at ${examName} exam difficulty level with 4 options for MCQ. Focus on frequently asked patterns and quick solving techniques. Provide shortcuts and tricks in explanations.`;
+        break;
+      case "GATE":
+        sys = `You are a GATE exam question setter. Generate ${questionType === "mcq" ? "MCQ" : questionType === "theory" ? "Numerical Answer Type (NAT)" : "MCQ and NAT"} questions for ${subject}${topic ? " - " + topic : ""}. Questions should test deep conceptual understanding and numerical problem-solving at GATE level. Include negative marking for MCQs (-1/3 for 1-mark, -2/3 for 2-mark questions).`;
+        negativeMarking = true;
+        break;
+      default:
+        sys = `You are an expert examiner for ${examName}. Generate practice questions for ${subject}${topic ? " - " + topic : ""}. Include appropriate difficulty level and detailed explanations.`;
+    }
+  } else if (educationType === "school") {
+    sys = `You are a school exam paper setter for Class ${classLevel || "10"} (${board || "CBSE"} board). Generate ${questionType} questions for ${subject}${topic ? " - " + topic : ""}. Questions should match ${board || "CBSE"} board exam pattern and difficulty. Include chapter-wise questions with marking scheme. For MCQs: 4 options with explanation. For theory: include expected answer with key points and marks allocation.`;
+  } else {
+    sys = `You are an expert examiner. Generate ${questionType} questions for ${subject}${topic ? " - " + topic : ""}. For MCQ include 4 options with one correct answer and explanation. For theory include model answer. Questions should be university/semester exam level.`;
+  }
+  
+  sys += " Return using the tool provided. IMPORTANT: You MUST return questions.";
+
+  const questionSchema: any = {
+    type: "object",
+    properties: {
+      id: { type: "number" },
+      type: { type: "string", enum: ["mcq", "theory"] },
+      question: { type: "string" },
+      marks: { type: "number" },
+      options: { type: "array", items: { type: "string" } },
+      correctAnswer: { type: "string" },
+      explanation: { type: "string" },
+      modelAnswer: { type: "string" },
+      negativeMarks: { type: "number" },
+      difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
+      timeEstimate: { type: "string" },
+      section: { type: "string" },
+    },
+    required: ["id", "type", "question", "marks"], additionalProperties: false,
+  };
 
   const tools = [{
     type: "function",
     function: {
       name: "generate_mock_test",
-      description: "Return generated test questions.",
+      description: "Return generated test questions with analysis metadata.",
       parameters: {
         type: "object",
         properties: {
-          questions: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "number" },
-                type: { type: "string", enum: ["mcq", "theory"] },
-                question: { type: "string" },
-                marks: { type: "number" },
-                options: { type: "array", items: { type: "string" } },
-                correctAnswer: { type: "string" },
-                explanation: { type: "string" },
-                modelAnswer: { type: "string" },
-              },
-              required: ["id", "type", "question", "marks"], additionalProperties: false,
+          questions: { type: "array", items: questionSchema },
+          testMeta: {
+            type: "object",
+            properties: {
+              totalMarks: { type: "number" },
+              duration: { type: "string" },
+              negativeMarking: { type: "boolean" },
+              examPattern: { type: "string" },
             },
+            additionalProperties: false,
           },
         },
         required: ["questions"], additionalProperties: false,
@@ -201,27 +265,33 @@ async function handleMockTest(body: any, apiKey: string) {
 
   const response = await callAI(apiKey, [
     { role: "system", content: sys },
-    { role: "user", content: `Generate exactly ${numQuestions} ${questionType} questions.` },
+    { role: "user", content: `Generate exactly ${numQuestions} ${questionType} questions.${negativeMarking ? " Include negative marking values." : ""}` },
   ], tools, { type: "function", function: { name: "generate_mock_test" } });
 
   try {
     const data = await response.json();
     const result = extractJsonFromToolCall(data);
     if (!result || !result.questions) {
-      console.error("No questions from AI:", JSON.stringify(data).slice(0, 500));
       return new Response(JSON.stringify({ error: "No questions generated. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
-    console.error("Failed to parse mock test response:", e);
     return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 }
 
 // ─── ANSWER CHECK ───
 async function handleAnswerCheck(body: any, apiKey: string) {
-  const { question, answer, subject } = body;
-  const sys = `You are an SPPU 2024 pattern examiner. Grade the student's answer out of 10 with detailed feedback. Return using the tool provided.`;
+  const { question, answer, subject, educationType, examName } = body;
+  
+  let context = "";
+  if (educationType === "competitive_exam" && examName) {
+    context = `Grade as per ${examName} exam standards and marking scheme.`;
+  } else if (educationType === "school") {
+    context = "Grade as per school board exam marking scheme.";
+  }
+  
+  const sys = `You are an expert examiner. ${context} Grade the student's answer out of 10 with detailed feedback. Return using the tool provided.`;
 
   const tools = [{
     type: "function",
@@ -231,7 +301,7 @@ async function handleAnswerCheck(body: any, apiKey: string) {
       parameters: {
         type: "object",
         properties: {
-          score: { type: "number", description: "Score out of 10" },
+          score: { type: "number" },
           maxScore: { type: "number" },
           correctPoints: { type: "array", items: { type: "string" } },
           missingPoints: { type: "array", items: { type: "string" } },
@@ -253,20 +323,24 @@ async function handleAnswerCheck(body: any, apiKey: string) {
     const data = await response.json();
     const result = extractJsonFromToolCall(data);
     if (!result || result.score === undefined) {
-      console.error("No grading from AI:", JSON.stringify(data).slice(0, 500));
       return new Response(JSON.stringify({ error: "Grading failed. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
-    console.error("Failed to parse answer check response:", e);
     return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 }
 
 // ─── FORMULA SHEET ───
 async function handleFormulaSheet(body: any, apiKey: string) {
-  const { subject, units } = body;
-  const sys = `You are an SPPU 2024 pattern formula reference generator. Generate a comprehensive formula sheet. Return using the tool provided.`;
+  const { subject, units, educationType, examName } = body;
+  
+  let context = "";
+  if (educationType === "competitive_exam" && examName) {
+    context = `for ${examName} exam preparation. Focus on frequently used formulas and shortcuts.`;
+  }
+  
+  const sys = `You are a formula reference generator ${context}. Generate a comprehensive formula sheet. Return using the tool provided.`;
 
   const tools = [{
     type: "function",
@@ -314,20 +388,24 @@ async function handleFormulaSheet(body: any, apiKey: string) {
     const data = await response.json();
     const result = extractJsonFromToolCall(data);
     if (!result || !result.sections) {
-      console.error("No formulas from AI:", JSON.stringify(data).slice(0, 500));
       return new Response(JSON.stringify({ error: "Formula generation failed. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
-    console.error("Failed to parse formula sheet response:", e);
     return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 }
 
 // ─── EXAM PREDICTOR ───
 async function handleExamPredict(body: any, apiKey: string) {
-  const { subject, examDate, completedTopics } = body;
-  const sys = `You are an SPPU 2024 pattern exam analyst. Predict important topics and likely question types. Return using the tool provided.`;
+  const { subject, examDate, completedTopics, educationType, examName } = body;
+  
+  let context = "";
+  if (educationType === "competitive_exam" && examName) {
+    context = `for ${examName} exam. Use previous year trends and weightage analysis.`;
+  }
+  
+  const sys = `You are an exam analyst ${context}. Predict important topics and likely question types. Return using the tool provided.`;
 
   const tools = [{
     type: "function",
@@ -368,12 +446,10 @@ async function handleExamPredict(body: any, apiKey: string) {
     const data = await response.json();
     const result = extractJsonFromToolCall(data);
     if (!result || !result.importantTopics) {
-      console.error("No predictions from AI:", JSON.stringify(data).slice(0, 500));
       return new Response(JSON.stringify({ error: "Prediction failed. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
-    console.error("Failed to parse exam predict response:", e);
     return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 }
