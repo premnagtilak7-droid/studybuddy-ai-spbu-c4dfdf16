@@ -47,7 +47,7 @@ export default function PWAInstallPrompt() {
         <Download className="w-5 h-5 text-primary" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground">Install SPPU Study</p>
+        <p className="text-sm font-medium text-foreground">Install StudyBuddy</p>
         <p className="text-xs text-muted-foreground">Get push notifications & offline access</p>
       </div>
       <Button size="sm" onClick={handleInstall}>Install</Button>

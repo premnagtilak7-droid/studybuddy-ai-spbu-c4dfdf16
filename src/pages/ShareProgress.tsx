@@ -116,7 +116,7 @@ export default function ShareProgress() {
               </div>
             </div>
 
-            <p className="text-center text-[10px] opacity-50 mt-6">sppu-study.lovable.app</p>
+            <p className="text-center text-[10px] opacity-50 mt-6">studybuddy-ai-spbu.lovable.app</p>
           </div>
         </div>
 
