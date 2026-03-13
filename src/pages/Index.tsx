@@ -33,9 +33,11 @@ import { getUserXP, awardXP } from "@/lib/xp-store";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [subjects, setSubjects] = useState<UserSubject[]>([]);
   const [loading, setLoading] = useState(true);
   const [examDates, setExamDates] = useState<ExamDate[]>([]);
@@ -46,6 +48,9 @@ export default function Dashboard() {
   const [streak, setStreak] = useState(0);
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [gamificationCounts, setGamificationCounts] = useState({ doubts: 0, plans: 0, tests: 0 });
+  const [displayName, setDisplayName] = useState("");
+  const [educationType, setEducationType] = useState("");
+  const [educationDetails, setEducationDetails] = useState<any>({});
 
   const lastStudied = getLastStudied();
 
@@ -59,7 +64,17 @@ export default function Dashboard() {
     });
     getUserXP().then(setXP);
     getTodayStudyMinutes().then(setTodayMinutes);
-  }, []);
+    // Fetch profile for personalized welcome
+    if (user) {
+      supabase.from("profiles").select("display_name, education_type, education_details").eq("user_id", user.id).single().then(({ data }) => {
+        if (data) {
+          setDisplayName((data as any).display_name || "");
+          setEducationType((data as any).education_type || "");
+          setEducationDetails((data as any).education_details || {});
+        }
+      });
+    }
+  }, [user]);
 
   const loadData = useCallback(async () => {
     try {
@@ -120,6 +135,34 @@ export default function Dashboard() {
     return progressPct < expectedPct;
   });
 
+  // Personalized welcome based on education type
+  const getWelcomeTitle = () => {
+    const name = displayName ? `, ${displayName.split(" ")[0]}` : "";
+    const typeMessages: Record<string, string> = {
+      school: `📖 School Dashboard${name}`,
+      undergraduate: `🎓 College Dashboard${name}`,
+      postgraduate: `🎓 PG Dashboard${name}`,
+      competitive_exam: `🎯 Exam Prep${name}`,
+      professional: `💼 Professional Studies${name}`,
+      self_learning: `🌟 Learning Hub${name}`,
+    };
+    return typeMessages[educationType] || `📊 Stats Center${name}`;
+  };
+
+  const getWelcomeSubtitle = () => {
+    const contextMessages: Record<string, string> = {
+      school: educationDetails.board ? `Class ${educationDetails.class_level || ""} · ${educationDetails.board}` : "",
+      undergraduate: educationDetails.course_name ? `${educationDetails.course_name}${educationDetails.semester ? ` · Sem ${educationDetails.semester}` : ""}` : "",
+      postgraduate: educationDetails.course_name || "",
+      competitive_exam: educationDetails.exam_name ? `Preparing for ${educationDetails.exam_name}` : "",
+      professional: educationDetails.course_name || "",
+      self_learning: educationDetails.learning_goal || "",
+    };
+    const context = contextMessages[educationType];
+    if (context) return context;
+    return getMotivation();
+  };
+
   // Motivational message
   const getMotivation = () => {
     if (streak >= 7) return "🔥 Incredible streak! You're unstoppable!";
@@ -152,8 +195,8 @@ export default function Dashboard() {
 
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Stats Center</h1>
-            <p className="text-sm text-muted-foreground mt-1">{getMotivation()}</p>
+            <h1 className="text-2xl font-bold text-foreground">{getWelcomeTitle()}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{getWelcomeSubtitle() || getMotivation()}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate("/study-timer")} className="gap-1.5">

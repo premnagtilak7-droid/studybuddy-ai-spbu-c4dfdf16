@@ -1205,6 +1205,8 @@ export type Database = {
           created_at: string
           current_plan: string
           display_name: string | null
+          education_details: Json | null
+          education_type: string | null
           email: string
           exam_target: string | null
           id: string
@@ -1230,6 +1232,8 @@ export type Database = {
           created_at?: string
           current_plan?: string
           display_name?: string | null
+          education_details?: Json | null
+          education_type?: string | null
           email: string
           exam_target?: string | null
           id?: string
@@ -1255,6 +1259,8 @@ export type Database = {
           created_at?: string
           current_plan?: string
           display_name?: string | null
+          education_details?: Json | null
+          education_type?: string | null
           email?: string
           exam_target?: string | null
           id?: string
