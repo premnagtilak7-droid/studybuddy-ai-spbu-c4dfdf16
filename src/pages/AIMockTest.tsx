@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Clock, CheckCircle2, XCircle, Trophy, RotateCcw, FileText } from "lucide-react";
+import { Loader2, Clock, CheckCircle2, XCircle, Trophy, RotateCcw, FileText, AlertTriangle, BarChart3 } from "lucide-react";
 
 type Question = {
   id: number;
@@ -20,6 +20,17 @@ type Question = {
   correctAnswer?: string;
   explanation?: string;
   modelAnswer?: string;
+  negativeMarks?: number;
+  difficulty?: string;
+  timeEstimate?: string;
+  section?: string;
+};
+
+type TestMeta = {
+  totalMarks?: number;
+  duration?: string;
+  negativeMarking?: boolean;
+  examPattern?: string;
 };
 
 type TestState = "config" | "loading" | "test" | "results";
@@ -33,11 +44,17 @@ export default function AIMockTest() {
   const [numQuestions, setNumQuestions] = useState("10");
   const [questionType, setQuestionType] = useState("mixed");
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [testMeta, setTestMeta] = useState<TestMeta>({});
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const [score, setScore] = useState(0);
+  const [negativeScore, setNegativeScore] = useState(0);
   const [history, setHistory] = useState<any[]>([]);
+  const [educationType, setEducationType] = useState("");
+  const [examName, setExamName] = useState("");
+  const [classLevel, setClassLevel] = useState("");
+  const [board, setBoard] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -46,6 +63,16 @@ export default function AIMockTest() {
       });
       supabase.from("mock_tests").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(10).then(({ data }) => {
         if (data) setHistory(data);
+      });
+      // Load education profile
+      supabase.from("profiles").select("education_type, education_details").eq("user_id", user.id).single().then(({ data }) => {
+        if (data) {
+          setEducationType((data as any).education_type || "");
+          const details = (data as any).education_details || {};
+          setExamName(details.exam_name || "");
+          setClassLevel(details.class_level || "");
+          setBoard(details.board || "");
+        }
       });
     }
   }, [user]);
@@ -57,6 +84,22 @@ export default function AIMockTest() {
     return () => clearInterval(t);
   }, [state, timeLeft]);
 
+  // Get exam-specific question type options
+  const getQuestionTypes = () => {
+    if (educationType === "competitive_exam") {
+      switch (examName) {
+        case "JEE": return [{ value: "mcq", label: "MCQ (JEE Pattern)" }, { value: "theory", label: "Numerical" }, { value: "mixed", label: "Mixed" }];
+        case "NEET": return [{ value: "mcq", label: "MCQ (NEET Pattern)" }];
+        case "UPSC": return [{ value: "mcq", label: "Prelims MCQ" }, { value: "theory", label: "Mains Descriptive" }, { value: "mixed", label: "Mixed" }];
+        case "CAT": return [{ value: "mcq", label: "MCQ with Timer" }, { value: "mixed", label: "Mixed Set" }];
+        case "SSC":
+        case "Banking": return [{ value: "mcq", label: "Section-wise MCQ" }, { value: "mixed", label: "Mixed" }];
+        case "GATE": return [{ value: "mcq", label: "MCQ" }, { value: "theory", label: "NAT (Numerical)" }, { value: "mixed", label: "Mixed" }];
+      }
+    }
+    return [{ value: "mcq", label: "MCQ Only" }, { value: "theory", label: "Theory Only" }, { value: "mixed", label: "Mixed" }];
+  };
+
   const generateTest = async () => {
     setState("loading");
     try {
@@ -64,13 +107,27 @@ export default function AIMockTest() {
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-ai`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({ type: "mocktest", subject: subName, topic, numQuestions: parseInt(numQuestions), questionType }),
+        body: JSON.stringify({
+          type: "mocktest",
+          subject: subName,
+          topic,
+          numQuestions: parseInt(numQuestions),
+          questionType,
+          educationType,
+          examName,
+          classLevel,
+          board,
+        }),
       });
-      if (!resp.ok) throw new Error("Failed to generate test");
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Failed to generate test" }));
+        throw new Error(err.error || "Failed to generate test");
+      }
       const data = await resp.json();
       setQuestions(data.questions || []);
+      setTestMeta(data.testMeta || {});
       setUserAnswers({});
-      const time = parseInt(numQuestions) * 90; // 1.5 min per question
+      const time = parseInt(numQuestions) * (examName === "CAT" ? 120 : 90);
       setTimeLeft(time);
       setTotalTime(time);
       setState("test");
@@ -82,10 +139,18 @@ export default function AIMockTest() {
 
   const handleSubmit = useCallback(async () => {
     let correct = 0;
+    let negMarks = 0;
     questions.forEach(q => {
-      if (q.type === "mcq" && userAnswers[q.id] === q.correctAnswer) correct++;
+      if (q.type === "mcq") {
+        if (userAnswers[q.id] === q.correctAnswer) {
+          correct++;
+        } else if (userAnswers[q.id] && q.negativeMarks) {
+          negMarks += q.negativeMarks;
+        }
+      }
     });
     setScore(correct);
+    setNegativeScore(negMarks);
     setState("results");
 
     if (user) {
@@ -109,18 +174,53 @@ export default function AIMockTest() {
   const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
   const mcqCount = questions.filter(q => q.type === "mcq").length;
 
+  // Weak area analysis
+  const getWeakAreas = () => {
+    const sectionScores: Record<string, { correct: number; total: number }> = {};
+    const difficultyScores: Record<string, { correct: number; total: number }> = {};
+    
+    questions.forEach(q => {
+      if (q.type !== "mcq") return;
+      const section = q.section || "General";
+      const diff = q.difficulty || "medium";
+      
+      if (!sectionScores[section]) sectionScores[section] = { correct: 0, total: 0 };
+      if (!difficultyScores[diff]) difficultyScores[diff] = { correct: 0, total: 0 };
+      
+      sectionScores[section].total++;
+      difficultyScores[diff].total++;
+      
+      if (userAnswers[q.id] === q.correctAnswer) {
+        sectionScores[section].correct++;
+        difficultyScores[diff].correct++;
+      }
+    });
+
+    return { sectionScores, difficultyScores };
+  };
+
+  // Get exam-specific header
+  const getExamLabel = () => {
+    if (educationType === "competitive_exam" && examName) return `${examName} Mock Test`;
+    if (educationType === "school") return `Class ${classLevel || ""} ${board || ""} Practice Test`;
+    return "AI Mock Test Generator";
+  };
+
   if (state === "loading") {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <Loader2 className="w-12 h-12 animate-spin text-primary" />
-          <p className="text-lg font-medium text-muted-foreground">AI is generating your test...</p>
+          <p className="text-lg font-medium text-muted-foreground">AI is generating your {examName || ""} test...</p>
         </div>
       </AppLayout>
     );
   }
 
   if (state === "results") {
+    const { sectionScores, difficultyScores } = getWeakAreas();
+    const hasNegative = negativeScore > 0;
+
     return (
       <AppLayout>
         <div className="max-w-4xl mx-auto space-y-6">
@@ -134,22 +234,95 @@ export default function AIMockTest() {
               {mcqCount > 0 && (
                 <div>
                   <p className="text-4xl font-bold text-primary">{score}/{mcqCount}</p>
-                  <p className="text-muted-foreground">MCQ Score</p>
+                  <p className="text-muted-foreground">MCQ Score ({Math.round((score / mcqCount) * 100)}%)</p>
+                  {hasNegative && (
+                    <p className="text-sm text-destructive mt-1">Negative marks: -{negativeScore}</p>
+                  )}
                   <Progress value={(score / mcqCount) * 100} className="mt-2 max-w-xs mx-auto" />
                 </div>
               )}
-              <Button onClick={() => { setState("config"); setQuestions([]); }}>
+              <Button onClick={() => { setState("config"); setQuestions([]); setTestMeta({}); }}>
                 <RotateCcw className="w-4 h-4 mr-2" /> Take Another Test
               </Button>
             </CardContent>
           </Card>
 
+          {/* Test Analysis */}
+          {mcqCount > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-primary" /> Test Analysis
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Section-wise Analysis */}
+                {Object.keys(sectionScores).length > 1 && (
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-2">Section-wise Performance</p>
+                    <div className="space-y-2">
+                      {Object.entries(sectionScores).map(([section, { correct, total }]) => {
+                        const pct = Math.round((correct / total) * 100);
+                        const isWeak = pct < 50;
+                        return (
+                          <div key={section} className="flex items-center gap-3">
+                            <span className="text-xs text-muted-foreground w-24 truncate">{section}</span>
+                            <Progress value={pct} className="flex-1 h-2" />
+                            <span className={`text-xs font-mono ${isWeak ? "text-destructive" : "text-foreground"}`}>
+                              {correct}/{total}
+                            </span>
+                            {isWeak && <AlertTriangle className="w-3.5 h-3.5 text-destructive" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Difficulty-wise Analysis */}
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-2">Difficulty Breakdown</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {["easy", "medium", "hard"].map(diff => {
+                      const d = difficultyScores[diff];
+                      if (!d) return null;
+                      const pct = Math.round((d.correct / d.total) * 100);
+                      return (
+                        <div key={diff} className="p-3 rounded-lg bg-secondary/50 text-center">
+                          <p className="text-xs capitalize text-muted-foreground">{diff}</p>
+                          <p className="text-lg font-bold font-mono text-foreground">{d.correct}/{d.total}</p>
+                          <p className="text-xs font-mono text-muted-foreground">{pct}%</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Weak Areas */}
+                {Object.entries(sectionScores).filter(([, { correct, total }]) => (correct / total) < 0.5).length > 0 && (
+                  <div className="p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                    <p className="text-sm font-medium text-destructive mb-1">⚠️ Weak Areas to Focus On:</p>
+                    <ul className="text-xs text-destructive/80 space-y-1">
+                      {Object.entries(sectionScores)
+                        .filter(([, { correct, total }]) => (correct / total) < 0.5)
+                        .map(([section]) => <li key={section}>• {section}</li>)
+                      }
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {questions.map((q, i) => (
             <Card key={q.id} className={q.type === "mcq" ? (userAnswers[q.id] === q.correctAnswer ? "border-green-500/30" : "border-destructive/30") : ""}>
               <CardHeader>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={q.type === "mcq" ? "default" : "secondary"}>{q.type.toUpperCase()}</Badge>
                   <Badge variant="outline">{q.marks} marks</Badge>
+                  {q.difficulty && <Badge variant="outline" className="capitalize">{q.difficulty}</Badge>}
+                  {q.section && <Badge variant="outline">{q.section}</Badge>}
+                  {q.negativeMarks && <Badge variant="destructive" className="text-xs">-{q.negativeMarks} neg</Badge>}
                   {q.type === "mcq" && (
                     userAnswers[q.id] === q.correctAnswer
                       ? <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -179,7 +352,10 @@ export default function AIMockTest() {
       <AppLayout>
         <div className="max-w-4xl mx-auto space-y-4">
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-3 flex items-center justify-between border-b">
-            <span className="font-medium">{questions.length} Questions</span>
+            <div>
+              <span className="font-medium">{questions.length} Questions</span>
+              {testMeta.negativeMarking && <Badge variant="destructive" className="ml-2 text-xs">Negative Marking</Badge>}
+            </div>
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-primary" />
               <span className={`font-mono font-bold ${timeLeft < 60 ? "text-destructive" : "text-primary"}`}>{fmt(timeLeft)}</span>
@@ -190,9 +366,12 @@ export default function AIMockTest() {
           {questions.map((q, i) => (
             <Card key={q.id}>
               <CardHeader>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={q.type === "mcq" ? "default" : "secondary"}>{q.type.toUpperCase()}</Badge>
                   <Badge variant="outline">{q.marks} marks</Badge>
+                  {q.difficulty && <Badge variant="outline" className="capitalize">{q.difficulty}</Badge>}
+                  {q.section && <Badge variant="outline">{q.section}</Badge>}
+                  {q.timeEstimate && <span className="text-xs text-muted-foreground">⏱ {q.timeEstimate}</span>}
                 </div>
                 <CardTitle className="text-base mt-2">Q{i + 1}. {q.question}</CardTitle>
               </CardHeader>
@@ -230,17 +409,29 @@ export default function AIMockTest() {
   }
 
   // Config state
+  const qTypes = getQuestionTypes();
+
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">AI Mock Test Generator</h1>
-          <p className="text-muted-foreground">Generate practice tests powered by AI</p>
+          <h1 className="text-2xl font-bold text-foreground">{getExamLabel()}</h1>
+          <p className="text-muted-foreground">
+            {educationType === "competitive_exam" && examName
+              ? `Generate ${examName}-pattern practice tests powered by AI`
+              : "Generate practice tests powered by AI"}
+          </p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Configure Test</CardTitle>
+            {educationType === "competitive_exam" && examName && (
+              <CardDescription>
+                Questions will follow {examName} exam pattern
+                {(examName === "JEE" || examName === "NEET" || examName === "GATE") && " with negative marking"}
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -254,7 +445,7 @@ export default function AIMockTest() {
             </div>
             <div>
               <label className="text-sm font-medium text-foreground">Topic (optional)</label>
-              <Input placeholder="e.g. Star-Delta Transformation" value={topic} onChange={e => setTopic(e.target.value)} />
+              <Input placeholder="e.g. Kinematics, Organic Chemistry..." value={topic} onChange={e => setTopic(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -265,6 +456,7 @@ export default function AIMockTest() {
                     <SelectItem value="5">5 Questions</SelectItem>
                     <SelectItem value="10">10 Questions</SelectItem>
                     <SelectItem value="20">20 Questions</SelectItem>
+                    <SelectItem value="30">30 Questions</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -273,15 +465,13 @@ export default function AIMockTest() {
                 <Select value={questionType} onValueChange={setQuestionType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="mcq">MCQ Only</SelectItem>
-                    <SelectItem value="theory">Theory Only</SelectItem>
-                    <SelectItem value="mixed">Mixed</SelectItem>
+                    {qTypes.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <Button className="w-full" onClick={generateTest} disabled={!selectedSubject}>
-              <FileText className="w-4 h-4 mr-2" /> Generate Mock Test
+              <FileText className="w-4 h-4 mr-2" /> Generate {examName || "Mock"} Test
             </Button>
           </CardContent>
         </Card>
@@ -295,9 +485,9 @@ export default function AIMockTest() {
                   <div key={h.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm">
                     <div>
                       <p className="font-medium text-foreground">{h.subject}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleDateString()}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleDateString()} · {h.question_type}</p>
                     </div>
-                    <Badge variant={h.score !== null ? "default" : "secondary"}>
+                    <Badge variant={h.score !== null ? (h.score / h.total >= 0.7 ? "default" : "destructive") : "secondary"}>
                       {h.score !== null ? `${h.score}/${h.total}` : "Incomplete"}
                     </Badge>
                   </div>

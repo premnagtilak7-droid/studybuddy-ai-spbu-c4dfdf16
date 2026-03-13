@@ -5,6 +5,7 @@ import { Clock, Flame, BookOpen, Target, TrendingUp, Plus, AlertTriangle, Calend
 import StudyHeatmap from "../components/StudyHeatmap";
 import SubjectChart from "../components/SubjectChart";
 import ExamCountdown from "../components/ExamCountdown";
+import ExamStudyInsights from "../components/ExamStudyInsights";
 import WeeklyProgressSummary from "../components/WeeklyProgressSummary";
 import AppLayout from "../components/AppLayout";
 import CircularProgress from "../components/CircularProgress";
