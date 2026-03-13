@@ -29,6 +29,9 @@ export default function NotificationPermissionBanner() {
 
   const handleAllow = async () => {
     const result = await requestNotificationPermissionWithPrompt();
+    // Mark as asked regardless of outcome so we never ask again
+    localStorage.setItem("notif_perm_dismissed", "1");
+    localStorage.setItem("notif_permission_asked", "1");
     if (result === "granted") {
       toast.success("Notifications enabled! You'll get study reminders.");
     } else {
@@ -40,6 +43,7 @@ export default function NotificationPermissionBanner() {
   const handleDismiss = () => {
     setShow(false);
     localStorage.setItem("notif_perm_dismissed", "1");
+    localStorage.setItem("notif_permission_asked", "1");
   };
 
   return (
