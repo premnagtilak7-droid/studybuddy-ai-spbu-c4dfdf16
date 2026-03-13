@@ -238,12 +238,12 @@ export default function StudyGroups() {
               </Card>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="w-full grid grid-cols-5">
-                  <TabsTrigger value="chat" className="text-xs">Chat</TabsTrigger>
-                  <TabsTrigger value="meet" className="text-xs"><Video className="w-3 h-3 mr-1" />Meet</TabsTrigger>
-                  <TabsTrigger value="progress" className="text-xs">Progress</TabsTrigger>
-                  <TabsTrigger value="leaderboard" className="text-xs">Leaderboard</TabsTrigger>
-                  <TabsTrigger value="members" className="text-xs">Members</TabsTrigger>
+                <TabsList className="w-full grid grid-cols-5 h-auto">
+                  <TabsTrigger value="chat" className="text-xs sm:text-sm gap-1 py-2"><Send className="w-3 h-3 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Chat</span></TabsTrigger>
+                  <TabsTrigger value="meet" className="text-xs sm:text-sm gap-1 py-2"><Video className="w-3 h-3 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Meet</span></TabsTrigger>
+                  <TabsTrigger value="progress" className="text-xs sm:text-sm gap-1 py-2"><BookOpen className="w-3 h-3 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Progress</span></TabsTrigger>
+                  <TabsTrigger value="leaderboard" className="text-xs sm:text-sm gap-1 py-2"><Trophy className="w-3 h-3 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Board</span></TabsTrigger>
+                  <TabsTrigger value="members" className="text-xs sm:text-sm gap-1 py-2"><Users className="w-3 h-3 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Members</span></TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="chat">
