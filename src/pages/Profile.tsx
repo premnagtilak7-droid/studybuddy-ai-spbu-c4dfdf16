@@ -50,6 +50,7 @@ export default function Profile() {
   const [examTarget, setExamTarget] = useState("");
 
   const [payments, setPayments] = useState<any[]>([]);
+  // Stats
   const [totalStudyHours, setTotalStudyHours] = useState(0);
   const [streak, setStreak] = useState(0);
   const [badgesCount, setBadgesCount] = useState(0);
