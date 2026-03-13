@@ -1124,6 +1124,45 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          plan: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          razorpay_signature: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          plan: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          razorpay_signature?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          plan?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          razorpay_signature?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1131,6 +1170,7 @@ export type Database = {
           branch: string | null
           college: string | null
           created_at: string
+          current_plan: string
           display_name: string | null
           email: string
           exam_target: string | null
@@ -1139,7 +1179,10 @@ export type Database = {
           is_subscribed: boolean
           is_trial_active: boolean | null
           last_active_at: string | null
+          plan_expires_at: string | null
           premium_expires_at: string | null
+          razorpay_customer_id: string | null
+          razorpay_subscription_id: string | null
           trial_end: string | null
           trial_start: string | null
           updated_at: string
@@ -1152,6 +1195,7 @@ export type Database = {
           branch?: string | null
           college?: string | null
           created_at?: string
+          current_plan?: string
           display_name?: string | null
           email: string
           exam_target?: string | null
@@ -1160,7 +1204,10 @@ export type Database = {
           is_subscribed?: boolean
           is_trial_active?: boolean | null
           last_active_at?: string | null
+          plan_expires_at?: string | null
           premium_expires_at?: string | null
+          razorpay_customer_id?: string | null
+          razorpay_subscription_id?: string | null
           trial_end?: string | null
           trial_start?: string | null
           updated_at?: string
@@ -1173,6 +1220,7 @@ export type Database = {
           branch?: string | null
           college?: string | null
           created_at?: string
+          current_plan?: string
           display_name?: string | null
           email?: string
           exam_target?: string | null
@@ -1181,7 +1229,10 @@ export type Database = {
           is_subscribed?: boolean
           is_trial_active?: boolean | null
           last_active_at?: string | null
+          plan_expires_at?: string | null
           premium_expires_at?: string | null
+          razorpay_customer_id?: string | null
+          razorpay_subscription_id?: string | null
           trial_end?: string | null
           trial_start?: string | null
           updated_at?: string
