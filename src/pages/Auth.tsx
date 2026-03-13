@@ -56,8 +56,8 @@ export default function Auth() {
           <div className="w-14 h-14 rounded-xl gradient-primary flex items-center justify-center mx-auto mb-4">
             <GraduationCap className="w-7 h-7 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">SPPU Study</h1>
-          <p className="text-sm text-muted-foreground mt-1">2024 Pattern Engineering</p>
+          <h1 className="text-2xl font-bold text-foreground">StudyBuddy</h1>
+          <p className="text-sm text-muted-foreground mt-1">Your AI Study Companion</p>
         </div>
 
         <div className="glass-card p-6">

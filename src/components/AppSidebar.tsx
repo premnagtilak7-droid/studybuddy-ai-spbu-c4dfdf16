@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  BarChart3, BookOpen, CalendarClock, Calendar, Trophy, MessageSquare, ChevronLeft, ChevronRight, GraduationCap, Zap, Shield, LogOut, Flame, User, Sparkles, Loader2, HelpCircle, FileText, CheckCircle, Calculator, Target, Users, Heart, Share2, Rss, Layers, BookMarked, ClipboardList, Award, FlaskConical, Brain, Menu, X, Timer,
+  BarChart3, BookOpen, CalendarClock, Calendar, Trophy, MessageSquare, ChevronLeft, ChevronRight, GraduationCap, Zap, Shield, LogOut, Flame, User, Sparkles, Loader2, HelpCircle, FileText, CheckCircle, Calculator, Target, Users, Heart, Share2, Rss, Layers, BookMarked, ClipboardList, Award, FlaskConical, Brain, Menu, X, Timer, TrendingUp,
 } from "lucide-react";
 import { BellRing } from "lucide-react";
 import SupportTicketModal from "./SupportTicketModal";
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const navItems = [
-  { icon: BarChart3, label: "Stats Center", path: "/" },
+  { icon: BarChart3, label: "Dashboard", path: "/" },
   { icon: Calendar, label: "Timetable", path: "/timetable" },
   { icon: BookOpen, label: "Subjects", path: "/subjects" },
   { icon: BookOpen, label: "Manage Subjects", path: "/subject-management" },
@@ -35,6 +35,7 @@ const navItems = [
   { icon: CheckCircle, label: "Answer Checker", path: "/answer-checker" },
   { icon: Calculator, label: "Formula Sheet", path: "/formula-sheet" },
   { icon: Target, label: "Exam Predictor", path: "/exam-predictor" },
+  { icon: TrendingUp, label: "Performance Analysis", path: "/performance" },
   { icon: CalendarClock, label: "Exam Dates", path: "/exam-dates" },
   { icon: Trophy, label: "Study Room", path: "/study-room" },
   { icon: Timer, label: "Study Timer", path: "/study-timer" },
@@ -71,7 +72,6 @@ export default function AppSidebar() {
     getUserXP().then(setXP);
   }, []);
 
-  // Close mobile sidebar on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
@@ -104,8 +104,8 @@ export default function AppSidebar() {
         </div>
         {(!collapsed || isMobile) && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden flex-1">
-            <h1 className="text-sm font-bold text-sidebar-accent-foreground tracking-tight">SPPU Study</h1>
-            <p className="text-[10px] font-mono text-sidebar-foreground">2024 Pattern</p>
+            <h1 className="text-sm font-bold text-sidebar-accent-foreground tracking-tight">StudyBuddy</h1>
+            <p className="text-[10px] font-mono text-sidebar-foreground">AI Study Companion</p>
           </motion.div>
         )}
         {isMobile && (
@@ -170,7 +170,6 @@ export default function AppSidebar() {
 
       {/* User profile dropdown, Sign Out & Collapse */}
       <div className="px-2 pb-4 space-y-1 border-t border-sidebar-border pt-3">
-        {/* Help & Feedback */}
         <button
           onClick={() => setShowSupport(true)}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors text-sm font-medium ${
@@ -180,7 +179,6 @@ export default function AppSidebar() {
           <HelpCircle className="w-5 h-5 flex-shrink-0" />
           {(!collapsed || isMobile) && <span>Help & Feedback</span>}
         </button>
-        {/* Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors text-left">
@@ -214,7 +212,7 @@ export default function AppSidebar() {
                   </Badge>
                 )}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">SPPU Study Account</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">StudyBuddy Account</p>
             </div>
             <DropdownMenuSeparator />
             {isAdmin && (
@@ -246,7 +244,6 @@ export default function AppSidebar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Standalone Sign Out button */}
         <button
           onClick={() => setShowSignOutConfirm(true)}
           disabled={signingOut}
@@ -258,7 +255,6 @@ export default function AppSidebar() {
           {(!collapsed || isMobile) && <span>{signingOut ? "Signing out..." : "Sign Out"}</span>}
         </button>
 
-        {/* Collapse toggle - desktop only */}
         {!isMobile && (
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -273,7 +269,6 @@ export default function AppSidebar() {
 
   return (
     <>
-      {/* Mobile hamburger button */}
       {isMobile && (
         <button
           onClick={() => setMobileOpen(true)}
@@ -283,7 +278,6 @@ export default function AppSidebar() {
         </button>
       )}
 
-      {/* Mobile overlay */}
       <AnimatePresence>
         {isMobile && mobileOpen && (
           <motion.div
@@ -296,7 +290,6 @@ export default function AppSidebar() {
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
       {isMobile ? (
         <AnimatePresence>
           {mobileOpen && (
@@ -321,7 +314,6 @@ export default function AppSidebar() {
         </motion.aside>
       )}
 
-      {/* Sign Out Confirmation Dialog */}
       <AlertDialog open={showSignOutConfirm} onOpenChange={setShowSignOutConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>

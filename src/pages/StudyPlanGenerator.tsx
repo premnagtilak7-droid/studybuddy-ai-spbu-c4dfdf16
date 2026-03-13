@@ -249,7 +249,7 @@ export default function StudyPlanGenerator() {
   </style>
 </head>
 <body>
-  <h1>📚 SPPU Study Plan</h1>
+  <h1>📚 Study Plan</h1>
   <div class="meta">Generated: ${format(new Date(), "dd MMM yyyy")} · Difficulty: ${difficulty} · Daily Hours: ${dailyHours}h</div>
   <table>
     <thead><tr><th>✓</th><th>Date</th><th>Day</th><th>Subject</th><th>Topic</th><th>Hours</th><th>Revision</th></tr></thead>
@@ -312,7 +312,7 @@ export default function StudyPlanGenerator() {
               <Sparkles className="w-6 h-6 text-primary" />
               AI Study Plan Generator
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Powered by Gemini · SPPU 2024 Pattern</p>
+            <p className="text-sm text-muted-foreground mt-1">Powered by AI · Personalized for your goals</p>
           </div>
           <div className="flex gap-2">
             {plan && (

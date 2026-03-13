@@ -19,6 +19,7 @@ import AIMockTest from "./pages/AIMockTest";
 import AIAnswerChecker from "./pages/AIAnswerChecker";
 import AIFormulaSheet from "./pages/AIFormulaSheet";
 import AIExamPredictor from "./pages/AIExamPredictor";
+import AIPerformanceAnalysis from "./pages/AIPerformanceAnalysis";
 import StudyGroups from "./pages/StudyGroups";
 import DoubtForum from "./pages/DoubtForum";
 import StudyBuddy from "./pages/StudyBuddy";
@@ -87,6 +88,7 @@ const AppRoutes = () => {
       <Route path="/answer-checker" element={<ProtectedRoute><GatedRoute feature="answer_checker" featureName="AI Answer Checker"><AIAnswerChecker /></GatedRoute></ProtectedRoute>} />
       <Route path="/formula-sheet" element={<ProtectedRoute><GatedRoute feature="formula_sheet" featureName="AI Formula Sheet"><AIFormulaSheet /></GatedRoute></ProtectedRoute>} />
       <Route path="/exam-predictor" element={<ProtectedRoute><GatedRoute feature="exam_predictor" featureName="AI Exam Predictor"><AIExamPredictor /></GatedRoute></ProtectedRoute>} />
+      <Route path="/performance" element={<ProtectedRoute><AIPerformanceAnalysis /></ProtectedRoute>} />
       <Route path="/study-groups" element={<ProtectedRoute><GatedRoute feature="study_groups" featureName="Study Groups"><StudyGroups /></GatedRoute></ProtectedRoute>} />
       <Route path="/doubt-forum" element={<ProtectedRoute><GatedRoute feature="doubt_forum" featureName="Doubt Forum"><DoubtForum /></GatedRoute></ProtectedRoute>} />
       <Route path="/study-buddy" element={<ProtectedRoute><GatedRoute feature="study_buddy" featureName="Study Buddy"><StudyBuddy /></GatedRoute></ProtectedRoute>} />

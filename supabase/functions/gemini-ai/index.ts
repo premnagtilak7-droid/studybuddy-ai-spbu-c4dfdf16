@@ -24,6 +24,7 @@ serve(async (req) => {
       answercheck: handleAnswerCheck,
       formulasheet: handleFormulaSheet,
       exampredict: handleExamPredict,
+      performance: handlePerformance,
     };
 
     const handler = handlers[type];
@@ -83,12 +84,7 @@ function extractJsonFromToolCall(data: any): any {
   return null;
 }
 
-// ─── DOUBT ───
-async function handleDoubt(body: any, apiKey: string) {
-  const { messages, language, questionType, subject, educationType, examName } = body;
-  
-  // Build context-aware system prompt
-  let context = "";
+function getStudentContext(educationType?: string, examName?: string): string {
   if (educationType === "competitive_exam" && examName) {
     const examContexts: Record<string, string> = {
       JEE: "JEE Main & Advanced level. Focus on concepts, problem-solving approach, and tricks. Cover both JEE Main and Advanced level depth.",
@@ -99,14 +95,26 @@ async function handleDoubt(body: any, apiKey: string) {
       SSC: "SSC/Government exam level. Focus on quick solving techniques and commonly asked patterns.",
       Banking: "Banking exam level. Focus on quick solving techniques, shortcuts, and common patterns.",
     };
-    context = examContexts[examName] || `${examName} exam preparation`;
+    return examContexts[examName] || `${examName} exam preparation`;
   } else if (educationType === "school") {
-    context = "School level. Explain concepts simply with relatable examples. Follow NCERT/board exam patterns.";
+    return "School level. Explain concepts simply with relatable examples. Follow NCERT/board exam patterns.";
   } else if (educationType === "undergraduate" || educationType === "postgraduate") {
-    context = "University level. Provide detailed academic explanations suitable for semester exams.";
+    return "University level. Provide detailed academic explanations suitable for semester exams.";
+  } else if (educationType === "professional") {
+    return "Professional certification level. Focus on practical applications and industry standards.";
+  } else if (educationType === "self_learning") {
+    return "Self-learning context. Explain from basics with clear progression to advanced concepts.";
   }
+  return "General academic level. Provide clear, well-structured explanations.";
+}
 
-  let sys = `You are an expert tutor. ${context ? context + "\n\n" : ""}Answer with: clear explanation, step-by-step if numerical, key formula, and one memory tip. Be concise and student friendly.\n\nFormat your responses using markdown with headers, bullet points, and code blocks for formulas.\nWhen solving numerical problems, show each step clearly with proper formulas.\n\nIMPORTANT: Always provide a complete, non-empty response.`;
+// ─── DOUBT ───
+async function handleDoubt(body: any, apiKey: string) {
+  const { messages, language, questionType, subject, educationType, examName } = body;
+  
+  const context = getStudentContext(educationType, examName);
+
+  let sys = `You are an expert tutor. ${context}\n\nAnswer with: clear explanation, step-by-step if numerical, key formula, and one memory tip. Be concise and student friendly.\n\nFormat your responses using markdown with headers, bullet points, and code blocks for formulas.\nWhen solving numerical problems, show each step clearly with proper formulas.\n\nIMPORTANT: Always provide a complete, non-empty response.`;
   if (questionType) sys += `\n\nThe student is asking a "${questionType}" type question.`;
   if (subject) sys += `\n\nThe question is about: ${subject}.`;
   if (language === "marathi") sys += "\n\nRespond in Marathi. Keep technical terms in English.";
@@ -121,11 +129,11 @@ async function handleDoubt(body: any, apiKey: string) {
 async function handleStudyPlan(body: any, apiKey: string) {
   const { subjects, dailyHours = 4, difficulty = "balanced", educationType, examName } = body;
   
-  let context = "";
+  let context = getStudentContext(educationType, examName);
   if (educationType === "competitive_exam" && examName) {
-    context = `This is for ${examName} exam preparation. Prioritize high-weightage topics and include revision cycles.`;
+    context += " Prioritize high-weightage topics and include revision cycles.";
   } else if (educationType === "school") {
-    context = "This is for school board exam preparation. Follow the textbook chapter sequence.";
+    context += " Follow the textbook chapter sequence.";
   }
   
   const sys = `You are an expert study planner. ${context} Create a day-by-day study table. Return the plan using the tool provided. IMPORTANT: You MUST call the create_study_plan tool with a non-empty plan array.`;
@@ -180,7 +188,6 @@ async function handleStudyPlan(body: any, apiKey: string) {
 async function handleMockTest(body: any, apiKey: string) {
   const { subject, topic, numQuestions = 10, questionType = "mixed", educationType, examName, classLevel, board } = body;
 
-  // Build exam-specific prompts
   let sys = "";
   let negativeMarking = false;
   
@@ -214,7 +221,7 @@ async function handleMockTest(body: any, apiKey: string) {
   } else if (educationType === "school") {
     sys = `You are a school exam paper setter for Class ${classLevel || "10"} (${board || "CBSE"} board). Generate ${questionType} questions for ${subject}${topic ? " - " + topic : ""}. Questions should match ${board || "CBSE"} board exam pattern and difficulty. Include chapter-wise questions with marking scheme. For MCQs: 4 options with explanation. For theory: include expected answer with key points and marks allocation.`;
   } else {
-    sys = `You are an expert examiner. Generate ${questionType} questions for ${subject}${topic ? " - " + topic : ""}. For MCQ include 4 options with one correct answer and explanation. For theory include model answer. Questions should be university/semester exam level.`;
+    sys = `You are an expert examiner. Generate ${questionType} questions for ${subject}${topic ? " - " + topic : ""}. For MCQ include 4 options with one correct answer and explanation. For theory include model answer. Questions should be appropriate for the student's level.`;
   }
   
   sys += " Return using the tool provided. IMPORTANT: You MUST return questions.";
@@ -284,12 +291,7 @@ async function handleMockTest(body: any, apiKey: string) {
 async function handleAnswerCheck(body: any, apiKey: string) {
   const { question, answer, subject, educationType, examName } = body;
   
-  let context = "";
-  if (educationType === "competitive_exam" && examName) {
-    context = `Grade as per ${examName} exam standards and marking scheme.`;
-  } else if (educationType === "school") {
-    context = "Grade as per school board exam marking scheme.";
-  }
+  const context = getStudentContext(educationType, examName);
   
   const sys = `You are an expert examiner. ${context} Grade the student's answer out of 10 with detailed feedback. Return using the tool provided.`;
 
@@ -335,12 +337,9 @@ async function handleAnswerCheck(body: any, apiKey: string) {
 async function handleFormulaSheet(body: any, apiKey: string) {
   const { subject, units, educationType, examName } = body;
   
-  let context = "";
-  if (educationType === "competitive_exam" && examName) {
-    context = `for ${examName} exam preparation. Focus on frequently used formulas and shortcuts.`;
-  }
+  const context = getStudentContext(educationType, examName);
   
-  const sys = `You are a formula reference generator ${context}. Generate a comprehensive formula sheet. Return using the tool provided.`;
+  const sys = `You are a formula reference generator for ${context}. Generate a comprehensive formula sheet. Return using the tool provided.`;
 
   const tools = [{
     type: "function",
@@ -400,12 +399,9 @@ async function handleFormulaSheet(body: any, apiKey: string) {
 async function handleExamPredict(body: any, apiKey: string) {
   const { subject, examDate, completedTopics, educationType, examName } = body;
   
-  let context = "";
-  if (educationType === "competitive_exam" && examName) {
-    context = `for ${examName} exam. Use previous year trends and weightage analysis.`;
-  }
+  const context = getStudentContext(educationType, examName);
   
-  const sys = `You are an exam analyst ${context}. Predict important topics and likely question types. Return using the tool provided.`;
+  const sys = `You are an exam analyst. ${context} Predict important topics and likely question types. Return using the tool provided.`;
 
   const tools = [{
     type: "function",
@@ -447,6 +443,75 @@ async function handleExamPredict(body: any, apiKey: string) {
     const result = extractJsonFromToolCall(data);
     if (!result || !result.importantTopics) {
       return new Response(JSON.stringify({ error: "Prediction failed. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+}
+
+// ─── PERFORMANCE ANALYSIS ───
+async function handlePerformance(body: any, apiKey: string) {
+  const { tests, educationType, examName } = body;
+  
+  const context = getStudentContext(educationType, examName);
+  
+  const sys = `You are an expert academic performance analyst. ${context} Analyze the student's mock test results and provide detailed insights. Return using the tool provided.`;
+
+  const tools = [{
+    type: "function",
+    function: {
+      name: "analyze_performance",
+      description: "Return performance analysis.",
+      parameters: {
+        type: "object",
+        properties: {
+          overallScore: { type: "number", description: "Overall average percentage" },
+          subjectWise: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                subject: { type: "string" },
+                avgScore: { type: "number" },
+                totalTests: { type: "number" },
+                trend: { type: "string", enum: ["improving", "declining", "stable"] },
+              },
+              required: ["subject", "avgScore", "totalTests", "trend"], additionalProperties: false,
+            },
+          },
+          weakTopics: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                subject: { type: "string" },
+                topic: { type: "string" },
+                score: { type: "number" },
+                suggestion: { type: "string" },
+              },
+              required: ["subject", "topic", "score", "suggestion"], additionalProperties: false,
+            },
+          },
+          predictedScore: { type: "string", description: "Predicted exam performance based on current data" },
+          recommendations: { type: "array", items: { type: "string" } },
+          comparisonToIdeal: { type: "number", description: "How close to ideal preparation (0-100)" },
+        },
+        required: ["overallScore", "subjectWise", "weakTopics", "predictedScore", "recommendations", "comparisonToIdeal"], additionalProperties: false,
+      },
+    },
+  }];
+
+  const response = await callAI(apiKey, [
+    { role: "system", content: sys },
+    { role: "user", content: `Analyze these mock test results and provide insights:\n\n${JSON.stringify(tests, null, 2)}\n\nProvide subject-wise analysis, identify weak topics, predict performance, and give actionable recommendations.` },
+  ], tools, { type: "function", function: { name: "analyze_performance" } });
+
+  try {
+    const data = await response.json();
+    const result = extractJsonFromToolCall(data);
+    if (!result || !result.recommendations) {
+      return new Response(JSON.stringify({ error: "Analysis failed. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
