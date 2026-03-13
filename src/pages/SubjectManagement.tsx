@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, BookOpen, Save, X, GraduationCap } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X, GraduationCap } from "lucide-react";
 import AppLayout from "../components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,9 @@ import {
   deleteSubject,
   type UserSubject,
 } from "@/lib/subjects-store";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import SyllabusTemplateSelector from "@/components/SyllabusTemplateSelector";
 
 export default function SubjectManagement() {
   const [subjects, setSubjects] = useState<UserSubject[]>([]);
@@ -20,6 +22,8 @@ export default function SubjectManagement() {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", targetUnits: 6 });
   const [loading, setLoading] = useState(true);
+  const [educationType, setEducationType] = useState<string | null>(null);
+  const [examName, setExamName] = useState<string | null>(null);
 
   const loadSubjects = async () => {
     try {
@@ -32,7 +36,25 @@ export default function SubjectManagement() {
     }
   };
 
-  useEffect(() => { loadSubjects(); }, []);
+  const loadProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("education_type, education_details")
+      .eq("user_id", user.id)
+      .single();
+    if (data) {
+      setEducationType(data.education_type);
+      const details = data.education_details as any;
+      setExamName(details?.exam_name || null);
+    }
+  };
+
+  useEffect(() => {
+    loadSubjects();
+    loadProfile();
+  }, []);
 
   const handleAdd = async () => {
     if (!form.name.trim() || !form.code.trim()) return;
@@ -79,6 +101,7 @@ export default function SubjectManagement() {
 
   const totalTarget = subjects.reduce((a, s) => a + s.target_units, 0);
   const totalCompleted = subjects.reduce((a, s) => a + s.completed_units, 0);
+  const existingCodes = subjects.map(s => s.code);
 
   if (loading) {
     return (
@@ -105,18 +128,26 @@ export default function SubjectManagement() {
           </Button>
         </div>
 
+        {/* Syllabus Templates */}
+        <SyllabusTemplateSelector
+          educationType={educationType}
+          examName={examName}
+          existingSubjectCodes={existingCodes}
+          onSubjectsAdded={loadSubjects}
+        />
+
         {/* Add form */}
         {showAdd && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
-            <h3 className="font-semibold text-foreground mb-4">New Subject</h3>
+            <h3 className="font-semibold text-foreground mb-4">New Custom Subject</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label>Subject Name</Label>
-                <Input placeholder="e.g. Basic Electronics" value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} />
+                <Input placeholder="e.g. Mathematics" value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div>
                 <Label>Code</Label>
-                <Input placeholder="e.g. BEE" value={form.code} onChange={(e) => setForm(f => ({ ...f, code: e.target.value }))} maxLength={5} />
+                <Input placeholder="e.g. MATH" value={form.code} onChange={(e) => setForm(f => ({ ...f, code: e.target.value }))} maxLength={5} />
               </div>
               <div>
                 <Label>Target Units</Label>
@@ -133,11 +164,7 @@ export default function SubjectManagement() {
         {/* Subject list */}
         <div className="space-y-3">
           {subjects.map((subj) => (
-            <motion.div
-              key={subj.id}
-              layout
-              className="glass-card p-5"
-            >
+            <motion.div key={subj.id} layout className="glass-card p-5">
               {editing === subj.id ? (
                 <div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -208,10 +235,10 @@ export default function SubjectManagement() {
               </div>
               <h3 className="text-lg font-bold text-foreground mb-2">Create Your First Subject</h3>
               <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
-                Start tracking your SPPU 2024 Pattern subjects. Add subjects like BEE, Engineering Mechanics, or Maths II.
+                Use a syllabus template above or add a custom subject to start tracking your progress.
               </p>
               <Button onClick={() => { setShowAdd(true); setForm({ name: "", code: "", targetUnits: 6 }); }}>
-                <Plus className="w-4 h-4 mr-1" /> Create Your First Subject
+                <Plus className="w-4 h-4 mr-1" /> Create Custom Subject
               </Button>
             </motion.div>
           )}
