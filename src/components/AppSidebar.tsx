@@ -51,6 +51,7 @@ const navItems = [
   { icon: Brain, label: "Focus Mode", path: "/focus" },
   { icon: BellRing, label: "Notifications", path: "/notifications" },
   { icon: User, label: "My Profile", path: "/profile" },
+  { icon: GraduationCap, label: "Plans & Pricing", path: "/pricing" },
 ];
 
 export default function AppSidebar() {
