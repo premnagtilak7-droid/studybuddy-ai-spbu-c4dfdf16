@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Bell, Send, Clock, Eye, FileText } from "lucide-react";
+import { Bell, Send, Clock, Eye, FileText, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,7 @@ const TEMPLATES = [
   { type: "new_feature", title: "🚀 New Feature Available", message: "We've added exciting new features to help you study better. Check them out now!" },
   { type: "subscription_expiry", title: "⚠️ Subscription Expiring Soon", message: "Your premium subscription is expiring soon. Renew now to continue enjoying all premium features." },
   { type: "study_reminder", title: "📚 Time to Study!", message: "Don't break your study streak! Log in and complete at least one study session today." },
+  { type: "upgrade_promo", title: "🎉 Special Offer!", message: "Upgrade to Pro or Elite plan today and unlock all premium features at a special price!" },
 ];
 
 export default function AdminNotifications({ notifications, onRefresh }: Props) {
@@ -61,6 +62,19 @@ export default function AdminNotifications({ notifications, onRefresh }: Props) 
     onRefresh();
   };
 
+  const deleteNotification = async (id: string) => {
+    await supabase.from("admin_notifications").delete().eq("id", id);
+    toast.success("Notification deleted");
+    onRefresh();
+  };
+
+  const targetLabel = (t: string) => {
+    const map: Record<string, string> = {
+      all: "All Users", free: "Free Users", pro: "Pro Users", elite: "Elite Users", specific: "Specific Email"
+    };
+    return map[t] || t;
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {/* Composer */}
@@ -87,13 +101,14 @@ export default function AdminNotifications({ notifications, onRefresh }: Props) 
             <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Notification title..." />
           </div>
           <div>
-            <Label className="text-xs">Target</Label>
+            <Label className="text-xs">Target Audience</Label>
             <Select value={target} onValueChange={setTarget}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Users</SelectItem>
-                <SelectItem value="premium">Premium Only</SelectItem>
-                <SelectItem value="free">Free Only</SelectItem>
+                <SelectItem value="free">Free Plan Users Only</SelectItem>
+                <SelectItem value="pro">Pro Plan Users Only</SelectItem>
+                <SelectItem value="elite">Elite Plan Users Only</SelectItem>
                 <SelectItem value="specific">Specific Email</SelectItem>
               </SelectContent>
             </Select>
@@ -137,7 +152,7 @@ export default function AdminNotifications({ notifications, onRefresh }: Props) 
             <p className="text-xs text-muted-foreground mb-1">Preview:</p>
             <p className="font-semibold text-foreground text-sm">{title}</p>
             <p className="text-xs text-muted-foreground mt-1">{message}</p>
-            <p className="text-[10px] text-muted-foreground/60 mt-2">Target: {target}{target === "specific" ? ` (${targetEmail})` : ""}</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-2">Target: {targetLabel(target)}{target === "specific" ? ` (${targetEmail})` : ""}</p>
           </div>
         )}
 
@@ -165,13 +180,16 @@ export default function AdminNotifications({ notifications, onRefresh }: Props) 
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground">Target</th>
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground">Date</th>
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground">Status</th>
+                <th className="text-left p-3 text-xs font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {notifications.map(n => (
                 <tr key={n.id} className="border-b border-border/50">
                   <td className="p-3 text-xs font-medium text-foreground">{n.title}</td>
-                  <td className="p-3 text-xs text-muted-foreground capitalize">{n.target}{n.target_email ? ` (${n.target_email})` : ""}</td>
+                  <td className="p-3 text-xs text-muted-foreground">
+                    {targetLabel(n.target)}{n.target_email ? ` (${n.target_email})` : ""}
+                  </td>
                   <td className="p-3 font-mono text-xs text-muted-foreground">
                     {n.sent_at ? new Date(n.sent_at).toLocaleString() : n.scheduled_at ? `Scheduled: ${new Date(n.scheduled_at).toLocaleString()}` : "—"}
                   </td>
@@ -179,6 +197,11 @@ export default function AdminNotifications({ notifications, onRefresh }: Props) 
                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                       n.is_sent ? "bg-primary/20 text-primary" : "bg-accent/20 text-accent-foreground"
                     }`}>{n.is_sent ? "SENT" : "SCHEDULED"}</span>
+                  </td>
+                  <td className="p-3">
+                    <Button variant="ghost" size="sm" onClick={() => deleteNotification(n.id)}>
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </Button>
                   </td>
                 </tr>
               ))}

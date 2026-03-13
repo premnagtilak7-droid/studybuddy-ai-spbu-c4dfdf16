@@ -38,7 +38,7 @@ export default function AdminCouponManager({ coupons, redemptions, profiles, onR
 
   const generateCode = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    const code = "SPPU_" + Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const code = "STUDY_" + Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
     setNewCode(code);
   };
 
@@ -62,6 +62,7 @@ export default function AdminCouponManager({ coupons, redemptions, profiles, onR
 
   const toggleCoupon = async (id: string, current: boolean) => {
     await supabase.from("coupons").update({ is_active: !current }).eq("id", id);
+    toast.success(current ? "Coupon disabled" : "Coupon enabled");
     onRefresh();
   };
 
@@ -72,7 +73,6 @@ export default function AdminCouponManager({ coupons, redemptions, profiles, onR
   };
 
   const isExpired = (date: string | null) => date ? new Date(date) < new Date() : false;
-
   const getUserEmail = (userId: string) => profiles.find(p => p.user_id === userId)?.email || userId;
 
   return (
@@ -86,7 +86,7 @@ export default function AdminCouponManager({ coupons, redemptions, profiles, onR
           <div>
             <Label className="text-xs">Code</Label>
             <div className="flex gap-1">
-              <Input value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="SPPU_PRO" className="font-mono uppercase" />
+              <Input value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="STUDY_PRO50" className="font-mono uppercase" />
               <Button variant="outline" size="icon" onClick={generateCode} title="Generate random"><Dice5 className="w-4 h-4" /></Button>
             </div>
           </div>
@@ -112,23 +112,23 @@ export default function AdminCouponManager({ coupons, redemptions, profiles, onR
             </div>
           )}
           <div>
+            <Label className="text-xs">Applicable Plan</Label>
+            <Select value={planType} onValueChange={setPlanType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Both Pro & Elite</SelectItem>
+                <SelectItem value="pro">Pro Plan Only</SelectItem>
+                <SelectItem value="elite">Elite Plan Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <Label className="text-xs">Expiry Date</Label>
             <Input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} />
           </div>
           <div>
             <Label className="text-xs">Max Uses</Label>
-            <Input type="number" value={maxUses} onChange={e => setMaxUses(e.target.value ? Number(e.target.value) : "")} min={1} placeholder="∞" />
-          </div>
-          <div>
-            <Label className="text-xs">Plan Type</Label>
-            <Select value={planType} onValueChange={setPlanType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Plans</SelectItem>
-                <SelectItem value="free">Free Users Only</SelectItem>
-                <SelectItem value="premium">Premium Users Only</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input type="number" value={maxUses} onChange={e => setMaxUses(e.target.value ? Number(e.target.value) : "")} min={1} placeholder="∞ Unlimited" />
           </div>
         </div>
         <Button onClick={createCoupon}><Plus className="w-4 h-4 mr-1" /> Create Coupon</Button>
@@ -142,6 +142,7 @@ export default function AdminCouponManager({ coupons, redemptions, profiles, onR
               <tr className="border-b border-border bg-secondary/50">
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground">Code</th>
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground">Discount</th>
+                <th className="text-left p-3 text-xs font-medium text-muted-foreground">Plan</th>
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground">Expiry</th>
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground">Uses</th>
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground">Status</th>
@@ -165,6 +166,11 @@ export default function AdminCouponManager({ coupons, redemptions, profiles, onR
                       <td className="p-3 font-mono text-xs">
                         {c.discount_type === "flat" ? `₹${c.flat_amount}` : `${c.discount_percent}%`}
                       </td>
+                      <td className="p-3">
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-foreground uppercase">
+                          {c.plan_type === "all" ? "Pro & Elite" : c.plan_type}
+                        </span>
+                      </td>
                       <td className="p-3 font-mono text-xs text-muted-foreground">
                         {c.expiry_date ? new Date(c.expiry_date).toLocaleDateString() : "Never"}
                       </td>
@@ -174,15 +180,15 @@ export default function AdminCouponManager({ coupons, redemptions, profiles, onR
                           expired ? "bg-destructive/20 text-destructive" :
                           c.is_active ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
                         }`}>
-                          {expired ? "EXPIRED" : c.is_active ? "ACTIVE" : "OFF"}
+                          {expired ? "EXPIRED" : c.is_active ? "ACTIVE" : "DISABLED"}
                         </span>
                       </td>
                       <td className="p-3" onClick={e => e.stopPropagation()}>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => toggleCoupon(c.id, c.is_active)}>
+                          <Button variant="ghost" size="sm" onClick={() => toggleCoupon(c.id, c.is_active)} title={c.is_active ? "Disable" : "Enable"}>
                             {c.is_active ? <ToggleRight className="w-3.5 h-3.5 text-primary" /> : <ToggleLeft className="w-3.5 h-3.5" />}
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => deleteCoupon(c.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => deleteCoupon(c.id)} title="Delete">
                             <Trash2 className="w-3.5 h-3.5 text-destructive" />
                           </Button>
                         </div>
@@ -190,7 +196,7 @@ export default function AdminCouponManager({ coupons, redemptions, profiles, onR
                     </tr>
                     {expandedCoupon === c.id && couponRedemptions.length > 0 && (
                       <tr key={`${c.id}-detail`}>
-                        <td colSpan={6} className="p-3 bg-secondary/30">
+                        <td colSpan={7} className="p-3 bg-secondary/30">
                           <p className="text-xs font-semibold text-foreground mb-2">Redemptions ({couponRedemptions.length})</p>
                           <div className="space-y-1">
                             {couponRedemptions.map(r => (
