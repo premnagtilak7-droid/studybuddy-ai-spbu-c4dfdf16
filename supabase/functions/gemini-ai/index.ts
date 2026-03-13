@@ -15,9 +15,7 @@ serve(async (req) => {
     const { type } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    const apiKey = LOVABLE_API_KEY || GEMINI_API_KEY;
-    if (!apiKey) throw new Error("No API key configured");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const handlers: Record<string, (b: any, k: string) => Promise<Response>> = {
       doubt: handleDoubt,
@@ -36,7 +34,7 @@ serve(async (req) => {
       });
     }
 
-    return await handler(body, apiKey);
+    return await handler(body, LOVABLE_API_KEY);
   } catch (e) {
     console.error("gemini-ai error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
@@ -48,7 +46,7 @@ serve(async (req) => {
 
 async function callAI(apiKey: string, messages: any[], tools?: any[], toolChoice?: any, stream = false) {
   const body: any = {
-    model: "google/gemini-2.5-flash",
+    model: "google/gemini-3-flash-preview",
     messages,
     stream,
   };
@@ -68,10 +66,34 @@ async function callAI(apiKey: string, messages: any[], tools?: any[], toolChoice
   return response;
 }
 
+function extractJsonFromToolCall(data: any): any {
+  const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+  if (toolCall) {
+    const args = toolCall.function?.arguments;
+    if (typeof args === "string") {
+      return JSON.parse(args);
+    }
+    if (typeof args === "object") {
+      return args;
+    }
+  }
+  // Fallback: try to extract from content
+  const content = data?.choices?.[0]?.message?.content;
+  if (content) {
+    const cleaned = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const jsonStart = cleaned.search(/[\{\[]/);
+    const jsonEnd = Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      return JSON.parse(cleaned.substring(jsonStart, jsonEnd + 1));
+    }
+  }
+  return null;
+}
+
 // ─── DOUBT ───
 async function handleDoubt(body: any, apiKey: string) {
   const { messages, language, questionType, subject } = body;
-  let sys = `You are an expert SPPU 2024 pattern engineering tutor. Answer with: clear explanation, step-by-step if numerical, key formula, and one memory tip. Be concise and student friendly.\n\nFormat your responses using markdown with headers, bullet points, and code blocks for formulas.\nWhen solving numerical problems, show each step clearly with proper formulas and mention marks allocation when relevant.`;
+  let sys = `You are an expert SPPU 2024 pattern engineering tutor. Answer with: clear explanation, step-by-step if numerical, key formula, and one memory tip. Be concise and student friendly.\n\nFormat your responses using markdown with headers, bullet points, and code blocks for formulas.\nWhen solving numerical problems, show each step clearly with proper formulas and mention marks allocation when relevant.\n\nIMPORTANT: Always provide a complete, non-empty response. Never return blank.`;
   if (questionType) sys += `\n\nThe student is asking a "${questionType}" type question.`;
   if (subject) sys += `\n\nThe question is about: ${subject}.`;
   if (language === "marathi") sys += "\n\nRespond in Marathi. Keep technical terms in English.";
@@ -85,7 +107,7 @@ async function handleDoubt(body: any, apiKey: string) {
 // ─── STUDY PLAN ───
 async function handleStudyPlan(body: any, apiKey: string) {
   const { subjects, dailyHours = 4, difficulty = "balanced" } = body;
-  const sys = `You are SPPU 2024 pattern exam planner. Create day-by-day study table. Return the plan using the tool provided.`;
+  const sys = `You are SPPU 2024 pattern exam planner. Create day-by-day study table. Return the plan using the tool provided. IMPORTANT: You MUST call the create_study_plan tool with a non-empty plan array.`;
   const user = `Create a study plan for: ${JSON.stringify(subjects)}\nToday: ${new Date().toISOString().slice(0, 10)}\nDaily hours: ${dailyHours}\nDifficulty: ${difficulty}`;
 
   const tools = [{
@@ -115,19 +137,36 @@ async function handleStudyPlan(body: any, apiKey: string) {
   }];
 
   const response = await callAI(apiKey, [{ role: "system", content: sys }, { role: "user", content: user }], tools, { type: "function", function: { name: "create_study_plan" } });
-  if (response.headers.get("Content-Type")?.includes("text/event-stream")) {
-    return new Response(JSON.stringify({ error: "Unexpected stream" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  
+  // Check if it's an error response
+  if (response.headers.get("Content-Type")?.includes("application/json")) {
+    const text = await response.text();
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed.error) {
+        return new Response(text, { status: response.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    } catch {}
   }
-  const data = await response.json();
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) return new Response(JSON.stringify({ error: "No plan generated" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  return new Response(toolCall.function.arguments, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+  try {
+    const data = await response.json();
+    const result = extractJsonFromToolCall(data);
+    if (!result || !result.plan || !Array.isArray(result.plan) || result.plan.length === 0) {
+      console.error("Empty or invalid plan from AI:", JSON.stringify(data).slice(0, 500));
+      return new Response(JSON.stringify({ error: "AI returned an empty plan. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    console.error("Failed to parse study plan response:", e);
+    return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 }
 
 // ─── MOCK TEST ───
 async function handleMockTest(body: any, apiKey: string) {
   const { subject, topic, numQuestions = 10, questionType = "mixed" } = body;
-  const sys = `You are an SPPU 2024 pattern examiner. Generate ${questionType} questions for ${subject}${topic ? " - " + topic : ""}. For MCQ include 4 options with one correct answer and explanation. For theory include model answer. Return using the tool provided.`;
+  const sys = `You are an SPPU 2024 pattern examiner. Generate ${questionType} questions for ${subject}${topic ? " - " + topic : ""}. For MCQ include 4 options with one correct answer and explanation. For theory include model answer. Return using the tool provided. IMPORTANT: You MUST return questions.`;
 
   const tools = [{
     type: "function",
@@ -165,10 +204,18 @@ async function handleMockTest(body: any, apiKey: string) {
     { role: "user", content: `Generate exactly ${numQuestions} ${questionType} questions.` },
   ], tools, { type: "function", function: { name: "generate_mock_test" } });
 
-  const data = await response.json();
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) return new Response(JSON.stringify({ error: "No questions generated" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  return new Response(toolCall.function.arguments, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  try {
+    const data = await response.json();
+    const result = extractJsonFromToolCall(data);
+    if (!result || !result.questions) {
+      console.error("No questions from AI:", JSON.stringify(data).slice(0, 500));
+      return new Response(JSON.stringify({ error: "No questions generated. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    console.error("Failed to parse mock test response:", e);
+    return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 }
 
 // ─── ANSWER CHECK ───
@@ -202,10 +249,18 @@ async function handleAnswerCheck(body: any, apiKey: string) {
     { role: "user", content: `Subject: ${subject || "General"}\n\nQuestion: ${question}\n\nStudent's Answer: ${answer}` },
   ], tools, { type: "function", function: { name: "grade_answer" } });
 
-  const data = await response.json();
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) return new Response(JSON.stringify({ error: "Grading failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  return new Response(toolCall.function.arguments, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  try {
+    const data = await response.json();
+    const result = extractJsonFromToolCall(data);
+    if (!result || result.score === undefined) {
+      console.error("No grading from AI:", JSON.stringify(data).slice(0, 500));
+      return new Response(JSON.stringify({ error: "Grading failed. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    console.error("Failed to parse answer check response:", e);
+    return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 }
 
 // ─── FORMULA SHEET ───
@@ -255,10 +310,18 @@ async function handleFormulaSheet(body: any, apiKey: string) {
     { role: "user", content: `Subject: ${subject}\nUnits: ${(units || []).join(", ")}\n\nGenerate all important formulas.` },
   ], tools, { type: "function", function: { name: "generate_formula_sheet" } });
 
-  const data = await response.json();
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) return new Response(JSON.stringify({ error: "Formula generation failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  return new Response(toolCall.function.arguments, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  try {
+    const data = await response.json();
+    const result = extractJsonFromToolCall(data);
+    if (!result || !result.sections) {
+      console.error("No formulas from AI:", JSON.stringify(data).slice(0, 500));
+      return new Response(JSON.stringify({ error: "Formula generation failed. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    console.error("Failed to parse formula sheet response:", e);
+    return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 }
 
 // ─── EXAM PREDICTOR ───
@@ -301,10 +364,18 @@ async function handleExamPredict(body: any, apiKey: string) {
     { role: "user", content: `Subject: ${subject}\nExam Date: ${examDate}\nCompleted Topics: ${(completedTopics || []).join(", ") || "None specified"}\n\nPredict the most important topics.` },
   ], tools, { type: "function", function: { name: "predict_exam" } });
 
-  const data = await response.json();
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) return new Response(JSON.stringify({ error: "Prediction failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  return new Response(toolCall.function.arguments, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  try {
+    const data = await response.json();
+    const result = extractJsonFromToolCall(data);
+    if (!result || !result.importantTopics) {
+      console.error("No predictions from AI:", JSON.stringify(data).slice(0, 500));
+      return new Response(JSON.stringify({ error: "Prediction failed. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    console.error("Failed to parse exam predict response:", e);
+    return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 }
 
 async function handleAIError(response: Response) {
@@ -316,5 +387,5 @@ async function handleAIError(response: Response) {
   }
   const t = await response.text();
   console.error("AI gateway error:", response.status, t);
-  return new Response(JSON.stringify({ error: "AI service error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  return new Response(JSON.stringify({ error: "AI service error. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
