@@ -4,23 +4,9 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { awardXP } from "@/lib/xp-store";
 import { toast } from "sonner";
+import { playPomodoroFocusEnd, playPomodoroBreakEnd } from "@/lib/sounds";
+import { sendLocalNotification } from "@/lib/notifications";
 
-function playTimerSound() {
-  try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.15);
-    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.3);
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.5);
-  } catch {}
-}
 type Phase = "focus" | "short-break" | "long-break";
 
 const DURATIONS: Record<Phase, number> = {
@@ -69,13 +55,12 @@ export default function PomodoroTimer() {
         if (prev <= 1) {
           clearTimer();
           setRunning(false);
-          playTimerSound();
 
-          // Advance phase
           if (phase === "focus") {
             const newSessions = sessions + 1;
             setSessions(newSessions);
-            // Award XP for completing a focus session
+            playPomodoroFocusEnd();
+            sendLocalNotification("🎉 Focus Session Complete!", `Great work! You've completed session ${newSessions}. Time for a break!`, "timer", playPomodoroFocusEnd);
             awardXP("focus_session").then((amount) => {
               if (amount > 0) toast.success(`+${amount} XP for focus session!`);
             });
@@ -87,6 +72,8 @@ export default function PomodoroTimer() {
               return DURATIONS["short-break"];
             }
           } else {
+            playPomodoroBreakEnd();
+            sendLocalNotification("⏰ Break is Over!", "Time to get back to studying. Let's go! 💪", "timer", playPomodoroBreakEnd);
             setPhase("focus");
             return DURATIONS["focus"];
           }
@@ -148,25 +135,12 @@ export default function PomodoroTimer() {
 
       {/* Circular timer */}
       <div className="flex flex-col items-center py-4">
-        <div className="relative w-52 h-52">
+        <div className={`relative w-52 h-52 rounded-full ${running ? "animate-timer-pulse" : ""}`}>
           <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
-            <circle
-              cx="100"
-              cy="100"
-              r={radius}
-              fill="none"
-              stroke="hsl(var(--secondary))"
-              strokeWidth="8"
-            />
+            <circle cx="100" cy="100" r={radius} fill="none" stroke="hsl(var(--secondary))" strokeWidth="8" />
             <motion.circle
-              cx="100"
-              cy="100"
-              r={radius}
-              fill="none"
-              stroke={phaseColor[phase]}
-              strokeWidth="8"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
+              cx="100" cy="100" r={radius} fill="none" stroke={phaseColor[phase]}
+              strokeWidth="8" strokeLinecap="round" strokeDasharray={circumference}
               animate={{ strokeDashoffset }}
               transition={{ duration: 0.4, ease: "easeOut" }}
             />
@@ -176,11 +150,7 @@ export default function PomodoroTimer() {
               {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
             </span>
             <span className="text-xs text-muted-foreground font-mono mt-1 flex items-center gap-1">
-              {phase === "focus" ? (
-                <Brain className="w-3 h-3" />
-              ) : (
-                <Coffee className="w-3 h-3" />
-              )}
+              {phase === "focus" ? <Brain className="w-3 h-3" /> : <Coffee className="w-3 h-3" />}
               {PHASE_LABELS[phase]}
             </span>
           </div>
@@ -188,19 +158,10 @@ export default function PomodoroTimer() {
 
         {/* Controls */}
         <div className="flex items-center gap-3 mt-6">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleReset}
-            className="rounded-full"
-          >
+          <Button variant="outline" size="icon" onClick={handleReset} className="rounded-full ripple-btn">
             <RotateCcw className="w-4 h-4" />
           </Button>
-          <Button
-            size="lg"
-            onClick={() => setRunning(!running)}
-            className="rounded-full px-8 gap-2"
-          >
+          <Button size="lg" onClick={() => setRunning(!running)} className="rounded-full px-8 gap-2 ripple-btn">
             {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             {running ? "Pause" : "Start"}
           </Button>
@@ -209,8 +170,10 @@ export default function PomodoroTimer() {
         {/* Session dots */}
         <div className="flex items-center gap-2 mt-5">
           {Array.from({ length: 4 }, (_, i) => (
-            <div
+            <motion.div
               key={i}
+              animate={i < (sessions % 4) ? { scale: [1, 1.3, 1] } : {}}
+              transition={{ duration: 0.3 }}
               className={`w-3 h-3 rounded-full transition-colors ${
                 i < (sessions % 4) ? "bg-primary" : "bg-secondary"
               }`}

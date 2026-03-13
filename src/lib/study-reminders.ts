@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { sendToSW, hasNotificationPermission } from "./service-worker-manager";
+import { showReminderBanner } from "@/components/ReminderBanner";
+import { playReminderSound } from "./sounds";
 
 export type StudyReminder = {
   id: string;
@@ -39,14 +41,19 @@ export async function deleteReminder(id: string): Promise<void> {
   await supabase.from("study_reminders").delete().eq("id", id);
 }
 
-// Check reminders and fire notifications - called every minute
+const MOTIVATIONAL = [
+  "Stay focused and keep pushing! 💪",
+  "Every session brings you closer to your goals! 🎯",
+  "You're building something great! 🌟",
+  "Discipline is the bridge between goals and results! 🔥",
+];
+
 let reminderInterval: ReturnType<typeof setInterval> | null = null;
 
 export function startReminderChecker() {
   if (reminderInterval) return;
-  
-  checkReminders(); // immediate check
-  reminderInterval = setInterval(checkReminders, 60000); // every minute
+  checkReminders();
+  reminderInterval = setInterval(checkReminders, 60000);
 }
 
 export function stopReminderChecker() {
@@ -71,9 +78,18 @@ async function checkReminders() {
         const sentKey = `reminder_sent_${r.id}_${todayKey}`;
         if (!localStorage.getItem(sentKey)) {
           localStorage.setItem(sentKey, "1");
+          const motivation = MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)];
+
+          // Play loud sound
+          playReminderSound();
+
+          // Show in-app banner with snooze
+          showReminderBanner(r.subject_name, motivation);
+
+          // Send push notification via service worker
           sendToSW({
             type: 'STUDY_REMINDER',
-            data: { id: r.id, subjectName: r.subject_name }
+            data: { id: r.id, subjectName: r.subject_name, motivation }
           });
         }
       }
