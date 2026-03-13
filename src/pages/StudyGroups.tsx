@@ -341,23 +341,27 @@ export default function StudyGroups() {
                       {!meetActive ? (
                         <div className="flex flex-col items-center justify-center h-72 gap-4">
                           <Video className="w-12 h-12 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">Start or join a live video call with your group</p>
-                          <Button onClick={() => setMeetActive(true)} className="gap-2">
+                          <p className="text-sm text-muted-foreground text-center">Start or join a live video call with your group.<br/>All members using code <span className="font-mono font-bold text-foreground">{selectedGroup.join_code}</span> will join the same room.</p>
+                          <Button onClick={() => setMeetActive(true)} size="lg" className="gap-2">
                             <Video className="w-4 h-4" />Start Meet
                           </Button>
                         </div>
                       ) : (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs text-muted-foreground">Live video call — {selectedGroup.name}</p>
-                            <Button variant="destructive" size="sm" onClick={() => setMeetActive(false)}>Leave</Button>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">Live Call — {selectedGroup.name}</p>
+                              <p className="text-xs text-muted-foreground">Room: StudyBuddy-{selectedGroup.join_code} · Share the group code so others can join</p>
+                            </div>
+                            <Button variant="destructive" size="sm" onClick={() => setMeetActive(false)}>Leave Call</Button>
                           </div>
-                          <div className="rounded-lg overflow-hidden border border-border" style={{ height: "480px" }}>
+                          <div className="rounded-lg overflow-hidden border border-border bg-black" style={{ height: "min(520px, 65vh)" }}>
                             <iframe
-                              src={`https://meet.jit.si/StudyBuddy-${selectedGroup.join_code}#userInfo.displayName="${encodeURIComponent(user?.email?.split("@")[0] || "Student")}"`}
-                              allow="camera; microphone; fullscreen; display-capture; compute-pressure"
+                              src={`https://meet.jit.si/StudyBuddy-${selectedGroup.join_code}#config.prejoinConfig.enabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.toolbarButtons=["microphone","camera","desktop","fullscreen","hangup","chat","tileview","participants-pane","settings"]&config.disableDeepLinking=true&userInfo.displayName=${encodeURIComponent(user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Student")}`}
+                              allow="camera; microphone; fullscreen; display-capture; autoplay; compute-pressure"
                               className="w-full h-full border-0"
                               title="Group Video Call"
+                              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
                             />
                           </div>
                         </div>
