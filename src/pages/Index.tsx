@@ -48,6 +48,9 @@ export default function Dashboard() {
   const [streak, setStreak] = useState(0);
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [gamificationCounts, setGamificationCounts] = useState({ doubts: 0, plans: 0, tests: 0 });
+  const [displayName, setDisplayName] = useState("");
+  const [educationType, setEducationType] = useState("");
+  const [educationDetails, setEducationDetails] = useState<any>({});
 
   const lastStudied = getLastStudied();
 
