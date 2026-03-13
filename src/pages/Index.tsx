@@ -33,9 +33,11 @@ import { getUserXP, awardXP } from "@/lib/xp-store";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [subjects, setSubjects] = useState<UserSubject[]>([]);
   const [loading, setLoading] = useState(true);
   const [examDates, setExamDates] = useState<ExamDate[]>([]);
