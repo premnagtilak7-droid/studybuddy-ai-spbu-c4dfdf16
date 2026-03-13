@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { celebrateComplete, celebrateUnit, celebrateSubject } from "@/lib/confetti";
+import { playCompleteSound, playRewardSound } from "@/lib/sounds";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Plus, ChevronDown, ChevronRight, Trash2, Check, Target, Play, StickyNote } from "lucide-react";
