@@ -141,6 +141,7 @@ export default function Dashboard() {
   return (
     <AppLayout examDates={examDates}>
       <XPNotificationContainer />
+      <TrialBanner />
       <div className={`max-w-6xl mx-auto space-y-6 ${isRevisionMode ? "revision-mode" : ""}`}>
         {isRevisionMode && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/30">

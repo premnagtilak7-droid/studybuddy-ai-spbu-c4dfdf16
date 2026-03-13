@@ -62,8 +62,11 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   return children;
 }
 
+import { useTrialCheck } from "@/hooks/useTrialCheck";
+
 const AppRoutes = () => {
   useActivityTracker();
+  useTrialCheck();
   return (
     <Routes>
       <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
