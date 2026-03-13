@@ -156,7 +156,14 @@ export default function SubjectDetail() {
   };
 
   const handleToggleSubtopic = async (id: string, current: boolean) => {
-    try { await toggleSubtopic(id, !current); loadData(); } catch (err: any) { toast.error(err.message); }
+    try {
+      await toggleSubtopic(id, !current);
+      if (!current) {
+        playCompleteSound();
+        celebrateComplete();
+      }
+      loadData();
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const handleDeleteSubtopic = async (id: string) => {
