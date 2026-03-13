@@ -7,6 +7,8 @@ type AuthContextType = {
   user: User | null;
   isAdmin: boolean;
   isSubscribed: boolean;
+  isTrialActive: boolean;
+  trialDaysLeft: number;
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
