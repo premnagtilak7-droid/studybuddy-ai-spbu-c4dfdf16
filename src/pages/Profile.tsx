@@ -207,7 +207,7 @@ export default function Profile() {
             </Avatar>
             <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer hover:bg-primary/80 transition-colors">
               {uploading ? <Loader2 className="w-4 h-4 text-primary-foreground animate-spin" /> : <Camera className="w-4 h-4 text-primary-foreground" />}
-              <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarUpload} />
             </label>
           </div>
           <h2 className="text-xl font-bold mt-3 text-foreground">{profile?.display_name || "Student"}</h2>
