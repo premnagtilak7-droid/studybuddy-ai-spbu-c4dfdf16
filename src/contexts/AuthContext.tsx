@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { type PlanType } from "@/lib/plans";
+import { updateLastActivity, shouldAutoLogout } from "@/lib/auth-security";
 
 type AuthContextType = {
   session: Session | null;
@@ -42,14 +43,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const checkRole = async (userId: string, email?: string) => {
-    console.log("Checking admin role for:", email, userId);
     if (email === "nagtilakprem99@gmail.com") {
-      console.log("Admin email matched (hardcoded check)");
       setIsAdmin(true);
       return;
     }
-    const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-    console.log("has_role RPC result:", data, error);
+    const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
     setIsAdmin(!!data);
   };
 
@@ -62,7 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const profile = data as any;
     setIsSubscribed(!!profile?.is_subscribed);
     
-    // Set plan
     const plan = (profile?.current_plan || "free") as PlanType;
     setUserPlan(plan);
 
@@ -82,18 +79,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
+  // Auto-logout after 30 days of inactivity
+  useEffect(() => {
+    if (user && shouldAutoLogout()) {
+      signOut();
+      return;
+    }
+
+    // Track activity
+    updateLastActivity();
+    const events = ["click", "keydown", "scroll", "touchstart"];
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    const handleActivity = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => updateLastActivity(), 60000); // Update at most once per minute
+    };
+    events.forEach(e => window.addEventListener(e, handleActivity, { passive: true }));
+    return () => {
+      events.forEach(e => window.removeEventListener(e, handleActivity));
+      clearTimeout(debounceTimer);
+    };
+  }, [user, signOut]);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        console.log("Auth state changed:", _event, "email:", session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
+          // Check email verification - if user signed up with email and hasn't confirmed
+          const emailConfirmed = session.user.email_confirmed_at || session.user.confirmed_at;
+          if (!emailConfirmed && session.user.app_metadata?.provider === "email") {
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+
           setTimeout(async () => {
             await Promise.all([
               checkRole(session.user.id, session.user.email ?? undefined),
               checkSubscription(session.user.id),
             ]);
+            updateLastActivity();
             setLoading(false);
           }, 0);
         } else {
@@ -109,6 +140,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        const emailConfirmed = session.user.email_confirmed_at || session.user.confirmed_at;
+        if (!emailConfirmed && session.user.app_metadata?.provider === "email") {
+          supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
         Promise.all([
           checkRole(session.user.id, session.user.email ?? undefined),
           checkSubscription(session.user.id),
@@ -120,10 +157,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
 
   return (
     <AuthContext.Provider value={{ session, user, isAdmin, isSubscribed, isTrialActive, trialDaysLeft, userPlan, loading, signOut, refreshProfile }}>
