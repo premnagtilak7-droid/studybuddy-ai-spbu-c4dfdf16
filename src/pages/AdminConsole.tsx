@@ -28,6 +28,7 @@ const TABS = [
   { key: "feedback", label: "Feedback", icon: MessageSquare },
   { key: "ai", label: "AI Stats", icon: Brain },
   { key: "reports", label: "Reports", icon: FileText },
+  { key: "errors", label: "Errors", icon: Activity },
 ] as const;
 
 type Tab = typeof TABS[number]["key"];
