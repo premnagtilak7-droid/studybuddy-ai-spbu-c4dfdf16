@@ -16,6 +16,7 @@ import AdminReports from "@/components/admin/AdminReports";
 import AdminRevenue from "@/components/admin/AdminRevenue";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
 import AdminFeatureControl from "@/components/admin/AdminFeatureControl";
+import AdminErrorLogs from "@/components/admin/AdminErrorLogs";
 
 const TABS = [
   { key: "users", label: "Users", icon: Users },
@@ -27,6 +28,7 @@ const TABS = [
   { key: "feedback", label: "Feedback", icon: MessageSquare },
   { key: "ai", label: "AI Stats", icon: Brain },
   { key: "reports", label: "Reports", icon: FileText },
+  { key: "errors", label: "Errors", icon: Activity },
 ] as const;
 
 type Tab = typeof TABS[number]["key"];
@@ -209,6 +211,9 @@ export default function AdminConsole() {
         )}
         {tab === "features" && (
           <AdminFeatureControl />
+        )}
+        {tab === "errors" && (
+          <AdminErrorLogs />
         )}
       </div>
     </AppLayout>

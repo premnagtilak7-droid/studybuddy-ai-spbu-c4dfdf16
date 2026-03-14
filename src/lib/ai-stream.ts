@@ -1,3 +1,5 @@
+import { sanitizeAIInput } from "./prompt-sanitizer";
+
 type Msg = { role: "user" | "assistant"; content: string };
 
 const GEMINI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-ai`;
@@ -24,13 +26,19 @@ export async function streamChat({
   onError: (error: string) => void;
 }) {
   try {
+    // Sanitize user messages to prevent prompt injection
+    const sanitizedMessages = messages.map(m => ({
+      ...m,
+      content: m.role === "user" ? sanitizeAIInput(m.content) : m.content,
+    }));
+
     const resp = await fetch(GEMINI_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ type: "doubt", messages, language, questionType, subject, educationType, examName }),
+      body: JSON.stringify({ type: "doubt", messages: sanitizedMessages, language, questionType, subject, educationType, examName }),
     });
 
     if (!resp.ok) {

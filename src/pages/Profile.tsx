@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { User, Camera, Save, Mail, GraduationCap, Calendar, Target, Clock, Flame, Award, BookOpen, Crown, Loader2, CreditCard, XCircle, ArrowRight, School, Briefcase, Lightbulb } from "lucide-react";
+import { User, Camera, Save, Mail, GraduationCap, Calendar, Target, Clock, Flame, Award, BookOpen, Crown, Loader2, CreditCard, XCircle, ArrowRight, School, Briefcase, Lightbulb, Download, Trash2, Shield } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +86,99 @@ export default function Profile() {
   const [streak, setStreak] = useState(0);
   const [badgesCount, setBadgesCount] = useState(0);
   const [subjectsCount, setSubjectsCount] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleExportData = async () => {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const exportData: Record<string, any> = { exported_at: new Date().toISOString(), user_email: user.email };
+      
+      const tableNames = ["profiles", "subjects", "study_logs", "doubt_history", "flashcard_decks", "flashcards", "timetable_sessions", "study_plans", "mock_tests", "formula_bank", "assignments", "attendance_subjects", "marks_tracker", "cgpa_history", "study_dates", "user_achievements", "user_xp", "focus_sessions", "study_reminders", "exam_dates"];
+      
+      for (const t of tableNames) {
+        const { data } = await (supabase as any).from(t).select("*").eq("user_id", user.id);
+        exportData[t] = data || [];
+      }
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `studybuddy-data-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Data exported successfully!");
+    } catch {
+      toast.error("Failed to export data");
+    }
+    setExporting(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      // Delete user data from all tables
+      const delTables = ["study_logs", "doubt_history", "timetable_sessions", "study_plans", "mock_tests", "formula_bank", "formula_bookmarks", "formula_sheets", "assignments", "lab_experiments", "marks_tracker", "cgpa_history", "study_dates", "user_achievements", "user_xp", "xp_logs", "focus_sessions", "study_reminders", "daily_study_goals", "buddy_profiles", "buddy_requests", "batch_profiles", "challenge_progress", "activity_logs", "error_logs"];
+      
+      for (const t of delTables) {
+        await (supabase as any).from(t).delete().eq("user_id", user.id);
+      }
+
+      // Delete flashcards via decks
+      const { data: decks } = await supabase.from("flashcard_decks").select("id").eq("user_id", user.id);
+      if (decks?.length) {
+        for (const deck of decks) {
+          await supabase.from("flashcards").delete().eq("deck_id", deck.id);
+        }
+        await supabase.from("flashcard_decks").delete().eq("user_id", user.id);
+      }
+
+      // Delete subjects and related data
+      const { data: subs } = await supabase.from("subjects").select("id").eq("user_id", user.id);
+      if (subs?.length) {
+        for (const sub of subs) {
+          const { data: units } = await supabase.from("units").select("id").eq("subject_id", sub.id);
+          if (units?.length) {
+            for (const unit of units) {
+              const { data: topics } = await supabase.from("topics").select("id").eq("unit_id", unit.id);
+              if (topics?.length) {
+                for (const topic of topics) {
+                  await supabase.from("subtopics").delete().eq("topic_id", topic.id);
+                }
+                await supabase.from("topics").delete().eq("unit_id", unit.id);
+              }
+            }
+            await supabase.from("units").delete().eq("subject_id", sub.id);
+          }
+          await supabase.from("exam_dates").delete().eq("subject_id", sub.id);
+        }
+        await supabase.from("subjects").delete().eq("user_id", user.id);
+      }
+
+      // Delete attendance
+      const { data: attSubs } = await supabase.from("attendance_subjects").select("id").eq("user_id", user.id);
+      if (attSubs?.length) {
+        for (const as2 of attSubs) {
+          await supabase.from("attendance_records").delete().eq("subject_id", as2.id);
+        }
+        await supabase.from("attendance_subjects").delete().eq("user_id", user.id);
+      }
+
+      // Delete profile last
+      await supabase.from("profiles").delete().eq("user_id", user.id);
+
+      // Sign out
+      toast.success("Account deleted. Goodbye! 👋");
+      await supabase.auth.signOut();
+    } catch {
+      toast.error("Failed to delete account. Please contact support.");
+    }
+    setDeleting(false);
+  };
 
   const fetchProfile = useCallback(async () => {
     if (!user) return;
@@ -504,6 +597,46 @@ export default function Profile() {
               <p className="font-semibold text-foreground">{profile?.last_active_at ? format(new Date(profile.last_active_at), "dd MMM yyyy HH:mm") : "—"}</p>
             </div>
           </div>
+        </div>
+
+        {/* Data & Privacy */}
+        <div className="glass-card p-6 space-y-3">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Shield className="w-5 h-5" /> Data & Privacy
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Download all your data or permanently delete your account. See our{" "}
+            <a href="/privacy" className="text-primary underline">Privacy Policy</a> and{" "}
+            <a href="/terms" className="text-primary underline">Terms</a>.
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            <Button size="sm" variant="outline" className="gap-1" disabled={exporting} onClick={handleExportData}>
+              {exporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />} Download My Data
+            </Button>
+            <Button size="sm" variant="destructive" className="gap-1" disabled={deleting} onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 className="w-3 h-3" /> Delete Account
+            </Button>
+          </div>
+
+          {showDeleteConfirm && (
+            <div className="p-4 rounded-lg border border-destructive/50 bg-destructive/5 space-y-3">
+              <p className="text-sm font-semibold text-destructive">⚠️ This will permanently delete:</p>
+              <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
+                <li>Your profile and account</li>
+                <li>All subjects, study logs, and progress</li>
+                <li>Flashcards, formulas, timetable</li>
+                <li>All AI history and mock tests</li>
+              </ul>
+              <p className="text-xs text-destructive font-medium">This action cannot be undone.</p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="destructive" disabled={deleting} onClick={handleDeleteAccount}>
+                  {deleting ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                  Yes, Delete Everything
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
         </div>
       </motion.div>
     </AppLayout>
