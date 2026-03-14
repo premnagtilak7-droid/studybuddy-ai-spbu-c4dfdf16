@@ -122,10 +122,10 @@ export default function Profile() {
     setDeleting(true);
     try {
       // Delete user data from all tables
-      const tables = ["study_logs", "doubt_history", "timetable_sessions", "study_plans", "mock_tests", "formula_bank", "formula_bookmarks", "formula_sheets", "assignments", "lab_experiments", "marks_tracker", "cgpa_history", "study_dates", "user_achievements", "user_xp", "xp_logs", "focus_sessions", "study_reminders", "daily_study_goals", "buddy_profiles", "buddy_requests", "batch_profiles", "challenge_progress", "activity_logs", "error_logs"];
+      const delTables = ["study_logs", "doubt_history", "timetable_sessions", "study_plans", "mock_tests", "formula_bank", "formula_bookmarks", "formula_sheets", "assignments", "lab_experiments", "marks_tracker", "cgpa_history", "study_dates", "user_achievements", "user_xp", "xp_logs", "focus_sessions", "study_reminders", "daily_study_goals", "buddy_profiles", "buddy_requests", "batch_profiles", "challenge_progress", "activity_logs", "error_logs"];
       
-      for (const table of tables) {
-        await supabase.from(table as any).delete().eq("user_id" as any, user.id);
+      for (const t of delTables) {
+        await (supabase as any).from(t).delete().eq("user_id", user.id);
       }
 
       // Delete flashcards via decks
