@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { User, Camera, Save, Mail, GraduationCap, Calendar, Target, Clock, Flame, Award, BookOpen, Crown, Loader2, CreditCard, XCircle, ArrowRight, School, Briefcase, Lightbulb } from "lucide-react";
+import { User, Camera, Save, Mail, GraduationCap, Calendar, Target, Clock, Flame, Award, BookOpen, Crown, Loader2, CreditCard, XCircle, ArrowRight, School, Briefcase, Lightbulb, Download, Trash2, Shield } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
