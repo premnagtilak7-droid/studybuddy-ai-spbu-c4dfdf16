@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import TrialBanner from "@/components/TrialBanner";
 import { motion } from "framer-motion";
-import { Clock, Flame, BookOpen, Target, TrendingUp, Plus, AlertTriangle, CalendarClock, PlayCircle, Zap, Timer } from "lucide-react";
+import { Clock, Flame, BookOpen, Target, TrendingUp, Plus, AlertTriangle, CalendarClock, PlayCircle, Zap, Timer, Sparkles, Quote } from "lucide-react";
 import StudyHeatmap from "../components/StudyHeatmap";
 import SubjectChart from "../components/SubjectChart";
 import ExamCountdown from "../components/ExamCountdown";
@@ -36,6 +36,31 @@ import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
+const MOTIVATIONAL_QUOTES = [
+  { text: "The expert in anything was once a beginner.", author: "Helen Hayes" },
+  { text: "Success is the sum of small efforts repeated day in and day out.", author: "Robert Collier" },
+  { text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
+  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+  { text: "Education is not preparation for life; education is life itself.", author: "John Dewey" },
+  { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
+  { text: "The beautiful thing about learning is that no one can take it away from you.", author: "B.B. King" },
+  { text: "Study hard, for the well is deep, and our brains are shallow.", author: "Richard Baxter" },
+  { text: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin" },
+  { text: "The more that you read, the more things you will know.", author: "Dr. Seuss" },
+];
+
+function getDailyQuote() {
+  const day = Math.floor(Date.now() / 86400000);
+  return MOTIVATIONAL_QUOTES[day % MOTIVATIONAL_QUOTES.length];
+}
+
+function getTimeGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good Morning";
+  if (h < 17) return "Good Afternoon";
+  return "Good Evening";
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -54,6 +79,7 @@ export default function Dashboard() {
   const [educationDetails, setEducationDetails] = useState<any>({});
 
   const lastStudied = getLastStudied();
+  const quote = getDailyQuote();
 
   useEffect(() => {
     awardXP("daily_login").then((amount) => { if (amount > 0) emitXP(amount, "Daily login bonus"); });
@@ -65,7 +91,6 @@ export default function Dashboard() {
     });
     getUserXP().then(setXP);
     getTodayStudyMinutes().then(setTodayMinutes);
-    // Fetch profile for personalized welcome
     if (user) {
       supabase.from("profiles").select("display_name, education_type, education_details").eq("user_id", user.id).single().then(({ data }) => {
         if (data) {
@@ -104,7 +129,6 @@ export default function Dashboard() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Realtime sync
   useRealtimeSubscription("subjects", loadData);
   useRealtimeSubscription("topics", loadData);
   useRealtimeSubscription("study_logs", useCallback(() => { getTodayStudyMinutes().then(setTodayMinutes); }, []));
@@ -136,22 +160,8 @@ export default function Dashboard() {
     return progressPct < expectedPct;
   });
 
-  // Personalized welcome based on education type
-  const getWelcomeTitle = () => {
-    const name = displayName ? `, ${displayName.split(" ")[0]}` : "";
-    const typeMessages: Record<string, string> = {
-      school: `📖 School Dashboard${name}`,
-      undergraduate: `🎓 College Dashboard${name}`,
-      postgraduate: `🎓 PG Dashboard${name}`,
-      competitive_exam: `🎯 Exam Prep${name}`,
-      professional: `💼 Professional Studies${name}`,
-      self_learning: `🌟 Learning Hub${name}`,
-    };
-    return typeMessages[educationType] || `📊 Stats Center${name}`;
-  };
-
-  const getWelcomeSubtitle = () => {
-    const contextMessages: Record<string, string> = {
+  const getContextSubtitle = () => {
+    const msgs: Record<string, string> = {
       school: educationDetails.board ? `Class ${educationDetails.class_level || ""} · ${educationDetails.board}` : "",
       undergraduate: educationDetails.course_name ? `${educationDetails.course_name}${educationDetails.semester ? ` · Sem ${educationDetails.semester}` : ""}` : "",
       postgraduate: educationDetails.course_name || "",
@@ -159,27 +169,14 @@ export default function Dashboard() {
       professional: educationDetails.course_name || "",
       self_learning: educationDetails.learning_goal || "",
     };
-    const context = contextMessages[educationType];
-    if (context) return context;
-    return getMotivation();
-  };
-
-  // Motivational message
-  const getMotivation = () => {
-    if (streak >= 7) return "🔥 Incredible streak! You're unstoppable!";
-    if (streak >= 3) return "💪 Great consistency! Keep the momentum going!";
-    if (todayMinutes >= 120) return "📚 Amazing study session today! You're crushing it!";
-    if (todayMinutes > 0) return "👍 Good start today! Keep pushing forward!";
-    return "🚀 Ready to study? Start a timer and build your streak!";
+    return msgs[educationType] || "";
   };
 
   const statCards = [
-    { label: "Syllabus Done", value: `${syllabusPercent}%`, icon: Target, change: `${completedTopics}/${totalTopics} topics`, color: "primary" },
-    { label: "Today's Study", value: `${Math.floor(todayMinutes / 60)}h ${todayMinutes % 60}m`, icon: Clock, change: "Study time today", color: "accent", onClick: () => navigate("/study-timer") },
-    { label: "Subjects", value: `${subjects.length}`, icon: BookOpen, change: `${totalUnits} units total`, color: "success", onClick: () => navigate("/subject-management") },
-    { label: "Next Exam", value: nextExam ? `${nextExam.daysLeft}d` : "—", icon: CalendarClock, change: nextExam?.exam.label || "Set exam dates", color: isRevisionMode ? "destructive" : "accent", onClick: () => setExamModalOpen(true) },
-    { label: "XP Points", value: `${xp}`, icon: Zap, change: `Study to earn more XP`, color: "accent" },
-    { label: "Streak", value: `${streak} 🔥`, icon: Flame, change: streak > 0 ? `${streak} day${streak !== 1 ? 's' : ''} straight!` : "Study today to start", color: "primary" },
+    { label: "Syllabus Done", value: `${syllabusPercent}%`, icon: Target, desc: `${completedTopics}/${totalTopics} topics`, gradient: "gradient-primary", iconBg: "bg-primary/20", iconColor: "text-primary" },
+    { label: "Today's Study", value: `${Math.floor(todayMinutes / 60)}h ${todayMinutes % 60}m`, icon: Clock, desc: "Study time today", gradient: "from-blue-500 to-cyan-400", iconBg: "bg-blue-500/20", iconColor: "text-blue-400", onClick: () => navigate("/study-timer") },
+    { label: "Subjects", value: `${subjects.length}`, icon: BookOpen, desc: `${totalUnits} units total`, gradient: "gradient-success", iconBg: "bg-success/20", iconColor: "text-success", onClick: () => navigate("/subject-management") },
+    { label: "Next Exam", value: nextExam ? `${nextExam.daysLeft}d` : "—", icon: CalendarClock, desc: nextExam?.exam.label || "Set exam dates", gradient: isRevisionMode ? "gradient-danger" : "gradient-accent", iconBg: isRevisionMode ? "bg-destructive/20" : "bg-accent/20", iconColor: isRevisionMode ? "text-destructive" : "text-accent", onClick: () => setExamModalOpen(true) },
   ];
 
   return (
@@ -187,38 +184,121 @@ export default function Dashboard() {
       <XPNotificationContainer />
       <TrialBanner />
       <div className={`max-w-6xl mx-auto space-y-6 ${isRevisionMode ? "revision-mode" : ""}`}>
+        {/* Hero Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl p-6 sm:p-8 gradient-primary"
+        >
+          <div className="absolute inset-0 gradient-mesh opacity-30" />
+          <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <motion.p
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-primary-foreground/70 text-sm font-medium"
+              >
+                {getContextSubtitle()}
+              </motion.p>
+              <motion.h1
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-2xl sm:text-3xl font-extrabold text-primary-foreground mt-1"
+              >
+                {getTimeGreeting()}{displayName ? `, ${displayName.split(" ")[0]}` : ""} 👋
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="text-primary-foreground/80 text-sm mt-2 max-w-md"
+              >
+                {streak >= 7 ? "🔥 Incredible streak! You're unstoppable!" :
+                 streak >= 3 ? "💪 Great consistency! Keep the momentum!" :
+                 todayMinutes > 0 ? "👍 Good start today! Keep pushing forward!" :
+                 "🚀 Ready to study? Start a timer and build your streak!"}
+              </motion.p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => navigate("/study-timer")}
+                className="bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground border-0 backdrop-blur-sm gap-2"
+              >
+                <Timer className="w-4 h-4" /> Start Studying
+              </Button>
+              <LevelBadge xp={xp} compact />
+            </div>
+          </div>
+
+          {/* Floating decorative elements */}
+          <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-primary-foreground/5 animate-spin-slow" />
+          <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-primary-foreground/5" />
+        </motion.div>
+
+        {/* Revision Mode Warning */}
         {isRevisionMode && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/30">
-            <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
-            <div><p className="text-sm font-bold text-destructive">🔥 Revision Mode Active</p><p className="text-xs text-destructive/80">{nextExam!.exam.label} in {nextExam!.daysLeft} days — Focus on high-weightage topics!</p></div>
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-4 rounded-2xl gradient-danger text-primary-foreground">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <div><p className="text-sm font-bold">🔥 Revision Mode Active</p><p className="text-xs opacity-80">{nextExam!.exam.label} in {nextExam!.daysLeft} days — Focus on high-weightage topics!</p></div>
           </motion.div>
         )}
 
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{getWelcomeTitle()}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{getWelcomeSubtitle() || getMotivation()}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate("/study-timer")} className="gap-1.5">
-              <Timer className="w-4 h-4" /> Study Timer
-            </Button>
-            <LevelBadge xp={xp} compact />
-            {streak > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/15 border border-accent/30">
-                <Flame className="w-4 h-4 text-accent" />
-                <span className="text-sm font-bold font-mono text-accent">{streak}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
+        {/* Search */}
         <DashboardSearch subjects={subjects} allUnits={allUnits} />
 
+        {/* Streak + XP Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Streak Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="glass-card-hover p-5 flex items-center gap-4"
+          >
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${streak > 0 ? "glow-fire bg-gradient-to-br from-orange-500 to-red-500" : "bg-muted"}`}>
+              <span className={`text-2xl ${streak > 0 ? "animate-fire-glow" : ""}`}>🔥</span>
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Study Streak</p>
+              <p className="text-3xl font-extrabold font-mono text-foreground">{streak}<span className="text-base font-medium text-muted-foreground ml-1">days</span></p>
+            </div>
+            {streak > 0 && (
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Keep it up!</p>
+                <p className="text-sm font-bold text-accent">{streak >= 7 ? "🏆 Legend" : streak >= 3 ? "⚡ On fire" : "✨ Going"}</p>
+              </div>
+            )}
+          </motion.div>
+
+          {/* XP Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="glass-card-hover p-5 flex items-center gap-4 relative overflow-hidden shimmer"
+          >
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center glow-gold gradient-gold">
+              <Zap className="w-7 h-7 text-gold-foreground" />
+            </div>
+            <div className="flex-1 relative z-10">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">XP Points</p>
+              <p className="text-3xl font-extrabold font-mono text-gradient-gold">{xp}</p>
+            </div>
+            <div className="relative z-10">
+              <LevelBadge xp={xp} compact />
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Resume Study */}
         {lastStudied && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <button onClick={() => navigate(`/subject/${lastStudied.subjectId}`)} className="w-full flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/15 transition-colors text-left">
-              <PlayCircle className="w-5 h-5 text-primary flex-shrink-0" />
+            <button onClick={() => navigate(`/subject/${lastStudied.subjectId}`)} className="w-full flex items-center gap-3 p-4 rounded-2xl glass-card-hover accent-border-left text-left">
+              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+                <PlayCircle className="w-5 h-5 text-primary-foreground" />
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-foreground">Resume Study</p>
                 <p className="text-xs text-muted-foreground font-mono truncate">{lastStudied.topicName} · {lastStudied.subjectName} › {lastStudied.unitName}</p>
@@ -228,30 +308,59 @@ export default function Dashboard() {
           </motion.div>
         )}
 
+        {/* Goal Warnings */}
         {goalWarnings.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-xl bg-accent/10 border border-accent/30">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-2xl glass-card border-l-4 border-l-accent">
             <p className="text-sm font-bold text-accent mb-1">⚠️ Behind Schedule</p>
             {goalWarnings.map(s => {
               const prog = subjectProgress[s.id];
               const pct = prog ? Math.round((prog.done / prog.total) * 100) : 0;
-              return <p key={s.id} className="text-xs text-accent/80">{s.name}: {pct}% done — Target Grade: {s.target_grade} CGPA</p>;
+              return <p key={s.id} className="text-xs text-muted-foreground">{s.name}: {pct}% done — Target Grade: {s.target_grade} CGPA</p>;
             })}
           </motion.div>
         )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* Stat Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat, i) => (
-            <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className={`glass-card p-3 sm:p-4 ${stat.onClick ? "cursor-pointer hover:ring-2 hover:ring-primary/30" : ""}`} onClick={stat.onClick}>
-              <div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate">{stat.label}</p>
-                <p className="text-lg sm:text-xl font-bold font-mono mt-0.5 text-foreground">{stat.value}</p>
-                <p className="text-[10px] text-muted-foreground font-mono mt-0.5 flex items-center gap-1 truncate"><TrendingUp className="w-3 h-3 flex-shrink-0" /> {stat.change}</p>
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 * i }}
+              className={`glass-card-hover p-4 sm:p-5 ${stat.onClick ? "cursor-pointer" : ""}`}
+              onClick={stat.onClick}
+            >
+              <div className="flex items-start justify-between">
+                <div className={`w-10 h-10 rounded-xl ${stat.iconBg} flex items-center justify-center`}>
+                  <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
+                </div>
+                <TrendingUp className="w-4 h-4 text-muted-foreground/50" />
               </div>
+              <p className="text-2xl sm:text-3xl font-extrabold font-mono mt-3 text-foreground">{stat.value}</p>
+              <p className="text-xs text-muted-foreground font-medium mt-1">{stat.label}</p>
+              <p className="text-[10px] text-muted-foreground/70 font-mono mt-0.5">{stat.desc}</p>
             </motion.div>
           ))}
         </div>
 
+        {/* Motivational Quote */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="glass-card p-5 flex items-start gap-4"
+        >
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Quote className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm text-foreground italic leading-relaxed">"{quote.text}"</p>
+            <p className="text-xs text-muted-foreground mt-1.5 font-medium">— {quote.author}</p>
+          </div>
+        </motion.div>
+
+        {/* XP Level Card */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
           <LevelBadge xp={xp} />
         </motion.div>
@@ -288,14 +397,14 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <SubjectChart subjects={subjects} />
               <div className="glass-card p-5">
-                <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2"><Flame className="w-4 h-4 text-accent" /> Your Subjects</h3>
+                <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2"><BookOpen className="w-4 h-4 text-primary" /> Your Subjects</h3>
                 <p className="text-xs text-muted-foreground font-mono mb-4">Click to view units & topics</p>
                 <div className="space-y-3">
                   {subjects.map((subj) => {
                     const prog = subjectProgress[subj.id] || { total: 0, done: 0, unitsDone: 0 };
                     const segments = Array.from({ length: subj.target_units }, (_, i) => ({ filled: i < prog.unitsDone }));
                     return (
-                      <div key={subj.id} className="p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer" onClick={() => navigate(`/subject/${subj.id}`)}>
+                      <div key={subj.id} className="p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-all cursor-pointer hover:translate-x-1 duration-200" onClick={() => navigate(`/subject/${subj.id}`)}>
                         <div className="flex items-center gap-3">
                           <CircularProgress segments={segments} size={44} strokeWidth={4} />
                           <div className="min-w-0 flex-1">
