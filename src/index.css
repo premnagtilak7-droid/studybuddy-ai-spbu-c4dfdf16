@@ -311,6 +311,11 @@
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
+
+  /* Stable scrollbar - prevents layout shift */
+  .scrollbar-stable {
+    scrollbar-gutter: stable;
+  }
 }
 
 @keyframes shimmer {

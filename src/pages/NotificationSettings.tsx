@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bell, BellRing, Clock, TestTube, History, ArrowLeft, BellOff, Info, Volume2, Sun } from "lucide-react";
+import { Bell, BellRing, Clock, TestTube, History, ArrowLeft, BellOff, Info, Volume2, Sun, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -17,10 +17,10 @@ import {
   getNotificationHistory,
   type NotificationPreferences,
 } from "@/lib/notifications";
-import { setSoundVolume } from "@/lib/sounds";
+import { setSoundVolume, playSoundTest, initAudioContext } from "@/lib/sounds";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { cardSlideIn, staggerContainer, staggerItem } from "@/lib/animations";
+import { cardSlideIn, staggerItem } from "@/lib/animations";
 
 const notifTypes: { key: keyof NotificationPreferences; label: string; emoji: string; desc: string }[] = [
   { key: "examCountdown", label: "Exam Countdown", emoji: "⏰", desc: "Alerts before upcoming exams" },
@@ -74,11 +74,17 @@ export default function NotificationSettings() {
     setTimeout(() => setHistory(getNotificationHistory()), 500);
   };
 
+  const handleSoundTest = () => {
+    initAudioContext();
+    playSoundTest();
+    toast.success("Playing sound test — if you can't hear it, check your device volume.");
+  };
+
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto py-6 px-4 space-y-6">
         <motion.div {...cardSlideIn} className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="ripple-btn">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
@@ -109,7 +115,7 @@ export default function NotificationSettings() {
               </div>
             </div>
             {permission !== "granted" && permission !== "unsupported" && (
-              <Button size="sm" onClick={handleRequestPermission} className="ripple-btn">Enable</Button>
+              <Button size="sm" onClick={handleRequestPermission}>Enable</Button>
             )}
           </div>
         </motion.div>
@@ -129,6 +135,20 @@ export default function NotificationSettings() {
             />
             <span className="text-xs text-muted-foreground">🔊</span>
             <span className="text-xs font-mono text-foreground w-10 text-right">{Math.round(prefs.soundVolume * 100)}%</span>
+          </div>
+        </motion.div>
+
+        {/* Sound Test */}
+        <motion.div {...cardSlideIn} transition={{ delay: 0.09 }} className="glass-card p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-accent/10"><Music className="w-5 h-5 text-accent" /></div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Test Sound</p>
+                <p className="text-xs text-muted-foreground">Verify sounds play correctly on your device</p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" onClick={handleSoundTest}>🔊 Play Test</Button>
           </div>
         </motion.div>
 
@@ -172,17 +192,17 @@ export default function NotificationSettings() {
           </div>
         </motion.div>
 
-        {/* Test */}
+        {/* Test Notification */}
         <motion.div {...cardSlideIn} transition={{ delay: 0.2 }} className="glass-card p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-accent/10"><TestTube className="w-5 h-5 text-accent" /></div>
               <div>
-                <p className="text-sm font-medium text-foreground">Test Notifications</p>
-                <p className="text-xs text-muted-foreground">Send a test to verify they work</p>
+                <p className="text-sm font-medium text-foreground">Test Push Notification</p>
+                <p className="text-xs text-muted-foreground">Send a test to verify push notifications work</p>
               </div>
             </div>
-            <Button size="sm" variant="outline" onClick={handleTestNotification} className="ripple-btn">Send Test</Button>
+            <Button size="sm" variant="outline" onClick={handleTestNotification}>Send Test</Button>
           </div>
         </motion.div>
 

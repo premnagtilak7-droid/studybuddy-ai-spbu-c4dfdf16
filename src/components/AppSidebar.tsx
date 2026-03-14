@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -86,6 +86,8 @@ const NAV_SECTIONS = [
   },
 ];
 
+const SCROLL_KEY = "sidebar_scroll_pos";
+
 export default function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -98,9 +100,33 @@ export default function AppSidebar() {
   const streak = getStudyStreak();
   const [xp, setXP] = useState(0);
   const isMobile = useIsMobile();
+  const navRef = useRef<HTMLElement>(null);
+  const scrollRestoredRef = useRef(false);
 
   useEffect(() => { getUserXP().then(setXP); }, []);
-  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+
+  // Close mobile sidebar on navigation, but preserve scroll
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  // Restore scroll position after render
+  useEffect(() => {
+    if (navRef.current && !scrollRestoredRef.current) {
+      const saved = sessionStorage.getItem(SCROLL_KEY);
+      if (saved) {
+        navRef.current.scrollTop = parseInt(saved, 10);
+      }
+      scrollRestoredRef.current = true;
+    }
+  });
+
+  // Save scroll position on scroll
+  const handleNavScroll = useCallback(() => {
+    if (navRef.current) {
+      sessionStorage.setItem(SCROLL_KEY, String(navRef.current.scrollTop));
+    }
+  }, []);
 
   const level = getLevel(xp);
 
@@ -125,15 +151,15 @@ export default function AppSidebar() {
   const sidebarContent = (
     <div className="flex flex-col h-full gradient-sidebar">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border/50">
+      <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border/50 flex-shrink-0">
         <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0 shadow-lg glow-primary">
           <GraduationCap className="w-5 h-5 text-primary-foreground" />
         </div>
         {showLabel && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden flex-1">
+          <div className="overflow-hidden flex-1">
             <h1 className="text-sm font-extrabold text-sidebar-accent-foreground tracking-tight">StudyBuddy</h1>
             <p className="text-[10px] font-mono text-sidebar-foreground/50">AI Study Companion</p>
-          </motion.div>
+          </div>
         )}
         {isMobile && (
           <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
@@ -144,7 +170,7 @@ export default function AppSidebar() {
 
       {/* Streak + XP mini */}
       {showLabel && (
-        <div className="mx-3 mt-3 p-3 rounded-xl bg-sidebar-accent/50 border border-sidebar-border/30">
+        <div className="mx-3 mt-3 p-3 rounded-xl bg-sidebar-accent/50 border border-sidebar-border/30 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className={`text-lg ${streak > 0 ? "animate-fire-glow" : ""}`}>🔥</span>
@@ -158,8 +184,12 @@ export default function AppSidebar() {
         </div>
       )}
 
-      {/* Nav Sections */}
-      <nav className="flex-1 py-3 px-2 space-y-4 overflow-y-auto">
+      {/* Nav Sections - scroll preserved */}
+      <nav
+        ref={navRef}
+        onScroll={handleNavScroll}
+        className="flex-1 py-3 px-2 space-y-4 overflow-y-auto scrollbar-stable"
+      >
         {NAV_SECTIONS.map((section) => (
           <div key={section.title}>
             {showLabel && (
@@ -174,7 +204,7 @@ export default function AppSidebar() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`group flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 text-sm font-medium relative ${
+                    className={`group flex items-center gap-3 px-3 py-2 rounded-xl transition-colors duration-150 text-sm font-medium relative ${
                       isActive
                         ? "bg-sidebar-primary/15 text-sidebar-primary"
                         : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
@@ -184,12 +214,10 @@ export default function AppSidebar() {
                       <motion.div
                         layoutId="sidebar-active"
                         className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full gradient-primary"
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
                       />
                     )}
-                    <item.icon className={`w-[18px] h-[18px] flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                      isActive ? "text-sidebar-primary" : ""
-                    }`} />
+                    <item.icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? "text-sidebar-primary" : ""}`} />
                     {showLabel && (
                       <span className={`truncate ${isActive ? "font-semibold" : ""}`}>{item.label}</span>
                     )}
@@ -206,7 +234,7 @@ export default function AppSidebar() {
             )}
             <Link
               to="/admin"
-              className={`group flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 text-sm font-medium relative ${
+              className={`group flex items-center gap-3 px-3 py-2 rounded-xl transition-colors duration-150 text-sm font-medium relative ${
                 location.pathname === "/admin"
                   ? "bg-sidebar-primary/15 text-sidebar-primary"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
@@ -218,7 +246,7 @@ export default function AppSidebar() {
                   className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full gradient-primary"
                 />
               )}
-              <Shield className="w-[18px] h-[18px] flex-shrink-0 group-hover:scale-110 transition-transform" />
+              <Shield className="w-[18px] h-[18px] flex-shrink-0" />
               {showLabel && <span>Admin Dashboard</span>}
             </Link>
           </div>
@@ -228,10 +256,10 @@ export default function AppSidebar() {
       <SupportTicketModal open={showSupport} onClose={() => setShowSupport(false)} />
 
       {/* Bottom section */}
-      <div className="px-2 pb-3 space-y-1 border-t border-sidebar-border/30 pt-3">
+      <div className="px-2 pb-3 space-y-1 border-t border-sidebar-border/30 pt-3 flex-shrink-0">
         <button
           onClick={() => setShowSupport(true)}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent/60 transition-all duration-200 text-sm font-medium ${
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors duration-150 text-sm font-medium ${
             collapsed && !isMobile ? "justify-center" : ""
           }`}
         >
@@ -242,7 +270,7 @@ export default function AppSidebar() {
         {/* User Profile */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent/60 transition-all duration-200 text-left">
+            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors duration-150 text-left">
               <div className="relative flex-shrink-0">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center ring-2 ring-primary/30">
                   <User className="w-4 h-4 text-primary" />
@@ -307,7 +335,7 @@ export default function AppSidebar() {
         <button
           onClick={() => setShowSignOutConfirm(true)}
           disabled={signingOut}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-destructive hover:bg-destructive/10 transition-all duration-200 text-sm font-medium disabled:opacity-50 ${
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors duration-150 text-sm font-medium disabled:opacity-50 ${
             collapsed && !isMobile ? "justify-center" : ""
           }`}
         >
@@ -318,7 +346,7 @@ export default function AppSidebar() {
         {!isMobile && (
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="w-full p-2 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent/60 transition-all duration-200 flex items-center justify-center"
+            className="w-full p-2 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors duration-150 flex items-center justify-center"
           >
             {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
           </button>
@@ -344,6 +372,7 @@ export default function AppSidebar() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             onClick={() => setMobileOpen(false)}
             className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
           />
@@ -357,7 +386,7 @@ export default function AppSidebar() {
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
               className="fixed left-0 top-0 h-screen w-[280px] border-r border-sidebar-border/30 flex flex-col z-50 shadow-2xl"
             >
               {sidebarContent}
@@ -367,7 +396,7 @@ export default function AppSidebar() {
       ) : (
         <motion.aside
           animate={{ width: sidebarWidth }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
           className="fixed left-0 top-0 h-screen border-r border-sidebar-border/30 flex flex-col z-50"
         >
           {sidebarContent}

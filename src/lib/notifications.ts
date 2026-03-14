@@ -6,12 +6,12 @@ export interface NotificationPreferences {
   dailyStudyReminder: boolean;
   studyGoalAlert: boolean;
   achievementUnlocked: boolean;
-  dailyReminderTime: string; // HH:MM
-  streakAlertTime: string; // HH:MM
+  dailyReminderTime: string;
+  streakAlertTime: string;
   morningReminderEnabled: boolean;
-  morningReminderTime: string; // HH:MM
-  examCountdownDays: boolean; // 7/3/1 day alerts
-  soundVolume: number; // 0-1
+  morningReminderTime: string;
+  examCountdownDays: boolean;
+  soundVolume: number;
 }
 
 const PREFS_KEY = "sppu_notification_prefs";
@@ -29,7 +29,7 @@ export const defaultPrefs: NotificationPreferences = {
   morningReminderEnabled: true,
   morningReminderTime: "07:00",
   examCountdownDays: true,
-  soundVolume: 0.8,
+  soundVolume: 1.0,
 };
 
 export function getNotificationPrefs(): NotificationPreferences {
@@ -42,7 +42,6 @@ export function getNotificationPrefs(): NotificationPreferences {
 
 export function saveNotificationPrefs(prefs: NotificationPreferences) {
   localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
-  // Sync volume to sound system
   try {
     localStorage.setItem("sppu_sound_volume", String(prefs.soundVolume));
   } catch {}
@@ -74,8 +73,7 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   if (!("Notification" in window)) return "denied";
   if (Notification.permission === "granted") return "granted";
   if (Notification.permission === "denied") return "denied";
-  const alreadyAsked = localStorage.getItem("notif_permission_asked");
-  if (alreadyAsked) return Notification.permission;
+  // Always ask if permission is "default" - don't block with alreadyAsked
   const result = await Notification.requestPermission();
   localStorage.setItem("notif_permission_asked", "1");
   return result;
@@ -103,7 +101,7 @@ export async function sendLocalNotification(title: string, body: string, type: s
 
   addToHistory({ id: crypto.randomUUID(), title, body, type, timestamp: Date.now() });
 
-  // Play sound — use provided fn or default
+  // Play sound
   if (soundFn) {
     soundFn();
   } else {
@@ -124,7 +122,9 @@ export async function sendLocalNotification(title: string, body: string, type: s
         new Notification(title, { body, icon: "/pwa-192x192.png" });
       }
     } catch {
-      new Notification(title, { body, icon: "/pwa-192x192.png" });
+      try {
+        new Notification(title, { body, icon: "/pwa-192x192.png" });
+      } catch {}
     }
   }
 }
@@ -142,27 +142,23 @@ function randomMotivation() {
   return MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)];
 }
 
-// Schedule check - call this periodically or on app load
 export async function checkAndSendScheduledNotifications() {
   const prefs = getNotificationPrefs();
   const now = new Date();
   const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   const todayKey = now.toISOString().split("T")[0];
 
-  // Daily reminder
   if (prefs.dailyStudyReminder && currentTime === prefs.dailyReminderTime) {
     const sentKey = `notif_daily_${todayKey}`;
     if (!localStorage.getItem(sentKey)) {
       localStorage.setItem(sentKey, "1");
       const { playReminderSound } = await import("./sounds");
       sendLocalNotification("Hey! Time to study 📚", `You haven't studied today yet. ${randomMotivation()}`, "daily", playReminderSound);
-      // Also show in-app banner
       const { showReminderBanner } = await import("@/components/ReminderBanner");
       showReminderBanner("Daily Study", randomMotivation());
     }
   }
 
-  // Morning reminder
   if (prefs.morningReminderEnabled && currentTime === prefs.morningReminderTime) {
     const sentKey = `notif_morning_${todayKey}`;
     if (!localStorage.getItem(sentKey)) {
@@ -178,7 +174,6 @@ export async function checkAndSendScheduledNotifications() {
     }
   }
 
-  // Streak alert
   if (prefs.streakAlert && currentTime === prefs.streakAlertTime) {
     const sentKey = `notif_streak_${todayKey}`;
     if (!localStorage.getItem(sentKey)) {
@@ -187,7 +182,6 @@ export async function checkAndSendScheduledNotifications() {
     }
   }
 
-  // Exam countdown alerts (7, 3, 1 days before)
   if (prefs.examCountdownDays) {
     await checkExamCountdownAlerts(todayKey);
   }

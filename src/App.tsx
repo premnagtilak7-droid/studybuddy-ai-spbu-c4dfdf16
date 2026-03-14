@@ -7,13 +7,17 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { useTrialCheck } from "@/hooks/useTrialCheck";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState, useCallback } from "react";
 import { setupGlobalErrorHandlers } from "@/lib/error-logger";
+import { initAudioContext } from "@/lib/sounds";
 
-// Lazy load all pages
+// Preload critical pages immediately
 const Index = lazy(() => import("./pages/Index"));
-const Timetable = lazy(() => import("./pages/Timetable"));
 const Subjects = lazy(() => import("./pages/Subjects"));
+const StudyTimer = lazy(() => import("./pages/StudyTimer"));
+
+// Lazy load remaining pages
+const Timetable = lazy(() => import("./pages/Timetable"));
 const SubjectManagement = lazy(() => import("./pages/SubjectManagement"));
 const SubjectDetail = lazy(() => import("./pages/SubjectDetail"));
 const AISolver = lazy(() => import("./pages/AISolver"));
@@ -37,7 +41,6 @@ const AttendanceTracker = lazy(() => import("./pages/AttendanceTracker"));
 const MarksTracker = lazy(() => import("./pages/MarksTracker"));
 const AssignmentTracker = lazy(() => import("./pages/AssignmentTracker"));
 const FocusMode = lazy(() => import("./pages/FocusMode"));
-const StudyTimer = lazy(() => import("./pages/StudyTimer"));
 const PreviousYearPapers = lazy(() => import("./pages/PreviousYearPapers"));
 const Auth = lazy(() => import("./pages/Auth"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -55,25 +58,30 @@ import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import NotificationPermissionBanner from "./components/NotificationPermissionBanner";
 import ReminderBanner from "./components/ReminderBanner";
 import CookieConsent from "./components/CookieConsent";
-import { Skeleton } from "@/components/ui/skeleton";
+import PageLoader from "./components/PageLoader";
 
-const queryClient = new QueryClient();
-
-// Skeleton loading fallback
-function PageLoader() {
-  return (
-    <div className="min-h-screen bg-background p-6 space-y-4">
-      <Skeleton className="h-8 w-48" />
-      <Skeleton className="h-4 w-72" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-        <Skeleton className="h-32 rounded-xl" />
-        <Skeleton className="h-32 rounded-xl" />
-        <Skeleton className="h-32 rounded-xl" />
-      </div>
-      <Skeleton className="h-64 rounded-xl mt-4" />
-    </div>
-  );
+// Preload critical pages after initial render
+function usePreloadPages() {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      import("./pages/Index");
+      import("./pages/Subjects");
+      import("./pages/StudyTimer");
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 }
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 min cache
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -82,7 +90,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <BanCheck>{children}</BanCheck>;
 }
 
-// Block banned users immediately
 function BanCheck({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const [banned, setBanned] = useState(false);
@@ -113,8 +120,6 @@ function BanCheck({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-import { useState } from "react";
-
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isAdmin, user, loading } = useAuth();
   if (loading) return <PageLoader />;
@@ -132,6 +137,26 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 const AppRoutes = () => {
   useActivityTracker();
   useTrialCheck();
+  usePreloadPages();
+
+  // Initialize audio context on first user interaction
+  useEffect(() => {
+    const handler = () => {
+      initAudioContext();
+      document.removeEventListener("click", handler);
+      document.removeEventListener("touchstart", handler);
+      document.removeEventListener("keydown", handler);
+    };
+    document.addEventListener("click", handler, { once: false });
+    document.addEventListener("touchstart", handler, { once: false });
+    document.addEventListener("keydown", handler, { once: false });
+    return () => {
+      document.removeEventListener("click", handler);
+      document.removeEventListener("touchstart", handler);
+      document.removeEventListener("keydown", handler);
+    };
+  }, []);
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
