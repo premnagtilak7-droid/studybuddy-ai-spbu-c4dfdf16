@@ -212,6 +212,9 @@ export default function AdminConsole() {
         {tab === "features" && (
           <AdminFeatureControl />
         )}
+        {tab === "errors" && (
+          <AdminErrorLogs />
+        )}
       </div>
     </AppLayout>
   );
