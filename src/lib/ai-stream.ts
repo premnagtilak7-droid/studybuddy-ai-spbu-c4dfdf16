@@ -1,3 +1,5 @@
+import { sanitizeAIInput } from "./prompt-sanitizer";
+
 type Msg = { role: "user" | "assistant"; content: string };
 
 const GEMINI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-ai`;
