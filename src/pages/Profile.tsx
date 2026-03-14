@@ -94,12 +94,13 @@ export default function Profile() {
     if (!user) return;
     setExporting(true);
     try {
-      const tables = ["profiles", "subjects", "study_logs", "doubt_history", "flashcard_decks", "flashcards", "timetable_sessions", "study_plans", "mock_tests", "formula_bank", "assignments", "attendance_subjects", "attendance_records", "marks_tracker", "cgpa_history", "study_dates", "user_achievements", "user_xp", "focus_sessions", "study_reminders", "exam_dates"] as const;
       const exportData: Record<string, any> = { exported_at: new Date().toISOString(), user_email: user.email };
       
-      for (const table of tables) {
-        const { data } = await supabase.from(table).select("*").eq("user_id" as any, user.id);
-        exportData[table] = data || [];
+      const tableNames = ["profiles", "subjects", "study_logs", "doubt_history", "flashcard_decks", "flashcards", "timetable_sessions", "study_plans", "mock_tests", "formula_bank", "assignments", "attendance_subjects", "marks_tracker", "cgpa_history", "study_dates", "user_achievements", "user_xp", "focus_sessions", "study_reminders", "exam_dates"];
+      
+      for (const t of tableNames) {
+        const { data } = await (supabase as any).from(t).select("*").eq("user_id", user.id);
+        exportData[t] = data || [];
       }
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
