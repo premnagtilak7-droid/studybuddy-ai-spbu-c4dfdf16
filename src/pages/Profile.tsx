@@ -143,11 +143,19 @@ export default function Profile() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error("Image must be under 2MB"); return; }
+
+    // Deep validation: check MIME, extension, magic bytes
+    const { validateImageFileDeep } = await import("@/lib/security");
+    const validation = await validateImageFileDeep(file);
+    if (!validation.valid) {
+      toast.error(validation.error || "Invalid file");
+      return;
+    }
+
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    const ext = file.name.split(".").pop()?.toLowerCase();
     const path = `avatars/${user.id}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("documents").upload(path, file, { upsert: true });
+    const { error: upErr } = await supabase.storage.from("documents").upload(path, file, { upsert: true, contentType: file.type });
     if (upErr) { toast.error("Upload failed"); setUploading(false); return; }
     const { data: urlData } = supabase.storage.from("documents").getPublicUrl(path);
     await supabase.from("profiles").update({ avatar_url: urlData.publicUrl } as any).eq("user_id", user.id);
