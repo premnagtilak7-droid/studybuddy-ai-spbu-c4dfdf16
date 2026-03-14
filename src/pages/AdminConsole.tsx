@@ -16,6 +16,7 @@ import AdminReports from "@/components/admin/AdminReports";
 import AdminRevenue from "@/components/admin/AdminRevenue";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
 import AdminFeatureControl from "@/components/admin/AdminFeatureControl";
+import AdminErrorLogs from "@/components/admin/AdminErrorLogs";
 
 const TABS = [
   { key: "users", label: "Users", icon: Users },
