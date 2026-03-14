@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ["Inter", "sans-serif"],
+        display: ["Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
       colors: {
@@ -55,6 +55,10 @@ export default {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
         },
+        gold: {
+          DEFAULT: "hsl(var(--gold))",
+          foreground: "hsl(var(--gold-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -84,6 +88,8 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 8px)",
       },
       keyframes: {
         "accordion-down": {
@@ -96,7 +102,7 @@ export default {
         },
         "pulse-glow": {
           "0%, 100%": { boxShadow: "0 0 8px 0 hsl(var(--primary) / 0.3)" },
-          "50%": { boxShadow: "0 0 20px 4px hsl(var(--primary) / 0.5)" },
+          "50%": { boxShadow: "0 0 24px 6px hsl(var(--primary) / 0.5)" },
         },
         "fade-in-up": {
           "0%": { opacity: "0", transform: "translateY(16px)" },
@@ -117,6 +123,14 @@ export default {
           "40%": { transform: "scale(1.2)" },
           "100%": { transform: "scale(1)" },
         },
+        "spin-slow": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
+        "shimmer-btn": {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -126,6 +140,7 @@ export default {
         "slide-in-bottom": "slide-in-bottom 0.35s ease-out",
         "bounce-in": "bounce-in 0.5s ease-out",
         "pop": "pop 0.3s ease-out",
+        "spin-slow": "spin-slow 12s linear infinite",
       },
     },
   },
