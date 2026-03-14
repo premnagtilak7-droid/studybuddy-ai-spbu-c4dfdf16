@@ -5,55 +5,119 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
-import Index from "./pages/Index";
-import Timetable from "./pages/Timetable";
-import Subjects from "./pages/Subjects";
-import SubjectManagement from "./pages/SubjectManagement";
-import SubjectDetail from "./pages/SubjectDetail";
-import AISolver from "./pages/AISolver";
-import StudyRoom from "./pages/StudyRoom";
-import StudyPlanGenerator from "./pages/StudyPlanGenerator";
-import ExamDates from "./pages/ExamDates";
-import AdminConsole from "./pages/AdminConsole";
-import AIMockTest from "./pages/AIMockTest";
-import AIAnswerChecker from "./pages/AIAnswerChecker";
-import AIFormulaSheet from "./pages/AIFormulaSheet";
-import AIExamPredictor from "./pages/AIExamPredictor";
-import AIPerformanceAnalysis from "./pages/AIPerformanceAnalysis";
-import StudyGroups from "./pages/StudyGroups";
-import DoubtForum from "./pages/DoubtForum";
-import StudyBuddy from "./pages/StudyBuddy";
-import ShareProgress from "./pages/ShareProgress";
-import BatchFeed from "./pages/BatchFeed";
-import FlashcardMaker from "./pages/FlashcardMaker";
-import FormulaBank from "./pages/FormulaBank";
-import AttendanceTracker from "./pages/AttendanceTracker";
-import MarksTracker from "./pages/MarksTracker";
-import AssignmentTracker from "./pages/AssignmentTracker";
-import FocusMode from "./pages/FocusMode";
-import StudyTimer from "./pages/StudyTimer";
-import PreviousYearPapers from "./pages/PreviousYearPapers";
-import Auth from "./pages/Auth";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import ChangePassword from "./pages/ChangePassword";
-import NotificationSettings from "./pages/NotificationSettings";
-import NotFound from "./pages/NotFound";
-import Profile from "./pages/Profile";
-import Pricing from "./pages/Pricing";
+import { useTrialCheck } from "@/hooks/useTrialCheck";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { lazy, Suspense, useEffect } from "react";
+import { setupGlobalErrorHandlers } from "@/lib/error-logger";
+
+// Lazy load all pages
+const Index = lazy(() => import("./pages/Index"));
+const Timetable = lazy(() => import("./pages/Timetable"));
+const Subjects = lazy(() => import("./pages/Subjects"));
+const SubjectManagement = lazy(() => import("./pages/SubjectManagement"));
+const SubjectDetail = lazy(() => import("./pages/SubjectDetail"));
+const AISolver = lazy(() => import("./pages/AISolver"));
+const StudyRoom = lazy(() => import("./pages/StudyRoom"));
+const StudyPlanGenerator = lazy(() => import("./pages/StudyPlanGenerator"));
+const ExamDates = lazy(() => import("./pages/ExamDates"));
+const AdminConsole = lazy(() => import("./pages/AdminConsole"));
+const AIMockTest = lazy(() => import("./pages/AIMockTest"));
+const AIAnswerChecker = lazy(() => import("./pages/AIAnswerChecker"));
+const AIFormulaSheet = lazy(() => import("./pages/AIFormulaSheet"));
+const AIExamPredictor = lazy(() => import("./pages/AIExamPredictor"));
+const AIPerformanceAnalysis = lazy(() => import("./pages/AIPerformanceAnalysis"));
+const StudyGroups = lazy(() => import("./pages/StudyGroups"));
+const DoubtForum = lazy(() => import("./pages/DoubtForum"));
+const StudyBuddy = lazy(() => import("./pages/StudyBuddy"));
+const ShareProgress = lazy(() => import("./pages/ShareProgress"));
+const BatchFeed = lazy(() => import("./pages/BatchFeed"));
+const FlashcardMaker = lazy(() => import("./pages/FlashcardMaker"));
+const FormulaBank = lazy(() => import("./pages/FormulaBank"));
+const AttendanceTracker = lazy(() => import("./pages/AttendanceTracker"));
+const MarksTracker = lazy(() => import("./pages/MarksTracker"));
+const AssignmentTracker = lazy(() => import("./pages/AssignmentTracker"));
+const FocusMode = lazy(() => import("./pages/FocusMode"));
+const StudyTimer = lazy(() => import("./pages/StudyTimer"));
+const PreviousYearPapers = lazy(() => import("./pages/PreviousYearPapers"));
+const Auth = lazy(() => import("./pages/Auth"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const ChangePassword = lazy(() => import("./pages/ChangePassword"));
+const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsConditions = lazy(() => import("./pages/TermsConditions"));
+
 import { GatedRoute } from "./components/GatedRoute";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import NotificationPermissionBanner from "./components/NotificationPermissionBanner";
+import ReminderBanner from "./components/ReminderBanner";
+import CookieConsent from "./components/CookieConsent";
+import { Skeleton } from "@/components/ui/skeleton";
+
 const queryClient = new QueryClient();
+
+// Skeleton loading fallback
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-background p-6 space-y-4">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-4 w-72" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
+      </div>
+      <Skeleton className="h-64 rounded-xl mt-4" />
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground animate-pulse">Loading...</p></div>;
+  if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
-  return children;
+  return <BanCheck>{children}</BanCheck>;
 }
+
+// Block banned users immediately
+function BanCheck({ children }: { children: React.ReactNode }) {
+  const { user, signOut } = useAuth();
+  const [banned, setBanned] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    import("@/integrations/supabase/client").then(({ supabase }) => {
+      supabase.from("profiles").select("is_banned, ban_reason").eq("user_id", user.id).single().then(({ data }) => {
+        if (data?.is_banned) {
+          setBanned(true);
+          signOut();
+        }
+      });
+    });
+  }, [user, signOut]);
+
+  if (banned) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="text-center space-y-3 max-w-md">
+          <h2 className="text-xl font-bold text-destructive">Account Suspended</h2>
+          <p className="text-sm text-muted-foreground">Your account has been suspended. Contact support for assistance.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+import { useState } from "react";
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isAdmin, user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground animate-pulse">Loading...</p></div>;
+  if (loading) return <PageLoader />;
   if (!isAdmin && user?.email !== "nagtilakprem99@gmail.com") return <Navigate to="/" replace />;
   return children;
 }
@@ -65,73 +129,79 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   return children;
 }
 
-import { useTrialCheck } from "@/hooks/useTrialCheck";
-
 const AppRoutes = () => {
   useActivityTracker();
   useTrialCheck();
   return (
-    <Routes>
-      <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-      <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
-      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-      <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
-      <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
-      <Route path="/subject-management" element={<ProtectedRoute><SubjectManagement /></ProtectedRoute>} />
-      <Route path="/subject/:id" element={<ProtectedRoute><SubjectDetail /></ProtectedRoute>} />
-      <Route path="/ai-solver" element={<ProtectedRoute><GatedRoute feature="ai_solver" featureName="AI Doubt Solver"><AISolver /></GatedRoute></ProtectedRoute>} />
-      <Route path="/study-plan" element={<ProtectedRoute><GatedRoute feature="study_plan" featureName="AI Study Plan"><StudyPlanGenerator /></GatedRoute></ProtectedRoute>} />
-      <Route path="/study-room" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
-      <Route path="/exam-dates" element={<ProtectedRoute><ExamDates /></ProtectedRoute>} />
-      <Route path="/mock-test" element={<ProtectedRoute><GatedRoute feature="mock_test" featureName="AI Mock Test"><AIMockTest /></GatedRoute></ProtectedRoute>} />
-      <Route path="/answer-checker" element={<ProtectedRoute><GatedRoute feature="answer_checker" featureName="AI Answer Checker"><AIAnswerChecker /></GatedRoute></ProtectedRoute>} />
-      <Route path="/formula-sheet" element={<ProtectedRoute><GatedRoute feature="formula_sheet" featureName="AI Formula Sheet"><AIFormulaSheet /></GatedRoute></ProtectedRoute>} />
-      <Route path="/exam-predictor" element={<ProtectedRoute><GatedRoute feature="exam_predictor" featureName="AI Exam Predictor"><AIExamPredictor /></GatedRoute></ProtectedRoute>} />
-      <Route path="/performance" element={<ProtectedRoute><AIPerformanceAnalysis /></ProtectedRoute>} />
-      <Route path="/study-groups" element={<ProtectedRoute><GatedRoute feature="study_groups" featureName="Study Groups"><StudyGroups /></GatedRoute></ProtectedRoute>} />
-      <Route path="/doubt-forum" element={<ProtectedRoute><GatedRoute feature="doubt_forum" featureName="Doubt Forum"><DoubtForum /></GatedRoute></ProtectedRoute>} />
-      <Route path="/study-buddy" element={<ProtectedRoute><GatedRoute feature="study_buddy" featureName="Study Buddy"><StudyBuddy /></GatedRoute></ProtectedRoute>} />
-      <Route path="/share-progress" element={<ProtectedRoute><GatedRoute feature="share_progress" featureName="Share Progress"><ShareProgress /></GatedRoute></ProtectedRoute>} />
-      <Route path="/batch-feed" element={<ProtectedRoute><GatedRoute feature="batch_feed" featureName="Batch Feed"><BatchFeed /></GatedRoute></ProtectedRoute>} />
-      <Route path="/flashcards" element={<ProtectedRoute><GatedRoute feature="flashcards" featureName="Flashcard Maker"><FlashcardMaker /></GatedRoute></ProtectedRoute>} />
-      <Route path="/formula-bank" element={<ProtectedRoute><GatedRoute feature="formula_bank" featureName="Formula Bank"><FormulaBank /></GatedRoute></ProtectedRoute>} />
-      <Route path="/attendance" element={<ProtectedRoute><GatedRoute feature="attendance" featureName="Attendance Tracker"><AttendanceTracker /></GatedRoute></ProtectedRoute>} />
-      <Route path="/marks" element={<ProtectedRoute><GatedRoute feature="marks" featureName="Marks & CGPA"><MarksTracker /></GatedRoute></ProtectedRoute>} />
-      <Route path="/assignments" element={<ProtectedRoute><GatedRoute feature="assignments" featureName="Assignments & Labs"><AssignmentTracker /></GatedRoute></ProtectedRoute>} />
-      <Route path="/focus" element={<ProtectedRoute><GatedRoute feature="focus_mode" featureName="Focus Mode"><FocusMode /></GatedRoute></ProtectedRoute>} />
-      <Route path="/study-timer" element={<ProtectedRoute><StudyTimer /></ProtectedRoute>} />
-      <Route path="/previous-year-papers" element={<ProtectedRoute><PreviousYearPapers /></ProtectedRoute>} />
-      <Route path="/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
-      <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+        <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsConditions />} />
+        <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+        <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
+        <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
+        <Route path="/subject-management" element={<ProtectedRoute><SubjectManagement /></ProtectedRoute>} />
+        <Route path="/subject/:id" element={<ProtectedRoute><SubjectDetail /></ProtectedRoute>} />
+        <Route path="/ai-solver" element={<ProtectedRoute><GatedRoute feature="ai_solver" featureName="AI Doubt Solver"><AISolver /></GatedRoute></ProtectedRoute>} />
+        <Route path="/study-plan" element={<ProtectedRoute><GatedRoute feature="study_plan" featureName="AI Study Plan"><StudyPlanGenerator /></GatedRoute></ProtectedRoute>} />
+        <Route path="/study-room" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
+        <Route path="/exam-dates" element={<ProtectedRoute><ExamDates /></ProtectedRoute>} />
+        <Route path="/mock-test" element={<ProtectedRoute><GatedRoute feature="mock_test" featureName="AI Mock Test"><AIMockTest /></GatedRoute></ProtectedRoute>} />
+        <Route path="/answer-checker" element={<ProtectedRoute><GatedRoute feature="answer_checker" featureName="AI Answer Checker"><AIAnswerChecker /></GatedRoute></ProtectedRoute>} />
+        <Route path="/formula-sheet" element={<ProtectedRoute><GatedRoute feature="formula_sheet" featureName="AI Formula Sheet"><AIFormulaSheet /></GatedRoute></ProtectedRoute>} />
+        <Route path="/exam-predictor" element={<ProtectedRoute><GatedRoute feature="exam_predictor" featureName="AI Exam Predictor"><AIExamPredictor /></GatedRoute></ProtectedRoute>} />
+        <Route path="/performance" element={<ProtectedRoute><AIPerformanceAnalysis /></ProtectedRoute>} />
+        <Route path="/study-groups" element={<ProtectedRoute><GatedRoute feature="study_groups" featureName="Study Groups"><StudyGroups /></GatedRoute></ProtectedRoute>} />
+        <Route path="/doubt-forum" element={<ProtectedRoute><GatedRoute feature="doubt_forum" featureName="Doubt Forum"><DoubtForum /></GatedRoute></ProtectedRoute>} />
+        <Route path="/study-buddy" element={<ProtectedRoute><GatedRoute feature="study_buddy" featureName="Study Buddy"><StudyBuddy /></GatedRoute></ProtectedRoute>} />
+        <Route path="/share-progress" element={<ProtectedRoute><GatedRoute feature="share_progress" featureName="Share Progress"><ShareProgress /></GatedRoute></ProtectedRoute>} />
+        <Route path="/batch-feed" element={<ProtectedRoute><GatedRoute feature="batch_feed" featureName="Batch Feed"><BatchFeed /></GatedRoute></ProtectedRoute>} />
+        <Route path="/flashcards" element={<ProtectedRoute><GatedRoute feature="flashcards" featureName="Flashcard Maker"><FlashcardMaker /></GatedRoute></ProtectedRoute>} />
+        <Route path="/formula-bank" element={<ProtectedRoute><GatedRoute feature="formula_bank" featureName="Formula Bank"><FormulaBank /></GatedRoute></ProtectedRoute>} />
+        <Route path="/attendance" element={<ProtectedRoute><GatedRoute feature="attendance" featureName="Attendance Tracker"><AttendanceTracker /></GatedRoute></ProtectedRoute>} />
+        <Route path="/marks" element={<ProtectedRoute><GatedRoute feature="marks" featureName="Marks & CGPA"><MarksTracker /></GatedRoute></ProtectedRoute>} />
+        <Route path="/assignments" element={<ProtectedRoute><GatedRoute feature="assignments" featureName="Assignments & Labs"><AssignmentTracker /></GatedRoute></ProtectedRoute>} />
+        <Route path="/focus" element={<ProtectedRoute><GatedRoute feature="focus_mode" featureName="Focus Mode"><FocusMode /></GatedRoute></ProtectedRoute>} />
+        <Route path="/study-timer" element={<ProtectedRoute><StudyTimer /></ProtectedRoute>} />
+        <Route path="/previous-year-papers" element={<ProtectedRoute><PreviousYearPapers /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
   );
 };
 
-import PWAInstallPrompt from "./components/PWAInstallPrompt";
-import NotificationPermissionBanner from "./components/NotificationPermissionBanner";
-import ReminderBanner from "./components/ReminderBanner";
-import { AnimatePresence } from "framer-motion";
+const App = () => {
+  useEffect(() => {
+    setupGlobalErrorHandlers();
+  }, []);
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-          <PWAInstallPrompt />
-          <NotificationPermissionBanner />
-          <ReminderBanner />
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
+              <AppRoutes />
+              <PWAInstallPrompt />
+              <NotificationPermissionBanner />
+              <ReminderBanner />
+              <CookieConsent />
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;
