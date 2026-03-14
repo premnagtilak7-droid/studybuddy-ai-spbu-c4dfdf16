@@ -3,11 +3,24 @@
 
 const VOLUME_KEY = "sppu_sound_volume";
 
+// Shared AudioContext — initialized on first user interaction
+let sharedCtx: AudioContext | null = null;
+
+export function initAudioContext() {
+  if (sharedCtx && sharedCtx.state !== "closed") {
+    if (sharedCtx.state === "suspended") sharedCtx.resume();
+    return;
+  }
+  try {
+    sharedCtx = new AudioContext();
+  } catch {}
+}
+
 export function getSoundVolume(): number {
   try {
     const v = localStorage.getItem(VOLUME_KEY);
-    return v ? parseFloat(v) : 0.8;
-  } catch { return 0.8; }
+    return v ? parseFloat(v) : 1.0;
+  } catch { return 1.0; }
 }
 
 export function setSoundVolume(v: number) {
@@ -15,7 +28,15 @@ export function setSoundVolume(v: number) {
 }
 
 function getCtx(): AudioContext | null {
-  try { return new AudioContext(); } catch { return null; }
+  if (sharedCtx) {
+    if (sharedCtx.state === "suspended") sharedCtx.resume();
+    return sharedCtx;
+  }
+  // Fallback: create new context (may fail without user gesture)
+  try {
+    sharedCtx = new AudioContext();
+    return sharedCtx;
+  } catch { return null; }
 }
 
 function vol() { return getSoundVolume(); }
@@ -24,14 +45,13 @@ function vol() { return getSoundVolume(); }
 export function playAlarmBell() {
   const ctx = getCtx(); if (!ctx) return;
   const v = vol();
-  // 3 descending bell tones repeated
   [0, 0.4, 0.8, 1.5, 1.9, 2.3].forEach((t, i) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
     osc.type = "sine";
     osc.frequency.setValueAtTime(i % 3 === 0 ? 1200 : i % 3 === 1 ? 1000 : 800, ctx.currentTime + t);
-    gain.gain.setValueAtTime(v * 0.6, ctx.currentTime + t);
+    gain.gain.setValueAtTime(v * 0.8, ctx.currentTime + t);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + t + 0.35);
     osc.start(ctx.currentTime + t);
     osc.stop(ctx.currentTime + t + 0.35);
@@ -48,7 +68,7 @@ export function playPomodoroFocusEnd() {
     osc.connect(gain); gain.connect(ctx.destination);
     osc.type = "sine";
     osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.15);
-    gain.gain.setValueAtTime(v * 0.5, ctx.currentTime + i * 0.15);
+    gain.gain.setValueAtTime(v * 0.7, ctx.currentTime + i * 0.15);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.15 + 0.4);
     osc.start(ctx.currentTime + i * 0.15);
     osc.stop(ctx.currentTime + i * 0.15 + 0.4);
@@ -65,7 +85,7 @@ export function playPomodoroBreakEnd() {
     osc.connect(gain); gain.connect(ctx.destination);
     osc.type = "triangle";
     osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.2);
-    gain.gain.setValueAtTime(v * 0.5, ctx.currentTime + i * 0.2);
+    gain.gain.setValueAtTime(v * 0.7, ctx.currentTime + i * 0.2);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.2 + 0.3);
     osc.start(ctx.currentTime + i * 0.2);
     osc.stop(ctx.currentTime + i * 0.2 + 0.3);
@@ -82,7 +102,7 @@ export function playReminderSound() {
     osc.connect(gain); gain.connect(ctx.destination);
     osc.type = "square";
     osc.frequency.setValueAtTime(i % 2 === 0 ? 1000 : 1200, ctx.currentTime + t);
-    gain.gain.setValueAtTime(v * 0.4, ctx.currentTime + t);
+    gain.gain.setValueAtTime(v * 0.6, ctx.currentTime + t);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + t + 0.2);
     osc.start(ctx.currentTime + t);
     osc.stop(ctx.currentTime + t + 0.2);
@@ -99,7 +119,7 @@ export function playRewardSound() {
     osc.connect(gain); gain.connect(ctx.destination);
     osc.type = "sine";
     osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
-    gain.gain.setValueAtTime(v * 0.4, ctx.currentTime + i * 0.12);
+    gain.gain.setValueAtTime(v * 0.6, ctx.currentTime + i * 0.12);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.12 + 0.5);
     osc.start(ctx.currentTime + i * 0.12);
     osc.stop(ctx.currentTime + i * 0.12 + 0.5);
@@ -116,7 +136,7 @@ export function playMessageSound() {
   osc.type = "sine";
   osc.frequency.setValueAtTime(1200, ctx.currentTime);
   osc.frequency.setValueAtTime(900, ctx.currentTime + 0.08);
-  gain.gain.setValueAtTime(v * 0.3, ctx.currentTime);
+  gain.gain.setValueAtTime(v * 0.5, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
   osc.start(ctx.currentTime);
   osc.stop(ctx.currentTime + 0.2);
@@ -132,7 +152,7 @@ export function playJoinSound() {
     osc.connect(gain); gain.connect(ctx.destination);
     osc.type = "sine";
     osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
-    gain.gain.setValueAtTime(v * 0.25, ctx.currentTime + i * 0.1);
+    gain.gain.setValueAtTime(v * 0.4, ctx.currentTime + i * 0.1);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.1 + 0.3);
     osc.start(ctx.currentTime + i * 0.1);
     osc.stop(ctx.currentTime + i * 0.1 + 0.3);
@@ -149,7 +169,7 @@ export function playCompleteSound() {
   osc.type = "sine";
   osc.frequency.setValueAtTime(600, ctx.currentTime);
   osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
-  gain.gain.setValueAtTime(v * 0.35, ctx.currentTime);
+  gain.gain.setValueAtTime(v * 0.5, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
   osc.start(ctx.currentTime);
   osc.stop(ctx.currentTime + 0.25);
@@ -165,7 +185,7 @@ export function playErrorSound() {
   osc.type = "sawtooth";
   osc.frequency.setValueAtTime(200, ctx.currentTime);
   osc.frequency.setValueAtTime(150, ctx.currentTime + 0.1);
-  gain.gain.setValueAtTime(v * 0.25, ctx.currentTime);
+  gain.gain.setValueAtTime(v * 0.4, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
   osc.start(ctx.currentTime);
   osc.stop(ctx.currentTime + 0.3);
@@ -181,8 +201,26 @@ export function playNotificationSound() {
   osc.frequency.setValueAtTime(880, ctx.currentTime);
   osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
   osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
-  gain.gain.setValueAtTime(v * 0.5, ctx.currentTime);
+  gain.gain.setValueAtTime(v * 0.7, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
   osc.start(ctx.currentTime);
   osc.stop(ctx.currentTime + 0.5);
+}
+
+// ── SOUND TEST (plays all sounds in sequence) ──
+export function playSoundTest() {
+  const ctx = getCtx(); if (!ctx) return;
+  const v = vol();
+  // Play a clear ascending scale
+  [523, 659, 784, 880, 1047, 1319].forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.2);
+    gain.gain.setValueAtTime(v * 0.7, ctx.currentTime + i * 0.2);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.2 + 0.35);
+    osc.start(ctx.currentTime + i * 0.2);
+    osc.stop(ctx.currentTime + i * 0.2 + 0.35);
+  });
 }
