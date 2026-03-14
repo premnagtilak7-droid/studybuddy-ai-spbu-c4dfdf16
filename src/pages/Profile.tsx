@@ -86,6 +86,98 @@ export default function Profile() {
   const [streak, setStreak] = useState(0);
   const [badgesCount, setBadgesCount] = useState(0);
   const [subjectsCount, setSubjectsCount] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleExportData = async () => {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const tables = ["profiles", "subjects", "study_logs", "doubt_history", "flashcard_decks", "flashcards", "timetable_sessions", "study_plans", "mock_tests", "formula_bank", "assignments", "attendance_subjects", "attendance_records", "marks_tracker", "cgpa_history", "study_dates", "user_achievements", "user_xp", "focus_sessions", "study_reminders", "exam_dates"] as const;
+      const exportData: Record<string, any> = { exported_at: new Date().toISOString(), user_email: user.email };
+      
+      for (const table of tables) {
+        const { data } = await supabase.from(table).select("*").eq("user_id" as any, user.id);
+        exportData[table] = data || [];
+      }
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `studybuddy-data-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Data exported successfully!");
+    } catch {
+      toast.error("Failed to export data");
+    }
+    setExporting(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      // Delete user data from all tables
+      const tables = ["study_logs", "doubt_history", "timetable_sessions", "study_plans", "mock_tests", "formula_bank", "formula_bookmarks", "formula_sheets", "assignments", "lab_experiments", "marks_tracker", "cgpa_history", "study_dates", "user_achievements", "user_xp", "xp_logs", "focus_sessions", "study_reminders", "daily_study_goals", "buddy_profiles", "buddy_requests", "batch_profiles", "challenge_progress", "activity_logs", "error_logs"];
+      
+      for (const table of tables) {
+        await supabase.from(table as any).delete().eq("user_id" as any, user.id);
+      }
+
+      // Delete flashcards via decks
+      const { data: decks } = await supabase.from("flashcard_decks").select("id").eq("user_id", user.id);
+      if (decks?.length) {
+        for (const deck of decks) {
+          await supabase.from("flashcards").delete().eq("deck_id", deck.id);
+        }
+        await supabase.from("flashcard_decks").delete().eq("user_id", user.id);
+      }
+
+      // Delete subjects and related data
+      const { data: subs } = await supabase.from("subjects").select("id").eq("user_id", user.id);
+      if (subs?.length) {
+        for (const sub of subs) {
+          const { data: units } = await supabase.from("units").select("id").eq("subject_id", sub.id);
+          if (units?.length) {
+            for (const unit of units) {
+              const { data: topics } = await supabase.from("topics").select("id").eq("unit_id", unit.id);
+              if (topics?.length) {
+                for (const topic of topics) {
+                  await supabase.from("subtopics").delete().eq("topic_id", topic.id);
+                }
+                await supabase.from("topics").delete().eq("unit_id", unit.id);
+              }
+            }
+            await supabase.from("units").delete().eq("subject_id", sub.id);
+          }
+          await supabase.from("exam_dates").delete().eq("subject_id", sub.id);
+        }
+        await supabase.from("subjects").delete().eq("user_id", user.id);
+      }
+
+      // Delete attendance
+      const { data: attSubs } = await supabase.from("attendance_subjects").select("id").eq("user_id", user.id);
+      if (attSubs?.length) {
+        for (const as2 of attSubs) {
+          await supabase.from("attendance_records").delete().eq("subject_id", as2.id);
+        }
+        await supabase.from("attendance_subjects").delete().eq("user_id", user.id);
+      }
+
+      // Delete profile last
+      await supabase.from("profiles").delete().eq("user_id", user.id);
+
+      // Sign out
+      toast.success("Account deleted. Goodbye! 👋");
+      await supabase.auth.signOut();
+    } catch {
+      toast.error("Failed to delete account. Please contact support.");
+    }
+    setDeleting(false);
+  };
 
   const fetchProfile = useCallback(async () => {
     if (!user) return;
