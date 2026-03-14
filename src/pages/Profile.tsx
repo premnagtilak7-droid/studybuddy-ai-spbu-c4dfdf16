@@ -505,6 +505,46 @@ export default function Profile() {
             </div>
           </div>
         </div>
+
+        {/* Data & Privacy */}
+        <div className="glass-card p-6 space-y-3">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Shield className="w-5 h-5" /> Data & Privacy
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Download all your data or permanently delete your account. See our{" "}
+            <a href="/privacy" className="text-primary underline">Privacy Policy</a> and{" "}
+            <a href="/terms" className="text-primary underline">Terms</a>.
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            <Button size="sm" variant="outline" className="gap-1" disabled={exporting} onClick={handleExportData}>
+              {exporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />} Download My Data
+            </Button>
+            <Button size="sm" variant="destructive" className="gap-1" disabled={deleting} onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 className="w-3 h-3" /> Delete Account
+            </Button>
+          </div>
+
+          {showDeleteConfirm && (
+            <div className="p-4 rounded-lg border border-destructive/50 bg-destructive/5 space-y-3">
+              <p className="text-sm font-semibold text-destructive">⚠️ This will permanently delete:</p>
+              <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
+                <li>Your profile and account</li>
+                <li>All subjects, study logs, and progress</li>
+                <li>Flashcards, formulas, timetable</li>
+                <li>All AI history and mock tests</li>
+              </ul>
+              <p className="text-xs text-destructive font-medium">This action cannot be undone.</p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="destructive" disabled={deleting} onClick={handleDeleteAccount}>
+                  {deleting ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                  Yes, Delete Everything
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+        </div>
       </motion.div>
     </AppLayout>
   );
