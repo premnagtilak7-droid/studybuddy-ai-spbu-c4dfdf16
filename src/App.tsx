@@ -133,7 +133,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
