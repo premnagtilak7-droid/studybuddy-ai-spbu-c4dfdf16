@@ -59,6 +59,7 @@ import NotificationPermissionBanner from "./components/NotificationPermissionBan
 import ReminderBanner from "./components/ReminderBanner";
 import CookieConsent from "./components/CookieConsent";
 import PageLoader from "./components/PageLoader";
+import RouteSEO from "./components/RouteSEO";
 
 // Preload critical pages after initial render
 function usePreloadPages() {
@@ -216,6 +217,7 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <AuthProvider>
+              <RouteSEO />
               <AppRoutes />
               <PWAInstallPrompt />
               <NotificationPermissionBanner />
