@@ -45,9 +45,9 @@ serve(async (req) => {
   }
 });
 
-async function callAI(apiKey: string, messages: any[], tools?: any[], toolChoice?: any, stream = false) {
+async function callAI(apiKey: string, messages: any[], tools?: any[], toolChoice?: any, stream = false, model?: string) {
   const body: any = {
-    model: "google/gemini-3-flash-preview",
+    model: model || "google/gemini-3-flash-preview",
     messages,
     stream,
   };
@@ -226,11 +226,14 @@ async function handleMockTest(body: any, apiKey: string) {
   
   sys += ` Return using the tool provided. IMPORTANT: You MUST return questions.
 
-CRITICAL RULES FOR MCQ QUESTIONS (follow strictly):
+CRITICAL RULES FOR MCQ QUESTIONS (follow strictly — accuracy is paramount):
 1. "options" must be an array of 4 plain answer strings WITHOUT any "A)", "B)", "1.", or letter/number prefix. Just the answer text.
-2. "correctAnswer" MUST be the EXACT verbatim string of one of the items in "options" — character-for-character identical, same casing, same punctuation. Do NOT return a letter like "A" or "B". Do NOT return "A) ...". Do NOT paraphrase.
-3. "explanation" must clearly state WHY the correct option is correct AND briefly why each other option is wrong. Minimum 2 sentences. Show working/steps for numerical questions.
-4. Double-check the correctAnswer is actually correct before returning. Verify the math/facts.`;
+2. SOLVE the question fully BEFORE writing options. Compute the actual answer from first principles. Then make that computed value option A, B, C, or D — and copy that EXACT string into "correctAnswer".
+3. "correctAnswer" MUST be the EXACT verbatim string of one of the items in "options" — character-for-character identical, same casing, same punctuation, same units, same fractions. Do NOT return a letter like "A" or "B". Do NOT return "A) ...". Do NOT paraphrase.
+4. SELF-VERIFY before finalizing each question: Re-read your "explanation" — does the final numeric/factual answer in the explanation EXACTLY match "correctAnswer"? If not, FIX correctAnswer to match the explanation's conclusion. Never let them disagree.
+5. "explanation" must show the full working/derivation step-by-step, end with a clear sentence like "Therefore the answer is X", and that X must equal correctAnswer exactly.
+6. The other 3 options should be plausible distractors (common wrong answers from typical mistakes), but you must be 100% sure they are WRONG.
+7. If you are not certain about the answer to a question, do NOT include that question — generate a different one you can verify.`;
 
   const questionSchema: any = {
     type: "object",
@@ -278,8 +281,8 @@ CRITICAL RULES FOR MCQ QUESTIONS (follow strictly):
 
   const response = await callAI(apiKey, [
     { role: "system", content: sys },
-    { role: "user", content: `Generate exactly ${numQuestions} ${questionType} questions.${negativeMarking ? " Include negative marking values." : ""}` },
-  ], tools, { type: "function", function: { name: "generate_mock_test" } });
+    { role: "user", content: `Generate exactly ${numQuestions} ${questionType} questions. Solve each one fully before writing the options. Verify correctAnswer matches the explanation's conclusion exactly.${negativeMarking ? " Include negative marking values." : ""}` },
+  ], tools, { type: "function", function: { name: "generate_mock_test" } }, false, "google/gemini-2.5-pro");
 
   try {
     const data = await response.json();
