@@ -52,6 +52,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsConditions = lazy(() => import("./pages/TermsConditions"));
+const Landing = lazy(() => import("./pages/Landing"));
 
 import { GatedRoute } from "./components/GatedRoute";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
