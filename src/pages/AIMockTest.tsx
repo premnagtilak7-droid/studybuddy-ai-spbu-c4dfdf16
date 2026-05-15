@@ -213,7 +213,7 @@ export default function AIMockTest() {
       sectionScores[section].total++;
       difficultyScores[diff].total++;
       
-      if (userAnswers[q.id] === q.correctAnswer) {
+      if (isCorrect(q, userAnswers[q.id])) {
         sectionScores[section].correct++;
         difficultyScores[diff].correct++;
       }
