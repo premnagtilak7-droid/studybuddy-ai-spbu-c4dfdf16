@@ -52,6 +52,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsConditions = lazy(() => import("./pages/TermsConditions"));
+const Landing = lazy(() => import("./pages/Landing"));
 
 import { GatedRoute } from "./components/GatedRoute";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
@@ -164,6 +165,7 @@ const AppRoutes = () => {
         <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
         <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/landing" element={<Landing />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsConditions />} />
         <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
