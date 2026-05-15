@@ -224,7 +224,13 @@ async function handleMockTest(body: any, apiKey: string) {
     sys = `You are an expert examiner. Generate ${questionType} questions for ${subject}${topic ? " - " + topic : ""}. For MCQ include 4 options with one correct answer and explanation. For theory include model answer. Questions should be appropriate for the student's level.`;
   }
   
-  sys += " Return using the tool provided. IMPORTANT: You MUST return questions.";
+  sys += ` Return using the tool provided. IMPORTANT: You MUST return questions.
+
+CRITICAL RULES FOR MCQ QUESTIONS (follow strictly):
+1. "options" must be an array of 4 plain answer strings WITHOUT any "A)", "B)", "1.", or letter/number prefix. Just the answer text.
+2. "correctAnswer" MUST be the EXACT verbatim string of one of the items in "options" — character-for-character identical, same casing, same punctuation. Do NOT return a letter like "A" or "B". Do NOT return "A) ...". Do NOT paraphrase.
+3. "explanation" must clearly state WHY the correct option is correct AND briefly why each other option is wrong. Minimum 2 sentences. Show working/steps for numerical questions.
+4. Double-check the correctAnswer is actually correct before returning. Verify the math/facts.`;
 
   const questionSchema: any = {
     type: "object",

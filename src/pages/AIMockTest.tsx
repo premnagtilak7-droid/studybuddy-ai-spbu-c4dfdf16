@@ -137,12 +137,35 @@ export default function AIMockTest() {
     }
   };
 
+  const normalize = (s: string) =>
+    (s || "").toString().trim().replace(/^[\(\[]?[A-Da-d][\)\].:\-]\s*/, "").replace(/\s+/g, " ").toLowerCase();
+
+  const isCorrect = (q: Question, userAns?: string) => {
+    if (!userAns || !q.correctAnswer) return false;
+    const ua = normalize(userAns);
+    const ca = normalize(q.correctAnswer);
+    if (ua === ca) return true;
+    // Handle case where AI returned just a letter like "A"/"B"
+    const letter = (q.correctAnswer || "").trim().toUpperCase();
+    if (/^[A-D]$/.test(letter) && q.options) {
+      const idx = letter.charCodeAt(0) - 65;
+      if (q.options[idx] && normalize(q.options[idx]) === ua) return true;
+    }
+    // Handle case where user answer is a letter
+    const uLetter = (userAns || "").trim().toUpperCase();
+    if (/^[A-D]$/.test(uLetter) && q.options) {
+      const idx = uLetter.charCodeAt(0) - 65;
+      if (q.options[idx] && normalize(q.options[idx]) === ca) return true;
+    }
+    return false;
+  };
+
   const handleSubmit = useCallback(async () => {
     let correct = 0;
     let negMarks = 0;
     questions.forEach(q => {
       if (q.type === "mcq") {
-        if (userAnswers[q.id] === q.correctAnswer) {
+        if (isCorrect(q, userAnswers[q.id])) {
           correct++;
         } else if (userAnswers[q.id] && q.negativeMarks) {
           negMarks += q.negativeMarks;
@@ -190,7 +213,7 @@ export default function AIMockTest() {
       sectionScores[section].total++;
       difficultyScores[diff].total++;
       
-      if (userAnswers[q.id] === q.correctAnswer) {
+      if (isCorrect(q, userAnswers[q.id])) {
         sectionScores[section].correct++;
         difficultyScores[diff].correct++;
       }
@@ -315,7 +338,7 @@ export default function AIMockTest() {
           )}
 
           {questions.map((q, i) => (
-            <Card key={q.id} className={q.type === "mcq" ? (userAnswers[q.id] === q.correctAnswer ? "border-green-500/30" : "border-destructive/30") : ""}>
+            <Card key={q.id} className={q.type === "mcq" ? (isCorrect(q, userAnswers[q.id]) ? "border-green-500/30" : "border-destructive/30") : ""}>
               <CardHeader>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={q.type === "mcq" ? "default" : "secondary"}>{q.type.toUpperCase()}</Badge>
@@ -324,7 +347,7 @@ export default function AIMockTest() {
                   {q.section && <Badge variant="outline">{q.section}</Badge>}
                   {q.negativeMarks && <Badge variant="destructive" className="text-xs">-{q.negativeMarks} neg</Badge>}
                   {q.type === "mcq" && (
-                    userAnswers[q.id] === q.correctAnswer
+                    isCorrect(q, userAnswers[q.id])
                       ? <CheckCircle2 className="w-5 h-5 text-green-500" />
                       : <XCircle className="w-5 h-5 text-destructive" />
                   )}
@@ -332,11 +355,16 @@ export default function AIMockTest() {
                 <CardTitle className="text-base mt-2">Q{i + 1}. {q.question}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {q.options?.map((opt, oi) => (
-                  <div key={oi} className={`p-2 rounded text-sm ${opt === q.correctAnswer ? "bg-green-500/10 text-green-700 dark:text-green-400 font-medium" : userAnswers[q.id] === opt ? "bg-destructive/10 text-destructive" : "text-muted-foreground"}`}>
-                    {String.fromCharCode(65 + oi)}) {opt}
-                  </div>
-                ))}
+                {q.options?.map((opt, oi) => {
+                  const optIsCorrect = normalize(opt) === normalize(q.correctAnswer || "") ||
+                    (/^[A-D]$/i.test((q.correctAnswer || "").trim()) && (q.correctAnswer || "").trim().toUpperCase().charCodeAt(0) - 65 === oi);
+                  const optIsUserPick = userAnswers[q.id] === opt;
+                  return (
+                    <div key={oi} className={`p-2 rounded text-sm ${optIsCorrect ? "bg-green-500/10 text-green-700 dark:text-green-400 font-medium" : optIsUserPick ? "bg-destructive/10 text-destructive" : "text-muted-foreground"}`}>
+                      {String.fromCharCode(65 + oi)}) {opt} {optIsCorrect && <span className="ml-1">✓ Correct</span>}
+                    </div>
+                  );
+                })}
                 {q.explanation && <p className="text-sm text-muted-foreground mt-2"><strong>Explanation:</strong> {q.explanation}</p>}
                 {q.modelAnswer && <p className="text-sm text-muted-foreground mt-2"><strong>Model Answer:</strong> {q.modelAnswer}</p>}
               </CardContent>
