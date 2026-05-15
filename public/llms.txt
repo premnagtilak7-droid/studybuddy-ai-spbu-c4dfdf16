@@ -1,0 +1,48 @@
+# StudyBuddy
+
+> AI-powered study companion for engineering and exam-prep students. Includes AI doubt solver, mock tests, study planner, flashcards, formula sheets, attendance/CGPA tracking, and previous year papers (SPPU 2024 pattern).
+
+## Pages
+
+- [Dashboard](/): Personalized study dashboard with progress, streaks and reminders.
+- [Subjects](/subjects): Track subjects, units and topics with spaced repetition.
+- [Timetable](/timetable): Drag-and-drop weekly class schedule.
+- [Study Timer](/study-timer): Background-accurate study timer.
+- [Exam Dates](/exam-dates): Upcoming exam countdowns and alerts.
+- [Previous Year Papers](/previous-year-papers): SPPU PYQs 2020–2024 as timed mocks.
+- [Pricing](/pricing): Free, Pro and Elite plans with a 7-day free trial.
+- [Privacy Policy](/privacy): How StudyBuddy handles user data.
+- [Terms & Conditions](/terms): Terms of service.
+
+## AI Tools
+
+- [AI Doubt Solver](/ai-solver): Step-by-step explanations for academic doubts.
+- [AI Study Plan](/study-plan): Personalized study schedule generator with PDF export.
+- [AI Mock Test](/mock-test): Timed MCQ and theory mock tests with auto-grading.
+- [AI Answer Checker](/answer-checker): SPPU 2024-pattern grading with feedback.
+- [AI Formula Sheet](/formula-sheet): Unit-wise formula generator.
+- [AI Exam Predictor](/exam-predictor): Predicts likely exam questions.
+- [Performance Analysis](/performance): CGPA trends and gap analysis.
+
+## Productivity
+
+- [Flashcards](/flashcards): Build and review flashcards with spaced repetition.
+- [Formula Bank](/formula-bank): Curated formulas for engineering subjects.
+- [Attendance Tracker](/attendance): Stay above the 75% mark.
+- [Marks & CGPA](/marks): Log marks and predict targets.
+- [Assignments & Labs](/assignments): Deadline tracking.
+- [Focus Mode](/focus): Distraction-free 25–90 minute timers.
+
+## Community
+
+- [Study Groups](/study-groups): Live group study rooms.
+- [Doubt Forum](/doubt-forum): Q&A with classmates.
+- [Study Buddy](/study-buddy): Match with peers by subjects.
+- [Batch Feed](/batch-feed): Updates from your batch.
+- [Share Progress](/share-progress): Branded progress cards.
+
+## Optional
+
+- [Sign In](/auth): Log in or create an account.
+- [Notifications](/notifications): Reminder settings.
+- [Profile](/profile): Account and subscription.
