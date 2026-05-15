@@ -137,12 +137,35 @@ export default function AIMockTest() {
     }
   };
 
+  const normalize = (s: string) =>
+    (s || "").toString().trim().replace(/^[\(\[]?[A-Da-d][\)\].:\-]\s*/, "").replace(/\s+/g, " ").toLowerCase();
+
+  const isCorrect = (q: Question, userAns?: string) => {
+    if (!userAns || !q.correctAnswer) return false;
+    const ua = normalize(userAns);
+    const ca = normalize(q.correctAnswer);
+    if (ua === ca) return true;
+    // Handle case where AI returned just a letter like "A"/"B"
+    const letter = (q.correctAnswer || "").trim().toUpperCase();
+    if (/^[A-D]$/.test(letter) && q.options) {
+      const idx = letter.charCodeAt(0) - 65;
+      if (q.options[idx] && normalize(q.options[idx]) === ua) return true;
+    }
+    // Handle case where user answer is a letter
+    const uLetter = (userAns || "").trim().toUpperCase();
+    if (/^[A-D]$/.test(uLetter) && q.options) {
+      const idx = uLetter.charCodeAt(0) - 65;
+      if (q.options[idx] && normalize(q.options[idx]) === ca) return true;
+    }
+    return false;
+  };
+
   const handleSubmit = useCallback(async () => {
     let correct = 0;
     let negMarks = 0;
     questions.forEach(q => {
       if (q.type === "mcq") {
-        if (userAnswers[q.id] === q.correctAnswer) {
+        if (isCorrect(q, userAnswers[q.id])) {
           correct++;
         } else if (userAnswers[q.id] && q.negativeMarks) {
           negMarks += q.negativeMarks;
