@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://studybuddy-ai-spbu.lovable.app/sitemap.xml
