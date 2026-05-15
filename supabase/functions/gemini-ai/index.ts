@@ -45,9 +45,9 @@ serve(async (req) => {
   }
 });
 
-async function callAI(apiKey: string, messages: any[], tools?: any[], toolChoice?: any, stream = false) {
+async function callAI(apiKey: string, messages: any[], tools?: any[], toolChoice?: any, stream = false, model?: string) {
   const body: any = {
-    model: "google/gemini-3-flash-preview",
+    model: model || "google/gemini-3-flash-preview",
     messages,
     stream,
   };
