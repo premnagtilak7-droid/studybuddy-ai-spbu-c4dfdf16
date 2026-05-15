@@ -53,6 +53,7 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsConditions = lazy(() => import("./pages/TermsConditions"));
 const Landing = lazy(() => import("./pages/Landing"));
+const Download = lazy(() => import("./pages/Download"));
 
 import { GatedRoute } from "./components/GatedRoute";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
@@ -166,10 +167,12 @@ const AppRoutes = () => {
         <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/landing" element={<Landing />} />
+        <Route path="/download" element={<Download />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsConditions />} />
         <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
-        <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
         <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
         <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
         <Route path="/subject-management" element={<ProtectedRoute><SubjectManagement /></ProtectedRoute>} />
