@@ -281,8 +281,8 @@ CRITICAL RULES FOR MCQ QUESTIONS (follow strictly — accuracy is paramount):
 
   const response = await callAI(apiKey, [
     { role: "system", content: sys },
-    { role: "user", content: `Generate exactly ${numQuestions} ${questionType} questions.${negativeMarking ? " Include negative marking values." : ""}` },
-  ], tools, { type: "function", function: { name: "generate_mock_test" } });
+    { role: "user", content: `Generate exactly ${numQuestions} ${questionType} questions. Solve each one fully before writing the options. Verify correctAnswer matches the explanation's conclusion exactly.${negativeMarking ? " Include negative marking values." : ""}` },
+  ], tools, { type: "function", function: { name: "generate_mock_test" } }, false, "google/gemini-2.5-pro");
 
   try {
     const data = await response.json();
