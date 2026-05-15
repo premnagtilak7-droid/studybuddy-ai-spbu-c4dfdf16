@@ -338,7 +338,7 @@ export default function AIMockTest() {
           )}
 
           {questions.map((q, i) => (
-            <Card key={q.id} className={q.type === "mcq" ? (userAnswers[q.id] === q.correctAnswer ? "border-green-500/30" : "border-destructive/30") : ""}>
+            <Card key={q.id} className={q.type === "mcq" ? (isCorrect(q, userAnswers[q.id]) ? "border-green-500/30" : "border-destructive/30") : ""}>
               <CardHeader>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={q.type === "mcq" ? "default" : "secondary"}>{q.type.toUpperCase()}</Badge>
@@ -347,7 +347,7 @@ export default function AIMockTest() {
                   {q.section && <Badge variant="outline">{q.section}</Badge>}
                   {q.negativeMarks && <Badge variant="destructive" className="text-xs">-{q.negativeMarks} neg</Badge>}
                   {q.type === "mcq" && (
-                    userAnswers[q.id] === q.correctAnswer
+                    isCorrect(q, userAnswers[q.id])
                       ? <CheckCircle2 className="w-5 h-5 text-green-500" />
                       : <XCircle className="w-5 h-5 text-destructive" />
                   )}
@@ -355,11 +355,16 @@ export default function AIMockTest() {
                 <CardTitle className="text-base mt-2">Q{i + 1}. {q.question}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {q.options?.map((opt, oi) => (
-                  <div key={oi} className={`p-2 rounded text-sm ${opt === q.correctAnswer ? "bg-green-500/10 text-green-700 dark:text-green-400 font-medium" : userAnswers[q.id] === opt ? "bg-destructive/10 text-destructive" : "text-muted-foreground"}`}>
-                    {String.fromCharCode(65 + oi)}) {opt}
-                  </div>
-                ))}
+                {q.options?.map((opt, oi) => {
+                  const optIsCorrect = normalize(opt) === normalize(q.correctAnswer || "") ||
+                    (/^[A-D]$/i.test((q.correctAnswer || "").trim()) && (q.correctAnswer || "").trim().toUpperCase().charCodeAt(0) - 65 === oi);
+                  const optIsUserPick = userAnswers[q.id] === opt;
+                  return (
+                    <div key={oi} className={`p-2 rounded text-sm ${optIsCorrect ? "bg-green-500/10 text-green-700 dark:text-green-400 font-medium" : optIsUserPick ? "bg-destructive/10 text-destructive" : "text-muted-foreground"}`}>
+                      {String.fromCharCode(65 + oi)}) {opt} {optIsCorrect && <span className="ml-1">✓ Correct</span>}
+                    </div>
+                  );
+                })}
                 {q.explanation && <p className="text-sm text-muted-foreground mt-2"><strong>Explanation:</strong> {q.explanation}</p>}
                 {q.modelAnswer && <p className="text-sm text-muted-foreground mt-2"><strong>Model Answer:</strong> {q.modelAnswer}</p>}
               </CardContent>
