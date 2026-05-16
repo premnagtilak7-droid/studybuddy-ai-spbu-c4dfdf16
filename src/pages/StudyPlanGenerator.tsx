@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Sparkles, Calendar as CalendarIcon, BookOpen, Clock, Loader2,
-  Trash2, Download, ChevronDown, ChevronUp, RefreshCw, FileText,
+  Trash2, Download, ChevronDown, ChevronUp, RefreshCw, FileText, AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
 import AppLayout from "@/components/AppLayout";
