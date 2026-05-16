@@ -610,6 +610,32 @@ export default function StudyPlanGenerator() {
             </Card>
           </div>
         )}
+
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                Exam date issues detected
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2 pt-2">
+                  <p className="text-sm">Please review before generating:</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">
+                    {warnings.map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
+                  <p className="text-xs text-muted-foreground pt-2">You can cancel and update exam dates above, or continue anyway.</p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel & Fix</AlertDialogCancel>
+              <AlertDialogAction onClick={() => { setConfirmOpen(false); void runGenerate(); }}>
+                Generate Anyway
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
