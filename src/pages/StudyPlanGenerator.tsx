@@ -51,9 +51,18 @@ const summarizeDays = (days: PlanDay[]) => {
   return { tasks, hours, subjects, revisions };
 };
 
+const normalizeSavedPlan = (data: unknown): PlanDay[] => {
+  if (Array.isArray(data)) return data as PlanDay[];
+  if (data && typeof data === "object" && Array.isArray((data as { plan?: unknown }).plan)) {
+    return (data as { plan: PlanDay[] }).plan;
+  }
+  return [];
+};
+
 export default function StudyPlanGenerator() {
   const [subjects, setSubjects] = useState<SubjectInput[]>([]);
   const [plan, setPlan] = useState<PlanDay[] | null>(null);
+  const [activePlanView, setActivePlanView] = useState<PlanView>("daily");
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -117,7 +126,7 @@ export default function StudyPlanGenerator() {
         .limit(1)
         .single();
       if (data) {
-        setPlan(data.plan_data as any);
+        setPlan(normalizeSavedPlan(data.plan_data));
         setActivePlanId(data.id);
       }
     }
@@ -136,7 +145,7 @@ export default function StudyPlanGenerator() {
   const loadPlan = async (id: string) => {
     const { data } = await supabase.from("study_plans").select("id, plan_data, difficulty, daily_hours").eq("id", id).single();
     if (data) {
-      setPlan(data.plan_data as any);
+      setPlan(normalizeSavedPlan(data.plan_data));
       setActivePlanId(data.id);
       setDifficulty((data.difficulty as string) || "balanced");
       setDailyHours(Number(data.daily_hours) || 4);
