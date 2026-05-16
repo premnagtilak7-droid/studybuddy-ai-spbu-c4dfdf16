@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Sparkles, Calendar as CalendarIcon, BookOpen, Clock, Loader2,
   Trash2, Download, ChevronDown, ChevronUp, RefreshCw, FileText, AlertTriangle,
@@ -30,14 +30,51 @@ type SubjectInput = {
   selected: boolean;
 };
 
-type PlanTask = { subject: string; topic: string; hours: number; isRevision?: boolean; completed?: boolean };
+type PlanTask = { subject: string; topic: string; hours: number; isRevision?: boolean; completed?: boolean; detail?: string; method?: string; outcome?: string; priority?: "high" | "medium" | "low" };
 type PlanDay = { date: string; day: string; tasks: PlanTask[]; note?: string };
+type PlanView = "daily" | "weekly" | "monthly";
 
 const GEMINI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-ai`;
+
+const formatDateRange = (days: PlanDay[]) => {
+  if (!days.length) return "";
+  const first = new Date(`${days[0].date}T00:00:00`);
+  const last = new Date(`${days[days.length - 1].date}T00:00:00`);
+  return `${format(first, "dd MMM")} - ${format(last, "dd MMM yyyy")}`;
+};
+
+const summarizeDays = (days: PlanDay[]) => {
+  const tasks = days.flatMap(d => d.tasks);
+  const hours = tasks.reduce((sum, t) => sum + (Number(t.hours) || 0), 0);
+  const subjects = [...new Set(tasks.map(t => t.subject).filter(Boolean))];
+  const revisions = tasks.filter(t => t.isRevision).length;
+  return { tasks, hours, subjects, revisions };
+};
+
+const normalizePlanDays = (days: PlanDay[]): PlanDay[] => days.map((day) => ({
+  ...day,
+  note: day.note || "Complete the planned work, revise key points, and note doubts for follow-up.",
+  tasks: (day.tasks || []).map((task) => ({
+    ...task,
+    detail: task.detail || `Study ${task.topic} properly, prepare short notes, solve examples, and write doubts separately.`,
+    method: task.method || (task.isRevision ? "Recall → Practice → Mistake correction → Final recap" : "Read → Notes → Practice → Recap"),
+    outcome: task.outcome || `Finished notes, practice questions, and confidence check for ${task.topic}.`,
+    priority: task.priority || (task.isRevision ? "high" : "medium"),
+  })),
+}));
+
+const normalizeSavedPlan = (data: unknown): PlanDay[] => {
+  if (Array.isArray(data)) return normalizePlanDays(data as PlanDay[]);
+  if (data && typeof data === "object" && Array.isArray((data as { plan?: unknown }).plan)) {
+    return normalizePlanDays((data as { plan: PlanDay[] }).plan);
+  }
+  return [];
+};
 
 export default function StudyPlanGenerator() {
   const [subjects, setSubjects] = useState<SubjectInput[]>([]);
   const [plan, setPlan] = useState<PlanDay[] | null>(null);
+  const [activePlanView, setActivePlanView] = useState<PlanView>("daily");
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -101,7 +138,7 @@ export default function StudyPlanGenerator() {
         .limit(1)
         .single();
       if (data) {
-        setPlan(data.plan_data as any);
+        setPlan(normalizeSavedPlan(data.plan_data));
         setActivePlanId(data.id);
       }
     }
@@ -120,7 +157,7 @@ export default function StudyPlanGenerator() {
   const loadPlan = async (id: string) => {
     const { data } = await supabase.from("study_plans").select("id, plan_data, difficulty, daily_hours").eq("id", id).single();
     if (data) {
-      setPlan(data.plan_data as any);
+      setPlan(normalizeSavedPlan(data.plan_data));
       setActivePlanId(data.id);
       setDifficulty((data.difficulty as string) || "balanced");
       setDailyHours(Number(data.daily_hours) || 4);
@@ -215,7 +252,7 @@ export default function StudyPlanGenerator() {
       }
 
       const data = await resp.json();
-      const planData: PlanDay[] = (data.plan || []).map((d: PlanDay) => ({
+      const planData: PlanDay[] = normalizePlanDays(data.plan || []).map((d) => ({
         ...d,
         tasks: d.tasks.map(t => ({ ...t, completed: false })),
       }));
@@ -317,6 +354,20 @@ export default function StudyPlanGenerator() {
   const completedTasks = plan ? plan.reduce((a, d) => a + d.tasks.filter(t => t.completed).length, 0) : 0;
   const totalTasks = plan ? plan.reduce((a, d) => a + d.tasks.length, 0) : 0;
   const totalHours = plan ? plan.reduce((a, d) => a + d.tasks.reduce((b, t) => b + t.hours, 0), 0) : 0;
+  const weeklyPlan = useMemo(() => {
+    if (!plan) return [];
+    const weeks: PlanDay[][] = [];
+    for (let i = 0; i < plan.length; i += 7) weeks.push(plan.slice(i, i + 7));
+    return weeks;
+  }, [plan]);
+  const monthlyPlan = useMemo(() => {
+    if (!plan) return [];
+    return plan.reduce<Record<string, PlanDay[]>>((acc, day) => {
+      const key = format(new Date(`${day.date}T00:00:00`), "MMMM yyyy");
+      acc[key] = [...(acc[key] || []), day];
+      return acc;
+    }, {});
+  }, [plan]);
 
   const subjectColors: Record<string, string> = {};
   const palette = ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
@@ -528,7 +579,24 @@ export default function StudyPlanGenerator() {
               </div>
             </div>
 
-            {/* Table View */}
+            {/* Plan View Selector */}
+            <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted p-1">
+              {(["daily", "weekly", "monthly"] as PlanView[]).map(view => (
+                <button
+                  key={view}
+                  onClick={() => setActivePlanView(view)}
+                  className={cn(
+                    "rounded-md px-3 py-2 text-xs font-semibold capitalize transition-all",
+                    activePlanView === view ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {view} Plan
+                </button>
+              ))}
+            </div>
+
+            {/* Daily View */}
+            {activePlanView === "daily" && (
             <Card>
               <ScrollArea className="max-h-[600px]">
                 <Table>
@@ -588,9 +656,12 @@ export default function StudyPlanGenerator() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <span className={cn("text-xs text-muted-foreground", task.completed && "line-through")}>
-                                {task.topic}
-                              </span>
+                              <div className={cn("space-y-1 text-xs", task.completed && "line-through opacity-60")}>
+                                <p className="font-medium text-foreground">{task.topic}</p>
+                                <p className="text-muted-foreground">{task.detail}</p>
+                                <p className="text-muted-foreground"><span className="font-medium text-foreground">Method:</span> {task.method}</p>
+                                <p className="text-muted-foreground"><span className="font-medium text-foreground">Output:</span> {task.outcome}</p>
+                              </div>
                             </TableCell>
                             <TableCell className="text-center">
                               <span className="text-xs">{task.hours}h</span>
@@ -608,6 +679,112 @@ export default function StudyPlanGenerator() {
                 </Table>
               </ScrollArea>
             </Card>
+            )}
+
+            {/* Weekly View */}
+            {activePlanView === "weekly" && (
+              <div className="space-y-3">
+                {weeklyPlan.map((days, index) => {
+                  const summary = summarizeDays(days);
+                  return (
+                    <Card key={index}>
+                      <CardContent className="py-4 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <h3 className="text-sm font-semibold text-foreground">Week {index + 1}</h3>
+                            <p className="text-xs text-muted-foreground">{formatDateRange(days)}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            <Badge variant="secondary">{summary.hours}h</Badge>
+                            <Badge variant="outline">{summary.tasks.length} tasks</Badge>
+                            {summary.revisions > 0 && <Badge variant="outline">{summary.revisions} revisions</Badge>}
+                          </div>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-foreground">Focus subjects</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {summary.subjects.map(subject => <Badge key={subject} variant="outline" className="text-[10px]">{subject}</Badge>)}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-foreground">Weekly target</p>
+                            <p className="text-xs text-muted-foreground">Complete all listed topics, keep daily notes updated, revise weak areas, and finish one quick self-test before the week ends.</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {days.map(day => (
+                            <div key={day.date} className="rounded-md border border-border p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs font-semibold text-foreground">{day.day}, {day.date}</p>
+                                <span className="text-xs text-muted-foreground">{day.tasks.reduce((sum, task) => sum + task.hours, 0)}h</span>
+                              </div>
+                              <ul className="mt-2 space-y-1.5">
+                                {day.tasks.map((task, taskIndex) => (
+                                  <li key={`${day.date}-${taskIndex}`} className="text-xs text-muted-foreground">
+                                    <span className="font-medium text-foreground">{task.subject}:</span> {task.topic} — {task.detail}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Monthly View */}
+            {activePlanView === "monthly" && (
+              <div className="space-y-3">
+                {Object.entries(monthlyPlan).map(([month, days]) => {
+                  const summary = summarizeDays(days);
+                  return (
+                    <Card key={month}>
+                      <CardContent className="py-4 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <h3 className="text-sm font-semibold text-foreground">{month}</h3>
+                            <p className="text-xs text-muted-foreground">{days.length} study days · {summary.subjects.length} subjects</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary">{summary.hours} total hours</Badge>
+                            <Badge variant="outline">{summary.tasks.length} tasks</Badge>
+                          </div>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <div className="rounded-md border border-border p-3">
+                            <p className="text-xs font-medium text-foreground">Main coverage</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{summary.subjects.join(", ") || "General study"}</p>
+                          </div>
+                          <div className="rounded-md border border-border p-3">
+                            <p className="text-xs font-medium text-foreground">Practice goal</p>
+                            <p className="mt-1 text-xs text-muted-foreground">Convert every completed topic into short notes and solve mixed practice questions weekly.</p>
+                          </div>
+                          <div className="rounded-md border border-border p-3">
+                            <p className="text-xs font-medium text-foreground">Revision goal</p>
+                            <p className="mt-1 text-xs text-muted-foreground">Use spaced revision for weak topics and keep exam-week tasks revision-first.</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {days.map(day => (
+                            <div key={day.date} className="flex flex-col gap-1 rounded-md bg-muted/40 p-3 md:flex-row md:items-start md:justify-between">
+                              <div>
+                                <p className="text-xs font-semibold text-foreground">{day.date} · {day.day}</p>
+                                <p className="text-xs text-muted-foreground">{day.tasks.map(task => `${task.subject}: ${task.topic}`).join(" • ")}</p>
+                              </div>
+                              <span className="text-xs text-muted-foreground">{day.tasks.reduce((sum, task) => sum + task.hours, 0)}h</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
