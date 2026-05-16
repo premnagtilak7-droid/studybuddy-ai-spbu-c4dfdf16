@@ -252,17 +252,9 @@ export default function StudyPlanGenerator() {
       }
 
       const data = await resp.json();
-      const planData: PlanDay[] = (data.plan || []).map((d: PlanDay) => ({
+      const planData: PlanDay[] = normalizePlanDays(data.plan || []).map((d) => ({
         ...d,
-        note: d.note || "Complete the planned work, revise key points, and note doubts for follow-up.",
-        tasks: d.tasks.map(t => ({
-          ...t,
-          completed: false,
-          detail: t.detail || "Study the topic from your notes/textbook, make concise notes, and solve practice questions.",
-          method: t.method || "Read → Notes → Practice → Recap",
-          outcome: t.outcome || "Clear notes, solved examples, and marked doubts.",
-          priority: t.priority || (t.isRevision ? "high" : "medium"),
-        })),
+        tasks: d.tasks.map(t => ({ ...t, completed: false })),
       }));
       setPlan(planData);
       toast.success("Study plan generated!");
