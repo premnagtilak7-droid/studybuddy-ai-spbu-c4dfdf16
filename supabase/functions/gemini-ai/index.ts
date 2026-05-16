@@ -132,6 +132,104 @@ function normalizeStudyPlan(result: any) {
   };
 }
 
+function addDays(date: Date, days: number) {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + days);
+  return copy;
+}
+
+function dateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function buildDetailedStudyPlan(subjects: any[], dailyHours: number, difficulty: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const taskBlock = difficulty === "relaxed" ? 1.5 : difficulty === "intensive" ? 1 : 1.25;
+  const states = (subjects || []).map((subject: any) => {
+    const parsedDate = subject?.examDate ? new Date(`${subject.examDate}T00:00:00`) : addDays(today, 30);
+    const targetDate = Number.isNaN(parsedDate.getTime()) || parsedDate < today ? addDays(today, 7) : parsedDate;
+    return {
+      name: String(subject?.name || "Subject"),
+      topics: Array.isArray(subject?.topics) ? subject.topics.map((t: any) => String(t).trim()).filter(Boolean) : [],
+      targetDate,
+      nextTopic: 0,
+      revisionCursor: 0,
+    };
+  }).filter((subject) => subject.topics.length > 0);
+
+  if (!states.length) return [];
+
+  const lastDate = states.reduce((latest, subject) => subject.targetDate > latest ? subject.targetDate : latest, today);
+  const plan = [];
+
+  for (let current = new Date(today); current <= lastDate; current = addDays(current, 1)) {
+    const tasks = [];
+    let remainingHours = Number(dailyHours) || 4;
+    const active = states.filter((subject) => current <= subject.targetDate);
+    const revisionSubjects = active.filter((subject) => {
+      const daysLeft = Math.ceil((subject.targetDate.getTime() - current.getTime()) / 86400000);
+      return daysLeft >= 0 && daysLeft <= 2;
+    });
+
+    const pushTask = (subject: any, topic: string, hours: number, isRevision: boolean) => {
+      const roundedHours = Math.max(0.5, Math.round(hours * 2) / 2);
+      tasks.push({
+        subject: subject.name,
+        topic,
+        hours: roundedHours,
+        isRevision,
+        priority: isRevision ? "high" : subject.targetDate <= addDays(current, 7) ? "high" : "medium",
+        detail: isRevision
+          ? `Revise ${topic} with formulas, definitions, common mistakes, and 5-10 quick questions.`
+          : `Study ${topic} from notes/textbook, write short notes, solve examples, and list doubts immediately.`,
+        method: isRevision
+          ? "Recall key points → solve mixed questions → correct mistakes → final 10-minute recap"
+          : "Concept reading → handwritten notes → worked examples → practice questions → mini recap",
+        outcome: isRevision
+          ? `Fast revision sheet and corrected mistakes for ${topic}.`
+          : `Clear notes, solved practice set, and confidence score for ${topic}.`,
+      });
+      remainingHours -= roundedHours;
+    };
+
+    for (const subject of revisionSubjects) {
+      if (remainingHours <= 0) break;
+      const topic = subject.topics[subject.revisionCursor % subject.topics.length];
+      subject.revisionCursor += 1;
+      pushTask(subject, topic, Math.min(taskBlock, remainingHours), true);
+    }
+
+    while (remainingHours > 0) {
+      const nextSubject = active
+        .filter((subject) => subject.nextTopic < subject.topics.length)
+        .sort((a, b) => a.targetDate.getTime() - b.targetDate.getTime() || (b.topics.length - b.nextTopic) - (a.topics.length - a.nextTopic))[0];
+      if (!nextSubject) break;
+      const topic = nextSubject.topics[nextSubject.nextTopic];
+      nextSubject.nextTopic += 1;
+      pushTask(nextSubject, topic, Math.min(taskBlock, remainingHours), false);
+    }
+
+    while (remainingHours > 0) {
+      const subject = (active.length ? active : states).sort((a, b) => a.targetDate.getTime() - b.targetDate.getTime())[0];
+      const topic = subject.topics[subject.revisionCursor % subject.topics.length];
+      subject.revisionCursor += 1;
+      pushTask(subject, topic, Math.min(taskBlock, remainingHours), true);
+    }
+
+    plan.push({
+      date: dateKey(current),
+      day: current.toLocaleDateString("en-US", { weekday: "long" }),
+      note: revisionSubjects.length
+        ? "Revision-first day: close gaps, correct mistakes, and keep the final recap short."
+        : "Finish the listed topics, update notes, and write doubts for the next session.",
+      tasks,
+    });
+  }
+
+  return plan;
+}
+
 function getStudentContext(educationType?: string, examName?: string): string {
   if (educationType === "competitive_exam" && examName) {
     const examContexts: Record<string, string> = {
@@ -194,6 +292,11 @@ async function handleDoubt(body: any, apiKey: string) {
 // ─── STUDY PLAN ───
 async function handleStudyPlan(body: any, apiKey: string) {
   const { subjects, dailyHours = 4, difficulty = "balanced", educationType, examName } = body;
+  const generatedPlan = normalizeStudyPlan({ plan: buildDetailedStudyPlan(subjects, dailyHours, difficulty) });
+  if (!generatedPlan.plan.length) {
+    return new Response(JSON.stringify({ error: "Add at least one subject with remaining topics before generating a plan." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  return new Response(JSON.stringify(generatedPlan), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   
   let context = getStudentContext(educationType, examName);
   if (educationType === "competitive_exam" && examName) {
