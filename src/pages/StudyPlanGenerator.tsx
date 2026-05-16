@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Sparkles, Calendar as CalendarIcon, BookOpen, Clock, Loader2,
-  Trash2, Download, ChevronDown, ChevronUp, RefreshCw, FileText,
+  Trash2, Download, ChevronDown, ChevronUp, RefreshCw, FileText, AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
 import AppLayout from "@/components/AppLayout";
@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -44,6 +45,8 @@ export default function StudyPlanGenerator() {
   const [difficulty, setDifficulty] = useState("balanced");
   const [savedPlans, setSavedPlans] = useState<{ id: string; title: string; created_at: string }[]>([]);
   const [showSaved, setShowSaved] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const planRef = useRef<HTMLDivElement>(null);
 
   // Load subjects from DB
@@ -151,9 +154,40 @@ export default function StudyPlanGenerator() {
     setSubjects(copy);
   };
 
-  const generate = async () => {
+  const generate = () => {
     const selected = subjects.filter(s => s.selected && s.topicsRemaining.trim());
     if (!selected.length) { toast.error("Select at least one subject with topics remaining."); return; }
+
+    // Detect exam-date issues
+    const issues: string[] = [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const missing = selected.filter(s => !s.examDate);
+    const past = selected.filter(s => s.examDate && s.examDate < today);
+    if (missing.length) issues.push(`No exam date set for: ${missing.map(s => s.name).join(", ")}. A default 30-day window will be used.`);
+    if (past.length) issues.push(`Exam date is in the past for: ${past.map(s => s.name).join(", ")}. These will be skipped or rushed.`);
+
+    const dated = selected.filter(s => s.examDate).sort((a, b) => a.examDate!.getTime() - b.examDate!.getTime());
+    for (let i = 1; i < dated.length; i++) {
+      const gap = (dated[i].examDate!.getTime() - dated[i - 1].examDate!.getTime()) / 86400000;
+      if (gap < 1) issues.push(`${dated[i - 1].name} and ${dated[i].name} have the same exam date — revision time will be tight.`);
+    }
+    const soonest = dated[0];
+    if (soonest && soonest.examDate) {
+      const daysAway = Math.ceil((soonest.examDate.getTime() - today.getTime()) / 86400000);
+      if (daysAway >= 0 && daysAway < 3) issues.push(`${soonest.name} exam is only ${daysAway} day(s) away — plan may not fit all topics.`);
+    }
+
+    if (issues.length) {
+      setWarnings(issues);
+      setConfirmOpen(true);
+      return;
+    }
+    void runGenerate();
+  };
+
+  const runGenerate = async () => {
+    const selected = subjects.filter(s => s.selected && s.topicsRemaining.trim());
+    if (!selected.length) return;
 
     setLoading(true);
     setPlan(null);
@@ -576,6 +610,32 @@ export default function StudyPlanGenerator() {
             </Card>
           </div>
         )}
+
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                Exam date issues detected
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2 pt-2">
+                  <p className="text-sm">Please review before generating:</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">
+                    {warnings.map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
+                  <p className="text-xs text-muted-foreground pt-2">You can cancel and update exam dates above, or continue anyway.</p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel & Fix</AlertDialogCancel>
+              <AlertDialogAction onClick={() => { setConfirmOpen(false); void runGenerate(); }}>
+                Generate Anyway
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
