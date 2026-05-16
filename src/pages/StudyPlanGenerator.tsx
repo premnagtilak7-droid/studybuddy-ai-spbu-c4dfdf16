@@ -51,10 +51,22 @@ const summarizeDays = (days: PlanDay[]) => {
   return { tasks, hours, subjects, revisions };
 };
 
+const normalizePlanDays = (days: PlanDay[]): PlanDay[] => days.map((day) => ({
+  ...day,
+  note: day.note || "Complete the planned work, revise key points, and note doubts for follow-up.",
+  tasks: (day.tasks || []).map((task) => ({
+    ...task,
+    detail: task.detail || `Study ${task.topic} properly, prepare short notes, solve examples, and write doubts separately.`,
+    method: task.method || (task.isRevision ? "Recall → Practice → Mistake correction → Final recap" : "Read → Notes → Practice → Recap"),
+    outcome: task.outcome || `Finished notes, practice questions, and confidence check for ${task.topic}.`,
+    priority: task.priority || (task.isRevision ? "high" : "medium"),
+  })),
+}));
+
 const normalizeSavedPlan = (data: unknown): PlanDay[] => {
-  if (Array.isArray(data)) return data as PlanDay[];
+  if (Array.isArray(data)) return normalizePlanDays(data as PlanDay[]);
   if (data && typeof data === "object" && Array.isArray((data as { plan?: unknown }).plan)) {
-    return (data as { plan: PlanDay[] }).plan;
+    return normalizePlanDays((data as { plan: PlanDay[] }).plan);
   }
   return [];
 };
