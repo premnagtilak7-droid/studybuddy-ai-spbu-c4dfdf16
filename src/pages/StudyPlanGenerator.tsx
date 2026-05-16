@@ -575,7 +575,24 @@ export default function StudyPlanGenerator() {
               </div>
             </div>
 
-            {/* Table View */}
+            {/* Plan View Selector */}
+            <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted p-1">
+              {(["daily", "weekly", "monthly"] as PlanView[]).map(view => (
+                <button
+                  key={view}
+                  onClick={() => setActivePlanView(view)}
+                  className={cn(
+                    "rounded-md px-3 py-2 text-xs font-semibold capitalize transition-all",
+                    activePlanView === view ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {view} Plan
+                </button>
+              ))}
+            </div>
+
+            {/* Daily View */}
+            {activePlanView === "daily" && (
             <Card>
               <ScrollArea className="max-h-[600px]">
                 <Table>
@@ -635,9 +652,12 @@ export default function StudyPlanGenerator() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <span className={cn("text-xs text-muted-foreground", task.completed && "line-through")}>
-                                {task.topic}
-                              </span>
+                              <div className={cn("space-y-1 text-xs", task.completed && "line-through opacity-60")}>
+                                <p className="font-medium text-foreground">{task.topic}</p>
+                                <p className="text-muted-foreground">{task.detail}</p>
+                                <p className="text-muted-foreground"><span className="font-medium text-foreground">Method:</span> {task.method}</p>
+                                <p className="text-muted-foreground"><span className="font-medium text-foreground">Output:</span> {task.outcome}</p>
+                              </div>
                             </TableCell>
                             <TableCell className="text-center">
                               <span className="text-xs">{task.hours}h</span>
@@ -655,6 +675,112 @@ export default function StudyPlanGenerator() {
                 </Table>
               </ScrollArea>
             </Card>
+            )}
+
+            {/* Weekly View */}
+            {activePlanView === "weekly" && (
+              <div className="space-y-3">
+                {weeklyPlan.map((days, index) => {
+                  const summary = summarizeDays(days);
+                  return (
+                    <Card key={index}>
+                      <CardContent className="py-4 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <h3 className="text-sm font-semibold text-foreground">Week {index + 1}</h3>
+                            <p className="text-xs text-muted-foreground">{formatDateRange(days)}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            <Badge variant="secondary">{summary.hours}h</Badge>
+                            <Badge variant="outline">{summary.tasks.length} tasks</Badge>
+                            {summary.revisions > 0 && <Badge variant="outline">{summary.revisions} revisions</Badge>}
+                          </div>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-foreground">Focus subjects</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {summary.subjects.map(subject => <Badge key={subject} variant="outline" className="text-[10px]">{subject}</Badge>)}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-foreground">Weekly target</p>
+                            <p className="text-xs text-muted-foreground">Complete all listed topics, keep daily notes updated, revise weak areas, and finish one quick self-test before the week ends.</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {days.map(day => (
+                            <div key={day.date} className="rounded-md border border-border p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs font-semibold text-foreground">{day.day}, {day.date}</p>
+                                <span className="text-xs text-muted-foreground">{day.tasks.reduce((sum, task) => sum + task.hours, 0)}h</span>
+                              </div>
+                              <ul className="mt-2 space-y-1.5">
+                                {day.tasks.map((task, taskIndex) => (
+                                  <li key={`${day.date}-${taskIndex}`} className="text-xs text-muted-foreground">
+                                    <span className="font-medium text-foreground">{task.subject}:</span> {task.topic} — {task.detail}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Monthly View */}
+            {activePlanView === "monthly" && (
+              <div className="space-y-3">
+                {Object.entries(monthlyPlan).map(([month, days]) => {
+                  const summary = summarizeDays(days);
+                  return (
+                    <Card key={month}>
+                      <CardContent className="py-4 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <h3 className="text-sm font-semibold text-foreground">{month}</h3>
+                            <p className="text-xs text-muted-foreground">{days.length} study days · {summary.subjects.length} subjects</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary">{summary.hours} total hours</Badge>
+                            <Badge variant="outline">{summary.tasks.length} tasks</Badge>
+                          </div>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <div className="rounded-md border border-border p-3">
+                            <p className="text-xs font-medium text-foreground">Main coverage</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{summary.subjects.join(", ") || "General study"}</p>
+                          </div>
+                          <div className="rounded-md border border-border p-3">
+                            <p className="text-xs font-medium text-foreground">Practice goal</p>
+                            <p className="mt-1 text-xs text-muted-foreground">Convert every completed topic into short notes and solve mixed practice questions weekly.</p>
+                          </div>
+                          <div className="rounded-md border border-border p-3">
+                            <p className="text-xs font-medium text-foreground">Revision goal</p>
+                            <p className="mt-1 text-xs text-muted-foreground">Use spaced revision for weak topics and keep exam-week tasks revision-first.</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {days.map(day => (
+                            <div key={day.date} className="flex flex-col gap-1 rounded-md bg-muted/40 p-3 md:flex-row md:items-start md:justify-between">
+                              <div>
+                                <p className="text-xs font-semibold text-foreground">{day.date} · {day.day}</p>
+                                <p className="text-xs text-muted-foreground">{day.tasks.map(task => `${task.subject}: ${task.topic}`).join(" • ")}</p>
+                              </div>
+                              <span className="text-xs text-muted-foreground">{day.tasks.reduce((sum, task) => sum + task.hours, 0)}h</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
