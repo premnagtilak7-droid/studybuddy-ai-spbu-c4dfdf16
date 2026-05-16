@@ -242,7 +242,15 @@ export default function StudyPlanGenerator() {
       const data = await resp.json();
       const planData: PlanDay[] = (data.plan || []).map((d: PlanDay) => ({
         ...d,
-        tasks: d.tasks.map(t => ({ ...t, completed: false })),
+        note: d.note || "Complete the planned work, revise key points, and note doubts for follow-up.",
+        tasks: d.tasks.map(t => ({
+          ...t,
+          completed: false,
+          detail: t.detail || "Study the topic from your notes/textbook, make concise notes, and solve practice questions.",
+          method: t.method || "Read → Notes → Practice → Recap",
+          outcome: t.outcome || "Clear notes, solved examples, and marked doubts.",
+          priority: t.priority || (t.isRevision ? "high" : "medium"),
+        })),
       }));
       setPlan(planData);
       toast.success("Study plan generated!");
@@ -342,6 +350,20 @@ export default function StudyPlanGenerator() {
   const completedTasks = plan ? plan.reduce((a, d) => a + d.tasks.filter(t => t.completed).length, 0) : 0;
   const totalTasks = plan ? plan.reduce((a, d) => a + d.tasks.length, 0) : 0;
   const totalHours = plan ? plan.reduce((a, d) => a + d.tasks.reduce((b, t) => b + t.hours, 0), 0) : 0;
+  const weeklyPlan = useMemo(() => {
+    if (!plan) return [];
+    const weeks: PlanDay[][] = [];
+    for (let i = 0; i < plan.length; i += 7) weeks.push(plan.slice(i, i + 7));
+    return weeks;
+  }, [plan]);
+  const monthlyPlan = useMemo(() => {
+    if (!plan) return [];
+    return plan.reduce<Record<string, PlanDay[]>>((acc, day) => {
+      const key = format(new Date(`${day.date}T00:00:00`), "MMMM yyyy");
+      acc[key] = [...(acc[key] || []), day];
+      return acc;
+    }, {});
+  }, [plan]);
 
   const subjectColors: Record<string, string> = {};
   const palette = ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
