@@ -154,9 +154,40 @@ export default function StudyPlanGenerator() {
     setSubjects(copy);
   };
 
-  const generate = async () => {
+  const generate = () => {
     const selected = subjects.filter(s => s.selected && s.topicsRemaining.trim());
     if (!selected.length) { toast.error("Select at least one subject with topics remaining."); return; }
+
+    // Detect exam-date issues
+    const issues: string[] = [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const missing = selected.filter(s => !s.examDate);
+    const past = selected.filter(s => s.examDate && s.examDate < today);
+    if (missing.length) issues.push(`No exam date set for: ${missing.map(s => s.name).join(", ")}. A default 30-day window will be used.`);
+    if (past.length) issues.push(`Exam date is in the past for: ${past.map(s => s.name).join(", ")}. These will be skipped or rushed.`);
+
+    const dated = selected.filter(s => s.examDate).sort((a, b) => a.examDate!.getTime() - b.examDate!.getTime());
+    for (let i = 1; i < dated.length; i++) {
+      const gap = (dated[i].examDate!.getTime() - dated[i - 1].examDate!.getTime()) / 86400000;
+      if (gap < 1) issues.push(`${dated[i - 1].name} and ${dated[i].name} have the same exam date — revision time will be tight.`);
+    }
+    const soonest = dated[0];
+    if (soonest && soonest.examDate) {
+      const daysAway = Math.ceil((soonest.examDate.getTime() - today.getTime()) / 86400000);
+      if (daysAway >= 0 && daysAway < 3) issues.push(`${soonest.name} exam is only ${daysAway} day(s) away — plan may not fit all topics.`);
+    }
+
+    if (issues.length) {
+      setWarnings(issues);
+      setConfirmOpen(true);
+      return;
+    }
+    void runGenerate();
+  };
+
+  const runGenerate = async () => {
+    const selected = subjects.filter(s => s.selected && s.topicsRemaining.trim());
+    if (!selected.length) return;
 
     setLoading(true);
     setPlan(null);
