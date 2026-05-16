@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Sparkles, Calendar as CalendarIcon, BookOpen, Clock, Loader2,
   Trash2, Download, ChevronDown, ChevronUp, RefreshCw, FileText, AlertTriangle,
@@ -30,10 +30,26 @@ type SubjectInput = {
   selected: boolean;
 };
 
-type PlanTask = { subject: string; topic: string; hours: number; isRevision?: boolean; completed?: boolean };
+type PlanTask = { subject: string; topic: string; hours: number; isRevision?: boolean; completed?: boolean; detail?: string; method?: string; outcome?: string; priority?: "high" | "medium" | "low" };
 type PlanDay = { date: string; day: string; tasks: PlanTask[]; note?: string };
+type PlanView = "daily" | "weekly" | "monthly";
 
 const GEMINI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-ai`;
+
+const formatDateRange = (days: PlanDay[]) => {
+  if (!days.length) return "";
+  const first = new Date(`${days[0].date}T00:00:00`);
+  const last = new Date(`${days[days.length - 1].date}T00:00:00`);
+  return `${format(first, "dd MMM")} - ${format(last, "dd MMM yyyy")}`;
+};
+
+const summarizeDays = (days: PlanDay[]) => {
+  const tasks = days.flatMap(d => d.tasks);
+  const hours = tasks.reduce((sum, t) => sum + (Number(t.hours) || 0), 0);
+  const subjects = [...new Set(tasks.map(t => t.subject).filter(Boolean))];
+  const revisions = tasks.filter(t => t.isRevision).length;
+  return { tasks, hours, subjects, revisions };
+};
 
 export default function StudyPlanGenerator() {
   const [subjects, setSubjects] = useState<SubjectInput[]>([]);
