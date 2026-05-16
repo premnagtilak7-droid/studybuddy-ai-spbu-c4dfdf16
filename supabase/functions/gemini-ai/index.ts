@@ -67,6 +67,33 @@ async function callAI(apiKey: string, messages: any[], tools?: any[], toolChoice
   return response;
 }
 
+async function callGeminiMultimodal(apiKey: string, systemPrompt: string, prompt: string, imageData: string, imageMimeType = "image/png") {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      stream: false,
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: `data:${imageMimeType};base64,${imageData}` } },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) return handleAIError(response);
+  return response;
+}
+
 function extractJsonFromToolCall(data: any): any {
   const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
   if (toolCall) {
@@ -110,15 +137,33 @@ function getStudentContext(educationType?: string, examName?: string): string {
 
 // ─── DOUBT ───
 async function handleDoubt(body: any, apiKey: string) {
-  const { messages, language, questionType, subject, educationType, examName } = body;
+  const { messages, language, questionType, subject, educationType, examName, imageData, imageMimeType } = body;
   
   const context = getStudentContext(educationType, examName);
 
-  let sys = `You are an expert tutor. ${context}\n\nAnswer with: clear explanation, step-by-step if numerical, key formula, and one memory tip. Be concise and student friendly.\n\nFormat your responses using markdown with headers, bullet points, and code blocks for formulas.\nWhen solving numerical problems, show each step clearly with proper formulas.\n\nIMPORTANT: Always provide a complete, non-empty response.`;
+  let sys = `You are an expert tutor. ${context}\n\nAnswer with: clear explanation, step-by-step if numerical, key formula, and one memory tip. Be concise and student friendly.\n\nFormat your responses using markdown with headers, bullet points, and code blocks for formulas. Use normal Markdown math text; do not output raw dollar-sign LaTeX delimiters like $$ or escaped symbols such as \$V.\nWhen solving numerical problems, show each step clearly with proper formulas.\nIf an image is provided, first read the image content carefully, identify the exact diagram/text/topic shown, and base the answer on that image plus the user's doubt. Do not guess unrelated topics.\n\nIMPORTANT: Always provide a complete, non-empty response.`;
   if (questionType) sys += `\n\nThe student is asking a "${questionType}" type question.`;
   if (subject) sys += `\n\nThe question is about: ${subject}.`;
   if (language === "marathi") sys += "\n\nRespond in Marathi. Keep technical terms in English.";
   else if (language === "hindi") sys += "\n\nRespond in Hindi. Keep technical terms in English.";
+
+  if (imageData) {
+    const userText = messages?.map((m: any) => m?.content).filter(Boolean).join("\n\n") || "Please analyze this image and explain it.";
+    const response = await callGeminiMultimodal(apiKey, sys, userText, imageData, imageMimeType);
+    if (response instanceof Response && response.headers.get("Content-Type")?.includes("application/json") && response.status !== 200) return response;
+
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) {
+      return new Response(JSON.stringify({ error: "AI could not analyze the image. Please try a clearer image." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    return new Response(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n`, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    });
+  }
 
   const response = await callAI(apiKey, [{ role: "system", content: sys }, ...messages], undefined, undefined, true);
   if (response instanceof Response && response.headers.get("Content-Type")?.includes("application/json")) return response;
