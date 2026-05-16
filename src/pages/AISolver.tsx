@@ -58,8 +58,8 @@ function ResponseCard({ content, imageUrl }: { content: string; imageUrl?: strin
   const displayContent = content
     .replace(/```(?:markdown|md)\s*/gi, "```")
     .replace(/\$\$/g, "")
-    .replace(/\$/g, "")
     .replace(/\\\$/g, "")
+    .replace(/\$/g, "")
     .replace(/\\times/g, "×")
     .replace(/\\Omega/g, "Ω")
     .replace(/\\Rightarrow/g, "⇒")
