@@ -45,6 +45,8 @@ export default function StudyPlanGenerator() {
   const [difficulty, setDifficulty] = useState("balanced");
   const [savedPlans, setSavedPlans] = useState<{ id: string; title: string; created_at: string }[]>([]);
   const [showSaved, setShowSaved] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const planRef = useRef<HTMLDivElement>(null);
 
   // Load subjects from DB
