@@ -212,13 +212,12 @@ async function handleStudyPlan(body: any, apiKey: string) {
 
   const response = await callAI(apiKey, [{ role: "system", content: sys }, { role: "user", content: user }], tools, { type: "function", function: { name: "create_study_plan" } });
   
-  if (response.headers.get("Content-Type")?.includes("application/json")) {
-    const text = await response.text();
-    try { const parsed = JSON.parse(text); if (parsed.error) return new Response(text, { status: response.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }); } catch {}
-  }
-
   try {
-    const data = await response.json();
+    const text = await response.text();
+    const data = JSON.parse(text);
+    if (data?.error) {
+      return new Response(text, { status: response.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const result = extractJsonFromToolCall(data);
     if (!result || !result.plan || !Array.isArray(result.plan) || result.plan.length === 0) {
       return new Response(JSON.stringify({ error: "AI returned an empty plan. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
