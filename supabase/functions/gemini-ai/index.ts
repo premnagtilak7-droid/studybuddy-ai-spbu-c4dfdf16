@@ -181,8 +181,25 @@ async function handleStudyPlan(body: any, apiKey: string) {
     context += " Follow the textbook chapter sequence.";
   }
   
-  const sys = `You are an expert study planner. ${context} Create a day-by-day study table. Return the plan using the tool provided. IMPORTANT: You MUST call the create_study_plan tool with a non-empty plan array.`;
-  const user = `Create a study plan for: ${JSON.stringify(subjects)}\nToday: ${new Date().toISOString().slice(0, 10)}\nDaily hours: ${dailyHours}\nDifficulty: ${difficulty}`;
+  const today = new Date().toISOString().slice(0, 10);
+  // Compute horizon: latest examDate or +30 days
+  let lastDate = today;
+  for (const s of (subjects || [])) {
+    if (s?.examDate && s.examDate > lastDate) lastDate = s.examDate;
+  }
+
+  const sys = `You are an expert study planner. ${context}
+
+STRICT RULES (must follow):
+1. Output a day-by-day plan from TODAY (${today}) until the LAST exam date (${lastDate}). Include EVERY day in between — do not skip days.
+2. Each day's total task hours must equal ${dailyHours} (±0.5). Difficulty "${difficulty}": light = fewer tasks/shorter, intense = more tasks.
+3. For each subject, schedule ALL its remaining topics BEFORE its examDate. Earlier examDate = scheduled first.
+4. The 1-2 days BEFORE each subject's examDate must be revision tasks for that subject (isRevision: true).
+5. Subjects with more remaining topics get more days.
+6. Use REAL date strings (YYYY-MM-DD), correct day-of-week names.
+7. Topic strings must come from the provided topics list — do not invent topics.
+8. You MUST call create_study_plan with a non-empty plan array covering the full date range.`;
+  const user = `Create the study plan.\nSubjects (name, topics[], examDate): ${JSON.stringify(subjects)}\nToday: ${today}\nLast exam date: ${lastDate}\nDaily hours: ${dailyHours}\nDifficulty: ${difficulty}`;
 
   const tools = [{
     type: "function",
