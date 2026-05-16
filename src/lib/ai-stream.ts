@@ -11,6 +11,8 @@ export async function streamChat({
   subject,
   educationType,
   examName,
+  imageData,
+  imageMimeType,
   onDelta,
   onDone,
   onError,
@@ -21,6 +23,8 @@ export async function streamChat({
   subject?: string;
   educationType?: string;
   examName?: string;
+  imageData?: string;
+  imageMimeType?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
@@ -38,7 +42,17 @@ export async function streamChat({
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ type: "doubt", messages: sanitizedMessages, language, questionType, subject, educationType, examName }),
+      body: JSON.stringify({
+        type: "doubt",
+        messages: sanitizedMessages,
+        language,
+        questionType,
+        subject,
+        educationType,
+        examName,
+        imageData,
+        imageMimeType,
+      }),
     });
 
     if (!resp.ok) {
