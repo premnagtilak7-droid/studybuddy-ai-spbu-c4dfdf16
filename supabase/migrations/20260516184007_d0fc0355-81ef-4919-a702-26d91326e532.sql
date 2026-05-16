@@ -1,0 +1,1 @@
+ALTER TABLE public.focus_sessions ADD COLUMN IF NOT EXISTS distractions integer NOT NULL DEFAULT 0;

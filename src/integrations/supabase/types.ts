@@ -648,6 +648,7 @@ export type Database = {
         Row: {
           completed: boolean
           created_at: string
+          distractions: number
           duration_minutes: number
           id: string
           notes: string | null
@@ -656,6 +657,7 @@ export type Database = {
         Insert: {
           completed?: boolean
           created_at?: string
+          distractions?: number
           duration_minutes: number
           id?: string
           notes?: string | null
@@ -664,6 +666,7 @@ export type Database = {
         Update: {
           completed?: boolean
           created_at?: string
+          distractions?: number
           duration_minutes?: number
           id?: string
           notes?: string | null
