@@ -150,6 +150,22 @@ function useImageUpload() {
   return { imageFile, imagePreview, uploading, uploadProgress, handleFile, clearImage, uploadImage };
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        reject(new Error("Could not read image"));
+        return;
+      }
+      resolve(result.split(",")[1] || "");
+    };
+    reader.onerror = () => reject(new Error("Could not read image"));
+    reader.readAsDataURL(file);
+  });
+}
+
 /* ─── Main Component ─── */
 function AISolverChat() {
   const [subjects, setSubjects] = useState<UserSubject[]>([]);
@@ -236,11 +252,15 @@ function AISolverChat() {
     const messages = [{ role: "user" as const, content: fullQuestion }];
 
     try {
+      const imageData = imageFile ? await fileToBase64(imageFile) : undefined;
+
       await streamChat({
         messages,
         language,
         questionType,
         subject: subjectName,
+        imageData,
+        imageMimeType: imageFile?.type,
         onDelta: (chunk) => {
           assistantSoFar += chunk;
           setResponse(assistantSoFar);
