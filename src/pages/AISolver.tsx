@@ -55,7 +55,19 @@ function CopyButton({ text }: { text: string }) {
 
 /* ─── Response Card ─── */
 function ResponseCard({ content, imageUrl }: { content: string; imageUrl?: string | null }) {
-  const sections = content.split(/(?=^##\s)/m).filter(Boolean);
+  const displayContent = content
+    .replace(/```(?:markdown|md)\s*/gi, "```")
+    .replace(/\$\$/g, "")
+    .replace(/\\\$/g, "")
+    .replace(/\$/g, "")
+    .replace(/\\times/g, "×")
+    .replace(/\\Omega/g, "Ω")
+    .replace(/\\Rightarrow/g, "⇒")
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)")
+    .replace(/\\sum/g, "Σ")
+    .replace(/_\{([^{}]+)\}/g, "_$1")
+    .trim();
+  const sections = displayContent.split(/(?=^##\s)/m).filter(Boolean);
 
   return (
     <Card className="border-primary/20">
@@ -76,11 +88,11 @@ function ResponseCard({ content, imageUrl }: { content: string; imageUrl?: strin
           ))
         ) : (
           <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{content}</ReactMarkdown>
+            <ReactMarkdown>{displayContent}</ReactMarkdown>
           </div>
         )}
         <div className="flex justify-end pt-2">
-          <CopyButton text={content} />
+          <CopyButton text={displayContent} />
         </div>
       </CardContent>
     </Card>
@@ -148,6 +160,22 @@ function useImageUpload() {
   }, [imageFile]);
 
   return { imageFile, imagePreview, uploading, uploadProgress, handleFile, clearImage, uploadImage };
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        reject(new Error("Could not read image"));
+        return;
+      }
+      resolve(result.split(",")[1] || "");
+    };
+    reader.onerror = () => reject(new Error("Could not read image"));
+    reader.readAsDataURL(file);
+  });
 }
 
 /* ─── Main Component ─── */
@@ -236,11 +264,15 @@ function AISolverChat() {
     const messages = [{ role: "user" as const, content: fullQuestion }];
 
     try {
+      const imageData = imageFile ? await fileToBase64(imageFile) : undefined;
+
       await streamChat({
         messages,
         language,
         questionType,
         subject: subjectName,
+        imageData,
+        imageMimeType: imageFile?.type,
         onDelta: (chunk) => {
           assistantSoFar += chunk;
           setResponse(assistantSoFar);
