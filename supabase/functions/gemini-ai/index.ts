@@ -111,6 +111,27 @@ function extractJsonFromToolCall(data: any): any {
   return null;
 }
 
+function normalizeStudyPlan(result: any) {
+  const plan = Array.isArray(result?.plan) ? result.plan : Array.isArray(result?.dailyPlan) ? result.dailyPlan : [];
+  return {
+    plan: plan.map((day: any) => ({
+      date: String(day?.date || ""),
+      day: String(day?.day || ""),
+      note: String(day?.note || "Stay consistent and complete every task before moving ahead."),
+      tasks: Array.isArray(day?.tasks) ? day.tasks.map((task: any) => ({
+        subject: String(task?.subject || "General Study"),
+        topic: String(task?.topic || "Revision"),
+        hours: Number(task?.hours) || 1,
+        isRevision: Boolean(task?.isRevision),
+        detail: String(task?.detail || task?.description || "Understand the concept, make short notes, solve practice questions, and mark doubts."),
+        method: String(task?.method || "Read → Notes → Practice → Quick recap"),
+        outcome: String(task?.outcome || "Clear concept notes and solved practice examples."),
+        priority: ["high", "medium", "low"].includes(task?.priority) ? task.priority : "medium",
+      })) : [],
+    })).filter((day: any) => day.date && day.tasks.length > 0),
+  };
+}
+
 function getStudentContext(educationType?: string, examName?: string): string {
   if (educationType === "competitive_exam" && examName) {
     const examContexts: Record<string, string> = {
@@ -198,7 +219,9 @@ STRICT RULES (must follow):
 5. Subjects with more remaining topics get more days.
 6. Use REAL date strings (YYYY-MM-DD), correct day-of-week names.
 7. Topic strings must come from the provided topics list — do not invent topics.
-8. You MUST call create_study_plan with a non-empty plan array covering the full date range.`;
+8. Every task must include proper details: detail, method, outcome, and priority.
+9. You MUST call create_study_plan with a non-empty plan array covering the full date range.
+10. Keep task detail practical for students: what to read, what to write/practice, expected output, and quick revision action.`;
   const user = `Create the study plan.\nSubjects (name, topics[], examDate): ${JSON.stringify(subjects)}\nToday: ${today}\nLast exam date: ${lastDate}\nDaily hours: ${dailyHours}\nDifficulty: ${difficulty}`;
 
   const tools = [{
@@ -215,7 +238,7 @@ STRICT RULES (must follow):
               type: "object",
               properties: {
                 date: { type: "string" }, day: { type: "string" },
-                tasks: { type: "array", items: { type: "object", properties: { subject: { type: "string" }, topic: { type: "string" }, hours: { type: "number" }, isRevision: { type: "boolean" } }, required: ["subject", "topic", "hours"], additionalProperties: false } },
+                tasks: { type: "array", items: { type: "object", properties: { subject: { type: "string" }, topic: { type: "string" }, hours: { type: "number" }, isRevision: { type: "boolean" }, detail: { type: "string" }, method: { type: "string" }, outcome: { type: "string" }, priority: { type: "string", enum: ["high", "medium", "low"] } }, required: ["subject", "topic", "hours", "detail", "method", "outcome", "priority"], additionalProperties: false } },
                 note: { type: "string" },
               },
               required: ["date", "day", "tasks"], additionalProperties: false,
@@ -235,8 +258,8 @@ STRICT RULES (must follow):
     if (data?.error) {
       return new Response(text, { status: response.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    const result = extractJsonFromToolCall(data);
-    if (!result || !result.plan || !Array.isArray(result.plan) || result.plan.length === 0) {
+    const result = normalizeStudyPlan(extractJsonFromToolCall(data));
+    if (!result.plan.length) {
       return new Response(JSON.stringify({ error: "AI returned an empty plan. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
