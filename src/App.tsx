@@ -247,6 +247,7 @@ const App = () => {
               <RouteSEO />
               <AmbientOrbs />
               <AppRoutes />
+              <MobileBottomNav />
               <PWAInstallPrompt />
               <NotificationPermissionBanner />
               <ReminderBanner />
