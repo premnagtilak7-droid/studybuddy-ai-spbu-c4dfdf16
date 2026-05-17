@@ -78,6 +78,8 @@ import ReminderBanner from "./components/ReminderBanner";
 import CookieConsent from "./components/CookieConsent";
 import PageLoader from "./components/PageLoader";
 import RouteSEO from "./components/RouteSEO";
+import AmbientOrbs from "./components/AmbientOrbs";
+import PageTransition from "./components/PageTransition";
 
 // Preload critical pages after initial render
 function usePreloadPages() {
@@ -178,6 +180,7 @@ const AppRoutes = () => {
 
   return (
     <Suspense fallback={<PageLoader />}>
+      <PageTransition>
       <Routes>
         <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
         <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
@@ -222,6 +225,7 @@ const AppRoutes = () => {
         <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </PageTransition>
     </Suspense>
   );
 };
@@ -240,6 +244,7 @@ const App = () => {
           <BrowserRouter>
             <AuthProvider>
               <RouteSEO />
+              <AmbientOrbs />
               <AppRoutes />
               <PWAInstallPrompt />
               <NotificationPermissionBanner />
