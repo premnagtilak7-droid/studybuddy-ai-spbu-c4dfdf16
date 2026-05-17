@@ -354,3 +354,82 @@
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
 }
+
+/* ===== Premium polish layer ===== */
+@layer utilities {
+  .premium-card {
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1),
+                border-color 0.25s cubic-bezier(0.4,0,0.2,1),
+                background-color 0.25s cubic-bezier(0.4,0,0.2,1),
+                box-shadow 0.25s cubic-bezier(0.4,0,0.2,1);
+    will-change: transform;
+  }
+  .premium-card:hover {
+    transform: translateY(-3px);
+    border-color: hsl(230 80% 64% / 0.35);
+    box-shadow: 0 10px 30px -12px hsl(230 80% 30% / 0.35);
+  }
+
+  .ambient-orb {
+    position: fixed;
+    border-radius: 9999px;
+    filter: blur(60px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .ambient-orb-1 {
+    width: 300px; height: 300px;
+    top: -60px; right: -60px;
+    background: rgba(99,102,241,0.10);
+    animation: orb-float-1 8s ease-in-out infinite alternate;
+  }
+  .ambient-orb-2 {
+    width: 200px; height: 200px;
+    bottom: -50px; right: 10%;
+    background: rgba(139,92,246,0.08);
+    animation: orb-float-2 10s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes orb-float-1 {
+    0% { transform: translate(0,0) scale(1); }
+    100% { transform: translate(-40px,30px) scale(1.1); }
+  }
+  @keyframes orb-float-2 {
+    0% { transform: translate(0,0) scale(1); }
+    100% { transform: translate(30px,-40px) scale(1.15); }
+  }
+
+  /* Shimmer sweep across an element (for greeting banner etc.) */
+  .shimmer-sweep {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .shimmer-sweep::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    background-size: 200% 100%;
+    animation: shimmer-sweep 4s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes shimmer-sweep {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Sidebar nav item staggered entrance */
+  .nav-item-enter {
+    opacity: 0;
+    transform: translateX(-8px);
+    animation: nav-enter 0.4s cubic-bezier(0.4,0,0.2,1) forwards;
+  }
+  @keyframes nav-enter {
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Tactile press */
+  .press {
+    transition: transform 0.12s ease;
+  }
+  .press:active { transform: scale(0.97); }
+}
