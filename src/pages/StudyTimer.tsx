@@ -693,6 +693,18 @@ export default function StudyTimer() {
                 </CardContent>
               </Tabs>
             </Card>
+
+            {/* Weekly Leaderboard (merged from Study Room) */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-1.5">
+                  <Trophy className="w-4 h-4 text-accent" /> Weekly Leaderboard
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Leaderboard />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right column */}
