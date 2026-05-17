@@ -594,7 +594,55 @@ export default function StudyTimer() {
               </CardContent>
             </Card>
 
-            {/* History + Analytics */}
+            {/* Focus Settings (merged from Focus Mode) */}
+            <Card>
+              <Collapsible open={focusSettingsOpen} onOpenChange={setFocusSettingsOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-4 text-left hover:bg-secondary/30 transition-colors rounded-t-lg">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">Focus Settings</span>
+                      {(strictMode || focusBlock) && <Badge variant="secondary" className="text-[10px]">On</Badge>}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${focusSettingsOpen ? "rotate-180" : ""}`} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="flex items-start justify-between gap-3 p-3 rounded-lg bg-secondary/30">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-primary" /> Strict Focus Mode</p>
+                        <p className="text-xs text-muted-foreground mt-1">Pauses timer + deducts XP when you switch tabs or minimize.</p>
+                      </div>
+                      <Switch checked={strictMode} onCheckedChange={setStrictMode} />
+                    </div>
+
+                    <div className="flex items-start justify-between gap-3 p-3 rounded-lg bg-secondary/30">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                          <Ban className="w-3.5 h-3.5 text-destructive" /> Focus Block
+                          <Badge variant="outline" className="text-[9px] ml-1">{platform === "native-android" ? "Android" : "Web — limited"}</Badge>
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Native app blocking only works in the Android build. On web, tab-leave detection (Strict mode) is used instead.
+                        </p>
+                      </div>
+                      <Switch checked={focusBlock} onCheckedChange={setFocusBlock} disabled={platform !== "native-android"} />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">What are you working on?</Label>
+                      <Input
+                        placeholder="e.g. Revise Unit 3 — Data Structures"
+                        value={currentTask}
+                        onChange={e => setCurrentTask(e.target.value)}
+                      />
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+
             <Card>
               <Tabs defaultValue="history">
                 <CardHeader className="pb-2">
