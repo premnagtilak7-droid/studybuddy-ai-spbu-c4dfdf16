@@ -28,7 +28,7 @@ import { motion } from "framer-motion";
 import {
   Play, Pause, Square, RotateCcw, Timer, Clock, Brain, Coffee,
   Flame, Target, History, BarChart3, StickyNote,
-  Volume2, Maximize2, Minimize2,
+  Volume2, Maximize2, Minimize2, Shield, Ban, ChevronDown, Trophy,
 } from "lucide-react";
 import StudyRemindersCard from "@/components/StudyRemindersCard";
 import { registerCustomSW, requestNotificationPermissionWithPrompt, sendToSW } from "@/lib/service-worker-manager";
