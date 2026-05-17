@@ -1,17 +1,22 @@
 // High-level wrapper around the AppBlocker native plugin.
-// Used by FocusMode.tsx. On non-Android platforms everything no-ops gracefully.
+// User-customizable: blocked apps come from the `user_blocked_apps` table.
 import AppBlocker, { isNativeAndroid, type BlockedAppEvent } from "@/capacitor-plugins/app-blocker";
+import { supabase } from "@/integrations/supabase/client";
 
-export const BLOCKED_APPS: { pkg: string; label: string }[] = [
-  { pkg: "com.instagram.android", label: "Instagram" },
-  { pkg: "com.google.android.youtube", label: "YouTube" },
-  { pkg: "com.facebook.katana", label: "Facebook" },
-  { pkg: "com.snapchat.android", label: "Snapchat" },
-  { pkg: "com.twitter.android", label: "Twitter / X" },
-  { pkg: "com.x.android", label: "X" },
-  { pkg: "com.zhiliaoapp.musically", label: "TikTok" },
-  { pkg: "com.ss.android.ugc.trill", label: "TikTok" },
-  { pkg: "com.whatsapp", label: "WhatsApp" },
+/** Curated catalog seeded for new users. */
+export const DEFAULT_BLOCKED_APPS: { label: string; pkg: string }[] = [
+  { label: "Instagram",  pkg: "com.instagram.android" },
+  { label: "YouTube",    pkg: "com.google.android.youtube" },
+  { label: "TikTok",     pkg: "com.zhiliaoapp.musically" },
+  { label: "Snapchat",   pkg: "com.snapchat.android" },
+  { label: "Facebook",   pkg: "com.facebook.katana" },
+  { label: "WhatsApp",   pkg: "com.whatsapp" },
+  { label: "Twitter / X", pkg: "com.twitter.android" },
+  { label: "Netflix",    pkg: "com.netflix.mediaclient" },
+  { label: "Free Fire",  pkg: "com.dts.freefireth" },
+  { label: "PUBG Mobile", pkg: "com.tencent.ig" },
+  { label: "Call of Duty Mobile", pkg: "com.activision.callofduty.shooter" },
+  { label: "Reddit",     pkg: "com.reddit.frontpage" },
 ];
 
 export type FocusBlockSupport = "native-android" | "web-fallback" | "ios-fallback";
@@ -26,12 +31,7 @@ export function detectSupport(): FocusBlockSupport {
 
 export async function hasUsageAccess(): Promise<boolean> {
   if (!isNativeAndroid()) return false;
-  try {
-    const { granted } = await AppBlocker.hasUsageStatsPermission();
-    return granted;
-  } catch {
-    return false;
-  }
+  try { return (await AppBlocker.hasUsageStatsPermission()).granted; } catch { return false; }
 }
 
 export async function openUsageAccessSettings(): Promise<void> {
@@ -39,11 +39,25 @@ export async function openUsageAccessSettings(): Promise<void> {
   try { await AppBlocker.openUsageAccessSettings(); } catch {}
 }
 
+/** Reads enabled blocked apps for the current user. Returns empty list if no auth. */
+export async function getEnabledBlockedApps(): Promise<{ label: string; pkg: string }[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from("user_blocked_apps")
+    .select("label, package_name, enabled")
+    .eq("user_id", user.id)
+    .eq("enabled", true);
+  return (data ?? []).map((r: any) => ({ label: r.label, pkg: r.package_name }));
+}
+
 export async function startBlocking(onBlocked: (e: BlockedAppEvent) => void) {
   if (!isNativeAndroid()) return { stop: async () => {} };
+  const apps = await getEnabledBlockedApps();
+  const list = apps.length ? apps : DEFAULT_BLOCKED_APPS;
   const listener = await AppBlocker.addListener("blockedAppDetected", onBlocked);
   await AppBlocker.startMonitoring({
-    blockedPackages: BLOCKED_APPS.map(b => b.pkg),
+    blockedPackages: list.map(b => b.pkg),
     intervalMs: 1500,
   });
   return {
@@ -55,3 +69,6 @@ export async function startBlocking(onBlocked: (e: BlockedAppEvent) => void) {
 }
 
 export type BlockedAttempt = { app: string; pkg: string; at: number };
+
+/** Legacy alias kept for FocusMode.tsx import compatibility. */
+export const BLOCKED_APPS = DEFAULT_BLOCKED_APPS.map(a => ({ pkg: a.pkg, label: a.label }));
