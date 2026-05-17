@@ -78,6 +78,8 @@ import ReminderBanner from "./components/ReminderBanner";
 import CookieConsent from "./components/CookieConsent";
 import PageLoader from "./components/PageLoader";
 import RouteSEO from "./components/RouteSEO";
+import AmbientOrbs from "./components/AmbientOrbs";
+import PageTransition from "./components/PageTransition";
 
 // Preload critical pages after initial render
 function usePreloadPages() {
