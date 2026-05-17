@@ -5,8 +5,9 @@ const config: CapacitorConfig = {
   appName: 'studybuddy-ai-spbu',
   webDir: 'dist',
   server: {
-    url: 'https://3d33dd99-7b77-473c-86c5-dfd3e20def3a.lovableproject.com?forceHideBadge=true',
+    url: 'https://3d33dd99-7b77-473c-86c5-dfd3e20def3a.lovableproject.com/app-entry?forceHideBadge=true',
     cleartext: true,
+    androidScheme: 'https',
   },
   plugins: {
     LocalNotifications: {

@@ -55,6 +55,7 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsConditions = lazy(() => import("./pages/TermsConditions"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Download = lazy(() => import("./pages/Download"));
+const AppEntry = lazy(() => import("./pages/AppEntry"));
 import SplashScreen from "./components/SplashScreen";
 import { Capacitor } from "@capacitor/core";
 
@@ -192,6 +193,7 @@ const AppRoutes = () => {
         <Route path="/terms" element={<TermsConditions />} />
         <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
         <Route path="/" element={<RootRedirect />} />
+        <Route path="/app-entry" element={<AppEntry />} />
         <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
         <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
         <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
