@@ -433,3 +433,30 @@
   }
   .press:active { transform: scale(0.97); }
 }
+
+/* ===== Mobile layout fixes (<768px) ===== */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+@media (max-width: 767px) {
+  /* Make room for fixed bottom nav (64px + safe area) */
+  body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+  /* Hide desktop sidebar margins/left offsets on mobile */
+  main, .main-content { margin-left: 0 !important; }
+
+  /* Tables never overflow viewport */
+  table { display: block; max-width: 100%; overflow-x: auto; }
+
+  /* Tighter card spacing */
+  .premium-card:hover { transform: none; }
+}
