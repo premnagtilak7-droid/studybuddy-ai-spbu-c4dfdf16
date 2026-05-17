@@ -535,13 +535,13 @@ async function handleFormulaSheet(body: any, apiKey: string) {
   
   const context = getStudentContext(educationType, examName);
   
-  const sys = `You are a formula reference generator for ${context}. Generate a comprehensive formula sheet. Return using the tool provided.`;
+  const sys = `You are a formula reference generator for ${context}. Generate a comprehensive formula sheet. For every formula provide BOTH a KaTeX-compatible LaTeX source string (no surrounding $ delimiters, no \\\\[ \\\\] wrappers) AND a readable plain-text fallback without symbols. Return using the tool provided.`;
 
   const tools = [{
     type: "function",
     function: {
       name: "generate_formula_sheet",
-      description: "Return formula sheet data.",
+      description: "Return formula sheet data with KaTeX LaTeX and plain text fallback.",
       parameters: {
         type: "object",
         properties: {
@@ -557,11 +557,12 @@ async function handleFormulaSheet(body: any, apiKey: string) {
                     type: "object",
                     properties: {
                       name: { type: "string" },
-                      formula: { type: "string" },
+                      latex: { type: "string", description: "KaTeX-compatible LaTeX source, no $ delimiters" },
+                      plainText: { type: "string", description: "Readable plain-text version without symbols" },
                       variables: { type: "string" },
                       example: { type: "string" },
                     },
-                    required: ["name", "formula", "variables"], additionalProperties: false,
+                    required: ["name", "latex", "plainText", "variables"], additionalProperties: false,
                   },
                 },
               },
@@ -576,7 +577,7 @@ async function handleFormulaSheet(body: any, apiKey: string) {
 
   const response = await callAI(apiKey, [
     { role: "system", content: sys },
-    { role: "user", content: `Subject: ${subject}\nUnits: ${(units || []).join(", ")}\n\nGenerate all important formulas.` },
+    { role: "user", content: `Subject: ${subject}\nUnits: ${(units || []).join(", ")}\n\nGenerate all important formulas with both latex and plainText fields for every entry.` },
   ], tools, { type: "function", function: { name: "generate_formula_sheet" } });
 
   try {
