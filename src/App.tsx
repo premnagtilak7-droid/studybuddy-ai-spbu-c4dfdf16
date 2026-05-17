@@ -180,6 +180,7 @@ const AppRoutes = () => {
 
   return (
     <Suspense fallback={<PageLoader />}>
+      <PageTransition>
       <Routes>
         <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
         <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
