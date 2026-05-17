@@ -50,9 +50,7 @@ const NAV_SECTIONS = [
     title: "Study",
     items: [
       { icon: CalendarClock, label: "Exam Dates", path: "/exam-dates" },
-      { icon: Trophy, label: "Study Room", path: "/study-room" },
       { icon: Timer, label: "Study Timer", path: "/study-timer" },
-      { icon: Brain, label: "Focus Mode", path: "/focus" },
       { icon: Ban, label: "Blocked Apps", path: "/blocked-apps" },
     ],
   },

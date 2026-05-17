@@ -22,7 +22,7 @@ const Timetable = lazy(() => import("./pages/Timetable"));
 const SubjectManagement = lazy(() => import("./pages/SubjectManagement"));
 const SubjectDetail = lazy(() => import("./pages/SubjectDetail"));
 const AISolver = lazy(() => import("./pages/AISolver"));
-const StudyRoom = lazy(() => import("./pages/StudyRoom"));
+
 const StudyPlanGenerator = lazy(() => import("./pages/StudyPlanGenerator"));
 const ExamDates = lazy(() => import("./pages/ExamDates"));
 const AdminConsole = lazy(() => import("./pages/AdminConsole"));
@@ -41,7 +41,7 @@ const FormulaBank = lazy(() => import("./pages/FormulaBank"));
 const AttendanceTracker = lazy(() => import("./pages/AttendanceTracker"));
 const MarksTracker = lazy(() => import("./pages/MarksTracker"));
 const AssignmentTracker = lazy(() => import("./pages/AssignmentTracker"));
-const FocusMode = lazy(() => import("./pages/FocusMode"));
+
 const BlockedApps = lazy(() => import("./pages/BlockedApps"));
 const PreviousYearPapers = lazy(() => import("./pages/PreviousYearPapers"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -227,7 +227,7 @@ const AppRoutes = () => {
         <Route path="/subject/:id" element={<ProtectedRoute><SubjectDetail /></ProtectedRoute>} />
         <Route path="/ai-solver" element={<ProtectedRoute><GatedRoute feature="ai_solver" featureName="AI Doubt Solver"><AISolver /></GatedRoute></ProtectedRoute>} />
         <Route path="/study-plan" element={<ProtectedRoute><GatedRoute feature="study_plan" featureName="AI Study Plan"><StudyPlanGenerator /></GatedRoute></ProtectedRoute>} />
-        <Route path="/study-room" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
+        <Route path="/study-room" element={<Navigate to="/study-timer" replace />} />
         <Route path="/exam-dates" element={<ProtectedRoute><ExamDates /></ProtectedRoute>} />
         <Route path="/mock-test" element={<ProtectedRoute><GatedRoute feature="mock_test" featureName="AI Mock Test"><AIMockTest /></GatedRoute></ProtectedRoute>} />
         <Route path="/answer-checker" element={<ProtectedRoute><GatedRoute feature="answer_checker" featureName="AI Answer Checker"><AIAnswerChecker /></GatedRoute></ProtectedRoute>} />
@@ -244,7 +244,7 @@ const AppRoutes = () => {
         <Route path="/attendance" element={<ProtectedRoute><GatedRoute feature="attendance" featureName="Attendance Tracker"><AttendanceTracker /></GatedRoute></ProtectedRoute>} />
         <Route path="/marks" element={<ProtectedRoute><GatedRoute feature="marks" featureName="Marks & CGPA"><MarksTracker /></GatedRoute></ProtectedRoute>} />
         <Route path="/assignments" element={<ProtectedRoute><GatedRoute feature="assignments" featureName="Assignments & Labs"><AssignmentTracker /></GatedRoute></ProtectedRoute>} />
-        <Route path="/focus" element={<ProtectedRoute><GatedRoute feature="focus_mode" featureName="Focus Mode"><FocusMode /></GatedRoute></ProtectedRoute>} />
+        <Route path="/focus" element={<Navigate to="/study-timer" replace />} />
         <Route path="/blocked-apps" element={<ProtectedRoute><BlockedApps /></ProtectedRoute>} />
         <Route path="/study-timer" element={<ProtectedRoute><StudyTimer /></ProtectedRoute>} />
         <Route path="/previous-year-papers" element={<ProtectedRoute><PreviousYearPapers /></ProtectedRoute>} />

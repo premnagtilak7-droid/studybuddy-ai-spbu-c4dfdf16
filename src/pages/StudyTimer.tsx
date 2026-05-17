@@ -11,6 +11,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import Leaderboard from "@/components/Leaderboard";
+import { detectSupport } from "@/lib/focus-block";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSubjects, type UserSubject } from "@/lib/subjects-store";
@@ -24,7 +28,7 @@ import { motion } from "framer-motion";
 import {
   Play, Pause, Square, RotateCcw, Timer, Clock, Brain, Coffee,
   Flame, Target, History, BarChart3, StickyNote,
-  Volume2, Maximize2, Minimize2,
+  Volume2, Maximize2, Minimize2, Shield, Ban, ChevronDown, Trophy,
 } from "lucide-react";
 import StudyRemindersCard from "@/components/StudyRemindersCard";
 import { registerCustomSW, requestNotificationPermissionWithPrompt, sendToSW } from "@/lib/service-worker-manager";
@@ -103,6 +107,32 @@ export default function StudyTimer() {
   // Track the real start time for DB persistence
   const dbStartTimeRef = useRef<string>(new Date().toISOString());
   const restoredRef = useRef(false);
+
+  // Focus settings (merged from Focus Mode page)
+  const [focusSettingsOpen, setFocusSettingsOpen] = useState(false);
+  const [strictMode, setStrictMode] = useState(false);
+  const platform = useRef(detectSupport()).current;
+  const [focusBlock, setFocusBlock] = useState(false);
+  const [currentTask, setCurrentTask] = useState("");
+  const runningRef = useRef(false);
+  const strictRef = useRef(false);
+  useEffect(() => { runningRef.current = running; }, [running]);
+  useEffect(() => { strictRef.current = strictMode; }, [strictMode]);
+
+  // Strict-mode tab-leave detection: pause timer + small XP penalty
+  useEffect(() => {
+    if (!running || !strictMode) return;
+    const onVisibility = () => {
+      if (document.hidden && runningRef.current && strictRef.current) {
+        pauseTimer();
+        awardXP("focus_session", -10).catch(() => {});
+        toast.warning("You left the session — paused. -10 XP");
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, strictMode]);
 
   const studyDatesSet = useMemo(() => new Set(getStudyDates()), []);
 
@@ -564,7 +594,55 @@ export default function StudyTimer() {
               </CardContent>
             </Card>
 
-            {/* History + Analytics */}
+            {/* Focus Settings (merged from Focus Mode) */}
+            <Card>
+              <Collapsible open={focusSettingsOpen} onOpenChange={setFocusSettingsOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-4 text-left hover:bg-secondary/30 transition-colors rounded-t-lg">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">Focus Settings</span>
+                      {(strictMode || focusBlock) && <Badge variant="secondary" className="text-[10px]">On</Badge>}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${focusSettingsOpen ? "rotate-180" : ""}`} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="flex items-start justify-between gap-3 p-3 rounded-lg bg-secondary/30">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-primary" /> Strict Focus Mode</p>
+                        <p className="text-xs text-muted-foreground mt-1">Pauses timer + deducts XP when you switch tabs or minimize.</p>
+                      </div>
+                      <Switch checked={strictMode} onCheckedChange={setStrictMode} />
+                    </div>
+
+                    <div className="flex items-start justify-between gap-3 p-3 rounded-lg bg-secondary/30">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                          <Ban className="w-3.5 h-3.5 text-destructive" /> Focus Block
+                          <Badge variant="outline" className="text-[9px] ml-1">{platform === "native-android" ? "Android" : "Web — limited"}</Badge>
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Native app blocking only works in the Android build. On web, tab-leave detection (Strict mode) is used instead.
+                        </p>
+                      </div>
+                      <Switch checked={focusBlock} onCheckedChange={setFocusBlock} disabled={platform !== "native-android"} />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">What are you working on?</Label>
+                      <Input
+                        placeholder="e.g. Revise Unit 3 — Data Structures"
+                        value={currentTask}
+                        onChange={e => setCurrentTask(e.target.value)}
+                      />
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+
             <Card>
               <Tabs defaultValue="history">
                 <CardHeader className="pb-2">
@@ -614,6 +692,18 @@ export default function StudyTimer() {
                   </TabsContent>
                 </CardContent>
               </Tabs>
+            </Card>
+
+            {/* Weekly Leaderboard (merged from Study Room) */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-1.5">
+                  <Trophy className="w-4 h-4 text-accent" /> Weekly Leaderboard
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Leaderboard />
+              </CardContent>
             </Card>
           </div>
 
