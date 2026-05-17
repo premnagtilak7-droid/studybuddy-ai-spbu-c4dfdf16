@@ -108,6 +108,32 @@ export default function StudyTimer() {
   const dbStartTimeRef = useRef<string>(new Date().toISOString());
   const restoredRef = useRef(false);
 
+  // Focus settings (merged from Focus Mode page)
+  const [focusSettingsOpen, setFocusSettingsOpen] = useState(false);
+  const [strictMode, setStrictMode] = useState(false);
+  const platform = useRef(detectSupport()).current;
+  const [focusBlock, setFocusBlock] = useState(false);
+  const [currentTask, setCurrentTask] = useState("");
+  const runningRef = useRef(false);
+  const strictRef = useRef(false);
+  useEffect(() => { runningRef.current = running; }, [running]);
+  useEffect(() => { strictRef.current = strictMode; }, [strictMode]);
+
+  // Strict-mode tab-leave detection: pause timer + small XP penalty
+  useEffect(() => {
+    if (!running || !strictMode) return;
+    const onVisibility = () => {
+      if (document.hidden && runningRef.current && strictRef.current) {
+        pauseTimer();
+        awardXP("focus_session", -10).catch(() => {});
+        toast.warning("You left the session — paused. -10 XP");
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, strictMode]);
+
   const studyDatesSet = useMemo(() => new Set(getStudyDates()), []);
 
   // ── Init Web Worker ──
