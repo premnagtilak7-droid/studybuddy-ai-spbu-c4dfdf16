@@ -28,7 +28,7 @@ const NAV_SECTIONS = [
   {
     title: "Main",
     items: [
-      { icon: BarChart3, label: "Dashboard", path: "/" },
+      { icon: BarChart3, label: "Dashboard", path: "/dashboard" },
       { icon: Calendar, label: "Timetable", path: "/timetable" },
       { icon: BookOpen, label: "Subjects", path: "/subjects" },
       { icon: BookOpen, label: "Manage Subjects", path: "/subject-management" },
