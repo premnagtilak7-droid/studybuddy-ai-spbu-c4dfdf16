@@ -1829,6 +1829,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_formulas: {
+        Row: {
+          created_at: string
+          example: string
+          id: string
+          latex: string
+          name: string
+          plain_text: string
+          subject: string
+          unit_name: string
+          updated_at: string
+          user_id: string
+          variables: string
+        }
+        Insert: {
+          created_at?: string
+          example?: string
+          id?: string
+          latex?: string
+          name: string
+          plain_text?: string
+          subject: string
+          unit_name?: string
+          updated_at?: string
+          user_id: string
+          variables?: string
+        }
+        Update: {
+          created_at?: string
+          example?: string
+          id?: string
+          latex?: string
+          name?: string
+          plain_text?: string
+          subject?: string
+          unit_name?: string
+          updated_at?: string
+          user_id?: string
+          variables?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
