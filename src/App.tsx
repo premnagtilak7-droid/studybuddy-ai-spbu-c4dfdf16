@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { useTrialCheck } from "@/hooks/useTrialCheck";
@@ -10,6 +10,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { lazy, Suspense, useEffect, useState, useCallback } from "react";
 import { setupGlobalErrorHandlers } from "@/lib/error-logger";
 import { initAudioContext } from "@/lib/sounds";
+import { supabase } from "@/integrations/supabase/client";
 
 // Preload critical pages immediately
 const Index = lazy(() => import("./pages/Index"));
@@ -63,13 +64,29 @@ const isNativeApp = (() => {
   try { return Capacitor.isNativePlatform(); } catch { return false; }
 })();
 
+const isStandaloneMobileApp = () => {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia?.("(display-mode: standalone)").matches || (window.navigator as any).standalone === true;
+};
+
+const isMobileAppRuntime = () => isNativeApp || isStandaloneMobileApp();
+
 function RootRedirect() {
   const { user, loading } = useAuth();
   if (loading) return <SplashScreen />;
-  if (isNativeApp) {
+  if (isMobileAppRuntime()) {
     return <Navigate to={user ? "/dashboard" : "/auth"} replace />;
   }
   return <Suspense fallback={<PageLoader />}><Landing /></Suspense>;
+}
+
+function LandingRoute() {
+  const { user, loading } = useAuth();
+  if (isMobileAppRuntime()) {
+    if (loading) return <SplashScreen />;
+    return <Navigate to={user ? "/dashboard" : "/auth"} replace />;
+  }
+  return <Landing />;
 }
 
 import { GatedRoute } from "./components/GatedRoute";
@@ -158,9 +175,19 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 }
 
 const AppRoutes = () => {
+  const navigate = useNavigate();
   useActivityTracker();
   useTrialCheck();
   usePreloadPages();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") navigate("/dashboard", { replace: true });
+      if (event === "SIGNED_OUT") navigate("/auth", { replace: true });
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   // Initialize audio context on first user interaction
   useEffect(() => {
@@ -187,7 +214,7 @@ const AppRoutes = () => {
         <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
         <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/landing" element={<Landing />} />
+        <Route path="/landing" element={<LandingRoute />} />
         <Route path="/download" element={<Download />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsConditions />} />
