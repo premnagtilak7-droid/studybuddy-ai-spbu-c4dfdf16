@@ -74,9 +74,8 @@ const isMobileAppRuntime = () => isNativeApp || isStandaloneMobileApp();
 function RootRedirect() {
   const { user, loading } = useAuth();
   if (loading) return <SplashScreen />;
-  if (isMobileAppRuntime()) {
-    return <Navigate to={user ? "/dashboard" : "/auth"} replace />;
-  }
+  if (user) return <Navigate to="/dashboard" replace />;
+  if (isMobileAppRuntime()) return <Navigate to="/auth" replace />;
   return <Suspense fallback={<PageLoader />}><Landing /></Suspense>;
 }
 
