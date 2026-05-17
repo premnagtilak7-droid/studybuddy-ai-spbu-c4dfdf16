@@ -244,6 +244,7 @@ const App = () => {
           <BrowserRouter>
             <AuthProvider>
               <RouteSEO />
+              <AmbientOrbs />
               <AppRoutes />
               <PWAInstallPrompt />
               <NotificationPermissionBanner />
