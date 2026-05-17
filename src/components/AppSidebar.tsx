@@ -356,16 +356,11 @@ export default function AppSidebar() {
     </div>
   );
 
+  // On mobile, the bottom nav replaces the sidebar entirely
+  if (isMobile) return null;
+
   return (
     <>
-      {isMobile && (
-        <button
-          onClick={() => setMobileOpen(true)}
-          className="fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-card/80 backdrop-blur-xl border border-border/50 shadow-lg"
-        >
-          <Menu className="w-5 h-5 text-foreground" />
-        </button>
-      )}
 
       <AnimatePresence>
         {isMobile && mobileOpen && (
