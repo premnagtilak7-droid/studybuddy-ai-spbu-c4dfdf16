@@ -55,6 +55,21 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsConditions = lazy(() => import("./pages/TermsConditions"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Download = lazy(() => import("./pages/Download"));
+import SplashScreen from "./components/SplashScreen";
+import { Capacitor } from "@capacitor/core";
+
+const isNativeApp = (() => {
+  try { return Capacitor.isNativePlatform(); } catch { return false; }
+})();
+
+function RootRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return <SplashScreen />;
+  if (isNativeApp) {
+    return <Navigate to={user ? "/dashboard" : "/auth"} replace />;
+  }
+  return <Suspense fallback={<PageLoader />}><Landing /></Suspense>;
+}
 
 import { GatedRoute } from "./components/GatedRoute";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
@@ -172,7 +187,7 @@ const AppRoutes = () => {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsConditions />} />
         <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<RootRedirect />} />
         <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
         <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
         <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />

@@ -59,7 +59,7 @@ export default function Auth() {
         }
         resetRateLimit();
         toast.success("Welcome back!");
-        navigate("/");
+        navigate("/dashboard", { replace: true });
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
