@@ -1,0 +1,1 @@
+ALTER TABLE public.focus_sessions ADD COLUMN IF NOT EXISTS blocked_attempts jsonb NOT NULL DEFAULT '[]'::jsonb;
