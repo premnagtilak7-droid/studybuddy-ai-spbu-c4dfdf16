@@ -646,6 +646,7 @@ export type Database = {
       }
       focus_sessions: {
         Row: {
+          blocked_attempts: Json
           completed: boolean
           created_at: string
           distractions: number
@@ -655,6 +656,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          blocked_attempts?: Json
           completed?: boolean
           created_at?: string
           distractions?: number
@@ -664,6 +666,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          blocked_attempts?: Json
           completed?: boolean
           created_at?: string
           distractions?: number
