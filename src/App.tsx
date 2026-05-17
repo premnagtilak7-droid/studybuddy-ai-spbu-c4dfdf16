@@ -225,6 +225,7 @@ const AppRoutes = () => {
         <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminConsole /></AdminRoute></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </PageTransition>
     </Suspense>
   );
 };
