@@ -40,7 +40,6 @@ const MORE_SECTIONS: { title: string; items: { icon: any; label: string; path: s
       { icon: ClipboardList, label: "Assignments", path: "/assignments" },
       { icon: Award, label: "Marks & CGPA", path: "/marks" },
       { icon: FlaskConical, label: "Previous Year Papers", path: "/previous-year-papers" },
-      { icon: Timer, label: "Focus Mode", path: "/focus" },
       { icon: Ban, label: "Blocked Apps", path: "/blocked-apps" },
       { icon: Brain, label: "Attendance", path: "/attendance" },
     ],
@@ -64,7 +63,7 @@ const MORE_SECTIONS: { title: string; items: { icon: any; label: string; path: s
   },
 ];
 
-const HIDDEN_ROUTES = ["/auth", "/forgot-password", "/reset-password", "/landing", "/", "/download", "/privacy", "/terms", "/focus"];
+const HIDDEN_ROUTES = ["/auth", "/forgot-password", "/reset-password", "/landing", "/", "/download", "/privacy", "/terms"];
 
 export default function MobileBottomNav() {
   const { pathname } = useLocation();
