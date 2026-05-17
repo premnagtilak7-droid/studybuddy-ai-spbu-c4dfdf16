@@ -1799,6 +1799,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_blocked_apps: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          is_custom: boolean
+          label: string
+          package_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          is_custom?: boolean
+          label: string
+          package_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          is_custom?: boolean
+          label?: string
+          package_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
