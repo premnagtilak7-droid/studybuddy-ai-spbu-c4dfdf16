@@ -80,6 +80,7 @@ import PageLoader from "./components/PageLoader";
 import RouteSEO from "./components/RouteSEO";
 import AmbientOrbs from "./components/AmbientOrbs";
 import PageTransition from "./components/PageTransition";
+import MobileBottomNav from "./components/MobileBottomNav";
 
 // Preload critical pages after initial render
 function usePreloadPages() {
