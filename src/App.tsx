@@ -55,6 +55,7 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsConditions = lazy(() => import("./pages/TermsConditions"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Download = lazy(() => import("./pages/Download"));
+const AppEntry = lazy(() => import("./pages/AppEntry"));
 import SplashScreen from "./components/SplashScreen";
 import { Capacitor } from "@capacitor/core";
 
