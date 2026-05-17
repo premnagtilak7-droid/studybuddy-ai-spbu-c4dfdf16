@@ -41,6 +41,7 @@ const AttendanceTracker = lazy(() => import("./pages/AttendanceTracker"));
 const MarksTracker = lazy(() => import("./pages/MarksTracker"));
 const AssignmentTracker = lazy(() => import("./pages/AssignmentTracker"));
 const FocusMode = lazy(() => import("./pages/FocusMode"));
+const BlockedApps = lazy(() => import("./pages/BlockedApps"));
 const PreviousYearPapers = lazy(() => import("./pages/PreviousYearPapers"));
 const Auth = lazy(() => import("./pages/Auth"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -197,6 +198,7 @@ const AppRoutes = () => {
         <Route path="/marks" element={<ProtectedRoute><GatedRoute feature="marks" featureName="Marks & CGPA"><MarksTracker /></GatedRoute></ProtectedRoute>} />
         <Route path="/assignments" element={<ProtectedRoute><GatedRoute feature="assignments" featureName="Assignments & Labs"><AssignmentTracker /></GatedRoute></ProtectedRoute>} />
         <Route path="/focus" element={<ProtectedRoute><GatedRoute feature="focus_mode" featureName="Focus Mode"><FocusMode /></GatedRoute></ProtectedRoute>} />
+        <Route path="/blocked-apps" element={<ProtectedRoute><BlockedApps /></ProtectedRoute>} />
         <Route path="/study-timer" element={<ProtectedRoute><StudyTimer /></ProtectedRoute>} />
         <Route path="/previous-year-papers" element={<ProtectedRoute><PreviousYearPapers /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
